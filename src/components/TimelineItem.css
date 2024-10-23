@@ -22,16 +22,6 @@
     background: #3498db;
 }
 
-.timeline-item {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-    width: 100%; /* Give more space to each item */
-    margin-bottom: 40px;
-    padding: 10px;
-    text-align: center;
-}
-
 .timeline-item.show {
     opacity: 1;
     transform: translateY(0);

@@ -9,14 +9,13 @@
     background: #f4f4f4;
     padding: 10px;
     border-radius: 8px;
-    position: fixed; /* fixed로 변경하여 고정 */
-    left: 20px;      /* 페이지 왼쪽에 위치하도록 설정 */
-    top: 20px;       /* 위에서 20px 떨어진 위치 */
-    z-index: 1000;   
-}
-
-.timeline-date {
-    display: none; /* 날짜를 숨기기 위해 추가 */
+    position: fixed;
+    left: 1%; 
+    top: 1%;
+    z-index: 1000;
+    max-height: 80vh; /* 최대 높이를 설정하여 화면 높이의 80%로 제한 */
+    overflow-y: auto; /* 내용이 넘칠 경우 스크롤을 생성 */
+    transition: position 0.3s ease-in-out;
 }
 
 
@@ -32,8 +31,8 @@
     background: #3498db;
     color: white;
     border-radius: 4px;
-    font-size: small;
-    text-align: left; /* 중앙 정렬을 왼쪽 정렬로 변경 */
+    font-size: medium;
+    text-align: left;
     justify-content: space-between;
 }
 
@@ -46,12 +45,13 @@
     justify-content: center;
     flex-direction: column;
     padding: 20px;
+    margin-left: 22%;
 }
 
 .timeline {
     position: relative;
     width: 100%;
-    max-width: 90%; /* Make it wider */
+    max-width: 90%;
     margin: 0 auto;
 }
 
@@ -75,6 +75,16 @@ h1 {
 }
 
 @media (max-width: 768px) {
+
+    .timeline-container {
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        margin-top: 5%;
+        margin-left: 0;
+        padding: 0px;
+    }    
+
     .nav-toggle-button {
         display: block; /* 모바일 환경에서는 버튼을 보이도록 */
         margin: 10px;
@@ -84,15 +94,23 @@ h1 {
         border: none;
         border-radius: 5px;
         cursor: pointer;
+        width: 90%;
+        z-index: 1001;
+        position: fixed;
+        left: 5%;
+        top: 0;
     }
 
     .timeline-nav {
         width: 100%;
-        position: relative;
+        position: fixed;
         left: 0;
         top: 0;
+        max-width: 20%;
+        margin-top: 10%;
         margin-bottom: 20px;
         display: none; /* 기본적으로 숨김 */
+        z-index: 1000;
     }
 
     .timeline-nav.open {
@@ -101,10 +119,5 @@ h1 {
 
     .timeline-nav.closed {
         display: none; /* 내비게이션이 닫힐 때 숨김 */
-    }
-
-    .timeline-container {
-        margin-left: 0;
-        padding: 10px;
     }
 }

@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TimelineItem.css';
 
-const TimelineItem = ({ date, title, videoIds, position, refCallback }) => {
+const TimelineItem = ({ title, videoIds, position, refCallback }) => {
   const itemRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -34,7 +34,6 @@ const TimelineItem = ({ date, title, videoIds, position, refCallback }) => {
       ref={itemRef}
       className={`timeline-item ${isVisible ? 'show' : 'hide'} ${position}`}
     >
-      <div className="timeline-date">{date}</div>
       <div className="timeline-content">
         <h2>
           {title.split('\n').map((line, index) => (

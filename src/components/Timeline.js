@@ -1,10 +1,10 @@
 // src/components/Timeline.js
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import TimelineItem from './TimelineItem';
 import './Timeline.css';
 import events from './events.json';
 
-const MEMBERS = ['칸나', '유니', '히나', '시로', '리제', '타비', '부키', '린', '나나', '리코', '단체'];
+const MEMBERS = ['칸나', '유니', '히나', '시로', '리제', '타비', '부키', '린', '나나', '리코', '단체, 서버'];
 
 const COLORS = [
     '#373584',
@@ -55,8 +55,8 @@ const groupEventsByDate = (events) => {
 
 const Timeline = () => {
     const itemRefs = useRef({});
-    events = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+    let eventsCopy = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
+
 
     const [searchText, setSearchText] = useState('');
     const [selectedMembers, setSelectedMembers] = useState(Array(11).fill(0));  // 멤버 필터링용 상태
@@ -65,9 +65,12 @@ const Timeline = () => {
     const [visibleDates, setVisibleDates] = useState([]);
     const [filterOperation, setFilterOperation] = useState('AND');  // AND 또는 OR 선택
     const [navOpen, setNavOpen] = useState(false); // 내비게이션 열림 상태 관리
+    const navRef = useRef(null);
+    const timelineRef = useRef(null);
+    const [isNavFixed, setIsNavFixed] = useState(false);
 
     // 제목과 멤버 필터링을 적용한 이벤트 목록
-    const filteredevents = events.filter((event) => {
+    const filteredevents = eventsCopy.filter((event) => {
         // 제목 검색 필터
         const titleMatch = event.title.includes(searchText);
         console.log(titleMatch, searchText)
@@ -97,6 +100,26 @@ const Timeline = () => {
         grouped[year][month].push(event);
         return grouped;
     }, {});
+
+    // 스크롤 감지를 통해 내비게이션 상태를 변경
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsNavFixed(!entry.isIntersecting);
+            },
+            { root: null, threshold: 0.1 }
+        );
+
+        if (timelineRef.current) {
+            observer.observe(timelineRef.current);
+        }
+
+        return () => {
+            if (timelineRef.current) {
+                observer.unobserve(timelineRef.current);
+            }
+        };
+    }, []);
 
     // Lazy load items based on visibility
     useEffect(() => {
@@ -170,13 +193,14 @@ const Timeline = () => {
 
     return (
         <div className="timeline-page">
+            
             <button className="nav-toggle-button" onClick={toggleNav}>
                 {navOpen ? '내비게이션 닫기' : '내비게이션 열기'}
             </button>
-            <div className="timeline-nav">
-                <h3>내비게이션</h3>
+            <div className={`timeline-nav ${navOpen ? 'open' : 'closed'}`}>
+                
+                <h2>내비게이션</h2>
 
-                {/* 제목 검색 */}
                 <input
                     type="text"
                     placeholder="제목 검색"
@@ -188,14 +212,14 @@ const Timeline = () => {
                 <ul>
                     {Object.keys(groupedByYearMonth).map((year) => (
                         <li key={year}>
-                            <span onClick={() => toggleYear(year)} style={{ cursor: 'pointer' }}>
+                            <span onClick={() => toggleYear(year)} style={{ cursor: 'pointer', display: 'block' }}>
                                 {year} {expandedYears[year] ? '▲' : '▼'}
                             </span>
                             {expandedYears[year] && (
                                 <ul>
                                     {Object.keys(groupedByYearMonth[year]).sort((a, b) => parseInt(a) - parseInt(b)).map((month) => (
                                         <li key={month}>
-                                            <span onClick={() => toggleMonth(year, month)} style={{ cursor: 'pointer' }}>
+                                            <span onClick={() => toggleMonth(year, month)} style={{ cursor: 'pointer', display: 'block' }}>
                                                 {month}월 {expandedMonths[`${year}-${month}`] ? '▲' : '▼'}
                                             </span>
                                             {expandedMonths[`${year}-${month}`] && (
@@ -227,8 +251,8 @@ const Timeline = () => {
                 <div style={{ marginTop: '20px' }}>
                     <h4>멤버 필터</h4>
 
-                    
-                    <button onClick={handleResetFilters} style={{ marginBottom: '10px'}}>초기화</button>
+
+                    <button onClick={handleResetFilters} style={{ marginBottom: '10px' }}>초기화</button>
                     {MEMBERS.map((member, index) => (
                         <label key={index} style={{ display: 'block', marginBottom: '1px' }}>
                             <input
@@ -242,7 +266,7 @@ const Timeline = () => {
                     <div style={{ marginTop: '20px' }}>
                         <h4>필터 방식</h4>
                         <div>
-                        <label style={{ display: 'block' }}>
+                            <label style={{ display: 'block' }}>
                                 <input
                                     type="radio"
                                     name="filterOperation"

@@ -1,0 +1,110 @@
+/* src/components/Timeline.css */
+.timeline-page {
+    display: flex;
+    flex-direction: row; /* 좌우 배치를 위해 추가 */
+}
+
+.timeline-nav {
+    width: 20%;
+    background: #f4f4f4;
+    padding: 10px;
+    border-radius: 8px;
+    position: fixed; /* fixed로 변경하여 고정 */
+    left: 20px;      /* 페이지 왼쪽에 위치하도록 설정 */
+    top: 20px;       /* 위에서 20px 떨어진 위치 */
+    z-index: 1000;   
+}
+
+.timeline-date {
+    display: none; /* 날짜를 숨기기 위해 추가 */
+}
+
+
+.timeline-nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+.timeline-nav ul li {
+    cursor: pointer;
+    padding: 5px;
+    margin-bottom: 5px;
+    background: #3498db;
+    color: white;
+    border-radius: 4px;
+    font-size: small;
+    text-align: left; /* 중앙 정렬을 왼쪽 정렬로 변경 */
+    justify-content: space-between;
+}
+
+.timeline-nav ul li:hover {
+    background: #2980b9;
+}
+
+.timeline-container {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.timeline {
+    position: relative;
+    width: 100%;
+    max-width: 90%; /* Make it wider */
+    margin: 0 auto;
+}
+
+.timeline:before {
+    content: '';
+    position: absolute;
+    transform: translateX(-50%);
+    left: 52%;
+    width: 2px;
+    height: 100%;
+    background: #3498db;
+}
+
+h1 {
+    align-self: center;
+}
+
+/* Timeline.css */
+.nav-toggle-button {
+    display: none; /* 기본적으로 숨김 */
+}
+
+@media (max-width: 768px) {
+    .nav-toggle-button {
+        display: block; /* 모바일 환경에서는 버튼을 보이도록 */
+        margin: 10px;
+        padding: 10px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .timeline-nav {
+        width: 100%;
+        position: relative;
+        left: 0;
+        top: 0;
+        margin-bottom: 20px;
+        display: none; /* 기본적으로 숨김 */
+    }
+
+    .timeline-nav.open {
+        display: block; /* 내비게이션이 열릴 때 보이도록 */
+    }
+
+    .timeline-nav.closed {
+        display: none; /* 내비게이션이 닫힐 때 숨김 */
+    }
+
+    .timeline-container {
+        margin-left: 0;
+        padding: 10px;
+    }
+}

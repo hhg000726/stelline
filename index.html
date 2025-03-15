@@ -101,7 +101,7 @@
       while (!/^[A-Z]{3}$/.test(username)) {  // 영어 대문자 3글자 검사
           username = prompt("사용자 이름을 입력하세요 (영어 3글자):", "").toUpperCase();
       }
-      fetch("http://127.0.0.1:5000/start_game", {
+      fetch("http://52.79.113.193/start_game", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: username })
@@ -113,7 +113,7 @@
           nextRound();
       })
       .catch((error) => {
-        alter("알 수 없는 오류!");
+        alert("알 수 없는 오류!");
       });
     }
 
@@ -132,7 +132,7 @@
     } 
 
     function guess(choice) {
-      fetch("http://127.0.0.1:5000/submit_choice", {
+      fetch("http://52.79.113.193/submit_choice", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: username, choice: choice })
@@ -163,12 +163,12 @@
           }
       })
       .catch((error) => {
-        alter("알 수 없는 오류!");
+        alert("알 수 없는 오류!");
       });;
     }
 
     function loadLeaderboard() {
-      fetch("http://127.0.0.1:5000/leaderboard")
+      fetch("http://52.79.113.193/leaderboard")
         .then(response => response.json())
         .then(data => {
           let leaderboardHTML = "<h2>🏆 리더보드</h2><ol>";
@@ -180,7 +180,7 @@
           document.getElementById("leaderboard").style.display = "block";
         })
         .catch((error) => {
-          alter("알 수 없는 오류!");
+          alert("알 수 없는 오류!");
         });;
     }
 

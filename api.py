@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -167,6 +167,10 @@ def submit_score(username):
     leaderboard[:] = leaderboard[:10]  # 상위 10명 유지
 
     save_leaderboard()  # 파일에 저장
+
+@app.route("/")
+def serve_index():
+    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
 # 리더보드 가져오기 API
 @app.route("/leaderboard", methods=["GET"])

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Old or New - Music Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #282c36;
+      color: white;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    #dashboard {
+      margin-bottom: 20px;
+    }
+
+    #game {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 50px;
+      margin-top: 20px;
+    }
+
+    .song {
+      width: 300px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #444;
+    }
+
+    img {
+      width: 100%;
+      border-radius: 10px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+
+    #start-btn {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .guess-btn {
+      width: 150px;
+      background-color: #2196F3;
+      color: white;
+    }
+
+    #score {
+      margin-top: 20px;
+      font-size: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Old or New?</h1>
+  <div id="dashboard">
+    <button id="start-btn" onclick="startGame()">게임 시작</button>
+    <p id="score" style="display: none;">점수: 0</p>
+  </div>
+  <div id="leaderboard" style="display: none;"></div>
+
+
+  <div id="game" style="display: none;">
+    <div class="song" id="left-song">
+      <img id="left-thumbnail" src="">
+      <p id="left-title"></p>
+      <p id="left-date"></p>
+      <button class="guess-btn" onclick="guess('left')">⬅ 왼쪽이 최신!</button>
+    </div>
+
+    <div class="song" id="right-song">
+      <img id="right-thumbnail" src="">
+      <p id="right-title"></p>
+      <p id="right-date"></p>
+      <button class="guess-btn" onclick="guess('right')">오른쪽이 최신! ➡</button>
+    </div>
+  </div>
+
+  <script>
+    let username = "";
+    function startGame() {
+      
+      while (!/^[A-Z]{3}$/.test(username)) {  // 영어 대문자 3글자 검사
+          username = prompt("사용자 이름을 입력하세요 (영어 3글자):", "").toUpperCase();
+      }
+      fetch("http://127.0.0.1:5000/start_game", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username })
+      })
+      .then(response => response.json())
+      .then(data => {
+          document.getElementById("start-btn").style.display = "none";
+          window.currentGame = data;
+          nextRound();
+      })
+      .catch((error) => {
+        alter("알 수 없는 오류!");
+      });
+    }
+
+    function nextRound() {
+      console.log(window.currentGame)
+      let left = window.currentGame.left;
+      let right = window.currentGame.right;
+      document.getElementById("game").style.display = "flex";
+      document.getElementById("score").style.display = "block";
+      document.getElementById("score").innerText = "점수: " + window.currentGame.score;
+      document.getElementById("left-title").innerText = left.title;
+      document.getElementById("left-thumbnail").src = `https://img.youtube.com/vi/${left.video_id}/0.jpg`;
+      document.getElementById("right-title").innerText = right.title;
+      document.getElementById("right-thumbnail").src = `https://img.youtube.com/vi/${right.video_id}/0.jpg`;
+      document.getElementById("leaderboard").style.display = "none";
+    } 
+
+    function guess(choice) {
+      fetch("http://127.0.0.1:5000/submit_choice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username, choice: choice })
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.message === "정답!") {
+            window.currentGame = data;
+            nextRound();
+          } 
+          else if (data.message === "끝!") {
+            alert(`${data.message}\n최종 점수: ${data.score}`);
+              document.getElementById("start-btn").style.display = "inline-block";
+              document.getElementById("game").style.display = "none";
+              document.getElementById("score").style.display = "none";
+              username = "";
+              document.getElementById("leaderboard").style.display = "block";
+              loadLeaderboard();
+          }
+          else {
+              alert(`${data.message}최종 점수: ${data.score}`);  // 오답이면 게임 종료
+              document.getElementById("start-btn").style.display = "inline-block";
+              document.getElementById("game").style.display = "none";
+              document.getElementById("score").style.display = "none";
+              username = "";
+              document.getElementById("leaderboard").style.display = "block";
+              loadLeaderboard();
+          }
+      })
+      .catch((error) => {
+        alter("알 수 없는 오류!");
+      });;
+    }
+
+    function loadLeaderboard() {
+      fetch("http://127.0.0.1:5000/leaderboard")
+        .then(response => response.json())
+        .then(data => {
+          let leaderboardHTML = "<h2>🏆 리더보드</h2><ol>";
+          data.forEach((entry, index) => {
+            leaderboardHTML += `<li>${entry.username}  ${entry.score}점 ${entry.time}</li>`;
+          });
+          leaderboardHTML += "</ol>";
+          document.getElementById("leaderboard").innerHTML = leaderboardHTML;
+          document.getElementById("leaderboard").style.display = "block";
+        })
+        .catch((error) => {
+          alter("알 수 없는 오류!");
+        });;
+    }
+
+    window.onload = () => {
+      loadLeaderboard();
+    };
+  </script>
+
+</body>
+
+</html>

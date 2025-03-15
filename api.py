@@ -7,15 +7,12 @@ from datetime import datetime
 from dotenv import load_dotenv
 import os, random
 
-
-
 #.env 파일 불러오기
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 PLAYLIST_ID = os.getenv("PLAYLIST_ID")
 LEADERBOARD_FILE = os.getenv("LEADERBOARD_FILE", "leaderboard.json")
-PORT = int(os.getenv("PORT"))
 
 app = Flask(__name__)
 CORS(app)
@@ -40,6 +37,7 @@ def load_leaderboard():
 def save_leaderboard():
     with open(LEADERBOARD_FILE, "w", encoding="utf-8") as f:
         json.dump(leaderboard, f, ensure_ascii=False, indent=4)
+    os.chmod(LEADERBOARD_FILE, 0o666)
     print("💾 리더보드 저장 완료!")
 
 # YouTube 재생목록에서 모든 동영상 가져오기
@@ -167,10 +165,6 @@ def submit_score(username):
     leaderboard[:] = leaderboard[:10]  # 상위 10명 유지
 
     save_leaderboard()  # 파일에 저장
-
-@app.route("/")
-def serve_index():
-    return send_from_directory(os.path.dirname(os.path.abspath(__file__)), "index.html")
 
 # 리더보드 가져오기 API
 @app.route("/leaderboard", methods=["GET"])

@@ -2,19 +2,20 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import requests, json
 from datetime import datetime
 from dotenv import load_dotenv
-import os, random, threading, time, logging
+from logging.handlers import TimedRotatingFileHandler
+import requests, json, os, random, threading, time, logging, string
 
 # 로그 설정
+handler = TimedRotatingFileHandler(
+    "app.log", when="midnight", interval=1, backupCount=7
+)
+handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler("app.log"),
-        logging.StreamHandler()
-    ]
+    handlers=[handler, logging.StreamHandler()]
 )
 
 # .env 파일 불러오기
@@ -116,12 +117,12 @@ def songGetter():
             logging.error(f"YouTube API 업데이트 오류: {e}")
         time.sleep(60)
 
-@app.route("/api/start_game", methods=["POST"])
+@app.route("/api/start_game", methods=["GET"])
 @limiter.limit("60 per minute")
 def start_game():
     """새로운 게임을 시작"""
-    data = request.json
-    username = data.get("username", "익명").strip()
+    characters = string.ascii_letters + string.digits + string.digits
+    username = ''.join(random.choice(characters) for _ in range(8))
 
     if len(all_songs) < 2:
         logging.warning(f"{username}이(가) 게임을 시작하려 했으나 곡 데이터 부족!")
@@ -140,7 +141,7 @@ def start_game():
     }
 
     logging.info(f"{username}이(가) 게임을 시작했습니다.")
-    return jsonify({"message": "게임 시작", "left": left, "right": right, "score": 0})
+    return jsonify({"message": "게임 시작", "username": username,"left": left, "right": right, "score": 0})
 
 @app.route("/api/submit_choice", methods=["POST"])
 def submit_choice():
@@ -165,7 +166,7 @@ def submit_choice():
             submit_score(username)
             del game_sessions[username]
             logging.info(f"{username}이(가) 게임을 종료했습니다. 점수: {session_data['score']}")
-            return jsonify({"message": message, "score": session_data["score"]})
+            return jsonify({"message": message, "username": username, "score": session_data["score"]})
         while newRight["video_id"] in session_data["usedSongs"]:
             newRight = random.sample(all_songs, 1)[0]
         session_data["usedSongs"].add(newRight["video_id"])
@@ -180,11 +181,11 @@ def submit_choice():
           "usedSongs": session_data["usedSongs"]
         }
     else:
-        message = "오답!\n" + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0] + "\n"
+        message = "오답!\n코드: " + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0] + "\n"
         submit_score(username)
         del game_sessions[username]
 
-    return jsonify({"message": message, "score": session_data["score"], "left": newLeft, "right": newRight})
+    return jsonify({"message": message, "username": username, "score": session_data["score"], "left": newLeft, "right": newRight})
 
 def submit_score(username):
     """사용자의 점수를 리더보드에 저장"""

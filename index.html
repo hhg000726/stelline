@@ -80,7 +80,8 @@
       overflow: hidden;
     }
 
-    th, td {
+    th,
+    td {
       border: 1px solid #555;
       padding: 10px;
       text-align: center;
@@ -119,26 +120,24 @@
   </div>
 
   <script>
+
     let username = "";
+
     function startGame() {
-      
-      while (!/^[A-Z]{3}$/.test(username)) {  // 영어 대문자 3글자 검사
-          username = prompt("사용자 이름을 입력하세요 (영어 3글자):", "").toUpperCase();
-      }
       fetch("http://52.79.113.193/api/start_game", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: username })
+        method: "GET",
+        headers: { "Content-Type": "application/json" }
       })
-      .then(response => response.json())
-      .then(data => {
+        .then(response => response.json())
+        .then(data => {
+          username = data.username;
           document.getElementById("start-btn").style.display = "none";
           window.currentGame = data;
           nextRound();
-      })
-      .catch((error) => {
-        alert("알 수 없는 오류!");
-      });
+        })
+        .catch((error) => {
+          alert("알 수 없는 오류!");
+        });
     }
 
     function nextRound() {
@@ -153,42 +152,42 @@
       document.getElementById("right-title").innerText = right.title;
       document.getElementById("right-thumbnail").src = `https://img.youtube.com/vi/${right.video_id}/0.jpg`;
       document.getElementById("leaderboard").style.display = "none";
-    } 
+    }
 
     function guess(choice) {
       fetch("http://52.79.113.193/api/submit_choice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username: username, choice: choice })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username, choice: choice })
       })
-      .then(response => response.json())
-      .then(data => {
+        .then(response => response.json())
+        .then(data => {
           if (data.message === "정답!") {
             window.currentGame = data;
             nextRound();
-          } 
+          }
           else if (data.message === "끝!") {
-            alert(`${data.message}\n최종 점수: ${data.score}`);
-              document.getElementById("start-btn").style.display = "inline-block";
-              document.getElementById("game").style.display = "none";
-              document.getElementById("score").style.display = "none";
-              username = "";
-              document.getElementById("leaderboard").style.display = "block";
-              loadLeaderboard();
+            alert(`${data.message}\n코드: ${data.username}\n점수: ${data.score}`);
+            document.getElementById("start-btn").style.display = "inline-block";
+            document.getElementById("game").style.display = "none";
+            document.getElementById("score").style.display = "none";
+            username = "";
+            document.getElementById("leaderboard").style.display = "block";
+            loadLeaderboard();
           }
           else {
-              alert(`${data.message}최종 점수: ${data.score}`);  // 오답이면 게임 종료
-              document.getElementById("start-btn").style.display = "inline-block";
-              document.getElementById("game").style.display = "none";
-              document.getElementById("score").style.display = "none";
-              username = "";
-              document.getElementById("leaderboard").style.display = "block";
-              loadLeaderboard();
+            alert(`${data.message}점수: ${data.score}`);  // 오답이면 게임 종료
+            document.getElementById("start-btn").style.display = "inline-block";
+            document.getElementById("game").style.display = "none";
+            document.getElementById("score").style.display = "none";
+            username = "";
+            document.getElementById("leaderboard").style.display = "block";
+            loadLeaderboard();
           }
-      })
-      .catch((error) => {
-        alert("알 수 없는 오류!");
-      });;
+        })
+        .catch((error) => {
+          alert("알 수 없는 오류!");
+        });;
     }
 
     function loadLeaderboard() {
@@ -196,7 +195,7 @@
         .then(response => response.json())
         .then(data => {
           let leaderboardHTML = "<h2>🏆 리더보드</h2>";
-          leaderboardHTML += `<table><tr><th>순위</th><th>이름</th><th>점수</th><th>시간</th></tr>`;
+          leaderboardHTML += `<table><tr><th>순위</th><th>코드</th><th>점수</th><th>시간</th></tr>`;
           data.forEach((entry, index) => {
             leaderboardHTML += `<tr><td>${index + 1}</td><td>${entry.username}</td><td>${entry.score}</td><td>${entry.time}</td></tr>`;
           });

@@ -166,13 +166,25 @@ def submit_choice():
             del game_sessions[username]
             logging.info(f"{username}이(가) 게임을 종료했습니다. 점수: {session_data['score']}")
             return jsonify({"message": message, "score": session_data["score"]})
+        while newRight["video_id"] in session_data["usedSongs"]:
+            newRight = random.sample(all_songs, 1)[0]
         session_data["usedSongs"].add(newRight["video_id"])
+        correct_choice = "left" if newLeft["date"] > newRight["date"] else "right"
+        print(correct_choice)
+        game_sessions[username] = {
+          "left": newLeft,
+          "right": newRight,
+          "correct": correct_choice,
+          "score": session_data["score"],
+          "startTime": session_data["startTime"],
+          "usedSongs": session_data["usedSongs"]
+        }
     else:
         message = f"오답! {username}: {session_data['score']}점"
         submit_score(username)
         del game_sessions[username]
 
-    return jsonify({"message": message, "score": session_data["score"]})
+    return jsonify({"message": message, "score": session_data["score"], "left": newLeft, "right": newRight})
 
 def submit_score(username):
     """사용자의 점수를 리더보드에 저장"""

@@ -1,13 +1,23 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import requests, json
 from datetime import datetime
 from dotenv import load_dotenv
-import os, random
+import os, random, threading, time, logging
 
-#.env 파일 불러오기
+# 로그 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
+)
+
+# .env 파일 불러오기
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
@@ -24,79 +34,104 @@ leaderboard = []
 game_sessions = {}
 
 def load_leaderboard():
+    """리더보드 파일을 로드"""
     global leaderboard
     try:
         with open(LEADERBOARD_FILE, "r", encoding="utf-8") as f:
             leaderboard = json.load(f)
-            print("리더보드 불러오기 성공!")
+            logging.info("리더보드 불러오기 성공!")
     except (FileNotFoundError, json.JSONDecodeError):
-        print("리더보드 파일 없음 또는 오류, 새로 생성합니다.")
+        logging.warning("리더보드 파일 없음 또는 오류 발생, 새로 생성합니다.")
         leaderboard = []
 
-# 점수 저장 함수
 def save_leaderboard():
-    with open(LEADERBOARD_FILE, "w", encoding="utf-8") as f:
-        json.dump(leaderboard, f, ensure_ascii=False, indent=4)
-    os.chmod(LEADERBOARD_FILE, 0o666)
-    print("💾 리더보드 저장 완료!")
+    """리더보드를 저장"""
+    try:
+        with open(LEADERBOARD_FILE, "w", encoding="utf-8") as f:
+            json.dump(leaderboard, f, ensure_ascii=False, indent=4)
+        logging.info("리더보드 저장 완료!")
+    except Exception as e:
+        logging.error(f"리더보드 저장 중 오류 발생: {e}")
 
-# YouTube 재생목록에서 모든 동영상 가져오기
 def get_songs():
+    """YouTube API에서 재생목록의 곡을 가져옴"""
+    logging.info("YouTube API에서 곡 목록을 가져오는 중...")
     URL = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={PLAYLIST_ID}&maxResults=50&key={API_KEY}"
     
     songs = []
     video_ids = []
     next_page_token = None
 
-    while True:
-        response = requests.get(URL + (f"&pageToken={next_page_token}" if next_page_token else ""), timeout=10)
-        data = response.json()
+    try:
+        while True:
+            response = requests.get(URL + (f"&pageToken={next_page_token}" if next_page_token else ""), timeout=10)
+            data = response.json()
 
-        for item in data.get("items", []):
-            video_id = item["snippet"]["resourceId"]["videoId"]
-            video_ids.append(video_id)
-            songs.append({
-                "title": item["snippet"]["title"],
-                "video_id": video_id
-            })
+            for item in data.get("items", []):
+                video_id = item["snippet"]["resourceId"]["videoId"]
+                video_ids.append(video_id)
+                songs.append({
+                    "title": item["snippet"]["title"],
+                    "video_id": video_id
+                })
 
-        next_page_token = data.get("nextPageToken")
-        if not next_page_token:
-            break  # 다음 페이지가 없으면 종료
+            next_page_token = data.get("nextPageToken")
+            if not next_page_token:
+                break
 
-    # 동영상 업로드 날짜 가져오기 (50개씩 요청)
-    for i in range(0, len(video_ids), 50):
-        video_id_str = ",".join(video_ids[i:i+50])
-        video_url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id_str}&key={API_KEY}"
-        video_response = requests.get(video_url).json()
+        logging.info(f"{len(songs)}개의 곡을 가져왔습니다.")
 
-        for item in video_response.get("items", []):
-            video_id = item["id"]
-            published_at = item["snippet"]["publishedAt"]  # 업로드 날짜
+        for i in range(0, len(video_ids), 50):
+            video_id_str = ",".join(video_ids[i:i+50])
+            video_url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id_str}&key={API_KEY}"
+            video_response = requests.get(video_url).json()
 
-            for song in songs:
-                if song["video_id"] == video_id:
-                    song["date"] = published_at  # 원본 업로드 날짜 저장
+            for item in video_response.get("items", []):
+                video_id = item["id"]
+                published_at = item["snippet"]["publishedAt"]
 
-    return songs
+                for song in songs:
+                    if song["video_id"] == video_id:
+                        song["date"] = published_at
+
+        return songs
+    except Exception as e:
+        logging.error(f"YouTube API에서 곡을 가져오는 중 오류 발생: {e}")
+        return []
 
 all_songs = get_songs()
+
+def songGetter():
+    """주기적으로 YouTube 곡 목록 업데이트"""
+    while True:
+        global all_songs
+        try:
+            new_songs = get_songs()
+            if new_songs:
+                all_songs = new_songs
+                logging.info("YouTube 데이터 업데이트 완료!")
+            else:
+                logging.warning("새로운 데이터 없음, 기존 데이터를 유지합니다.")
+        except Exception as e:
+            logging.error(f"YouTube API 업데이트 오류: {e}")
+        time.sleep(60)
 
 @app.route("/songs", methods=["GET"])
 def songs():
     return jsonify(get_songs())
 
-# 새로운 게임 시작
 @app.route("/start_game", methods=["POST"])
 @limiter.limit("60 per minute")
 def start_game():
+    """새로운 게임을 시작"""
     data = request.json
     username = data.get("username", "익명").strip()
 
     if len(all_songs) < 2:
+        logging.warning(f"{username}이(가) 게임을 시작하려 했으나 곡 데이터 부족!")
         return jsonify({"message": "곡 데이터가 부족합니다."}), 400
 
-    left, right = random.sample(all_songs, 2)  # 두 개의 곡 선택
+    left, right = random.sample(all_songs, 2)
     correct_choice = "left" if left["date"] > right["date"] else "right"
 
     game_sessions[username] = {
@@ -108,65 +143,54 @@ def start_game():
         "startTime": datetime.now()
     }
 
-    return jsonify({
-        "message": "게임 시작",
-        "left": left,
-        "right": right,
-        "score": 0
-    })
+    logging.info(f"{username}이(가) 게임을 시작했습니다.")
+    return jsonify({"message": "게임 시작", "left": left, "right": right, "score": 0})
 
-# 사용자의 선택을 받아서 점수 계산
 @app.route("/submit_choice", methods=["POST"])
 def submit_choice():
+    """사용자의 선택을 받아 점수를 계산"""
     data = request.json
     username = data.get("username", "익명").strip()
+
     if username not in game_sessions:
+        logging.warning(f"{username}이(가) 게임을 시작하지 않고 제출을 시도함.")
         return jsonify({"message": "게임을 먼저 시작하세요."}), 400
+
     choice = data.get("choice", "").strip()
     session_data = game_sessions[username]
     newRight = random.sample(all_songs, 1)[0]
     newLeft = session_data["right"]
 
     if choice == session_data["correct"]:
-        session_data["score"] += 1  # 정답이면 점수 증가
+        session_data["score"] += 1
         message = "정답!"
         if len(session_data["usedSongs"]) == len(all_songs):
             message = "끝!"
             submit_score(username)
-            return jsonify({"message": message, "score": session_data["score"], "left": newLeft, "right": newRight, "time": (datetime.now() - session_data["startTime"]).total_seconds()})
-        while newRight["video_id"] in session_data["usedSongs"]:
-            newRight = random.sample(all_songs, 1)[0]
+            del game_sessions[username]
+            logging.info(f"{username}이(가) 게임을 종료했습니다. 점수: {session_data['score']}")
+            return jsonify({"message": message, "score": session_data["score"]})
         session_data["usedSongs"].add(newRight["video_id"])
-        correct_choice = "left" if newLeft["date"] > newRight["date"] else "right"
-        print(correct_choice)
-        game_sessions[username] = {
-          "left": newLeft,
-          "right": newRight,
-          "correct": correct_choice,
-          "score": session_data["score"],
-          "startTime": session_data["startTime"],
-          "usedSongs": session_data["usedSongs"]
-        }
     else:
-        message = "오답!\n" + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0] + "\n"
+        message = f"오답! {username}: {session_data['score']}점"
         submit_score(username)
+        del game_sessions[username]
 
-    return jsonify({"message": message, "score": session_data["score"], "left": newLeft, "right": newRight})
+    return jsonify({"message": message, "score": session_data["score"]})
 
-# 점수 저장
 def submit_score(username):
+    """사용자의 점수를 리더보드에 저장"""
     data = game_sessions[username]
-
     final_score = data["score"]
-    
-    time = (datetime.now() - data["startTime"]).total_seconds()
-    leaderboard.append({"username": username, "score": final_score, "time": time})
+    elapsed_time = (datetime.now() - data["startTime"]).total_seconds()
+
+    leaderboard.append({"username": username, "score": final_score, "time": elapsed_time})
     leaderboard.sort(key=lambda x: (-x["score"], x["time"]))
-    leaderboard[:] = leaderboard[:10]  # 상위 10명 유지
+    leaderboard[:] = leaderboard[:10]
 
-    save_leaderboard()  # 파일에 저장
+    save_leaderboard()
+    logging.info(f"{username}이(가) {final_score}점으로 리더보드에 등록됨.")
 
-# 리더보드 가져오기 API
 @app.route("/leaderboard", methods=["GET"])
 def get_leaderboard():
     return jsonify(leaderboard)
@@ -174,4 +198,7 @@ def get_leaderboard():
 load_leaderboard()
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    watcher_thread = threading.Thread(target=songGetter, daemon=True)
+    watcher_thread.start()
+    logging.info("서버 시작됨!")
+    app.run(host="0.0.0.0", port=5000, debug=False)

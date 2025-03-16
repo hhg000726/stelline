@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Old or New - Music Game</title>
+  <title>최신 곡 고르기</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -65,12 +65,36 @@
       margin-top: 20px;
       font-size: 20px;
     }
+
+    #leaderboard {
+      display: none;
+      margin-top: 20px;
+    }
+
+    table {
+      width: 50%;
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      border: 1px solid #555;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background: #555;
+    }
   </style>
 </head>
 
 <body>
 
-  <h1>Old or New?</h1>
+  <h1>최신 곡 고르기</h1>
   <div id="dashboard">
     <button id="start-btn" onclick="startGame()">게임 시작</button>
     <p id="score" style="display: none;">점수: 0</p>
@@ -171,17 +195,18 @@
       fetch("http://52.79.113.193/leaderboard")
         .then(response => response.json())
         .then(data => {
-          let leaderboardHTML = "<h2>🏆 리더보드</h2><ol>";
+          let leaderboardHTML = "<h2>🏆 리더보드</h2>";
+          leaderboardHTML += `<table><tr><th>순위</th><th>이름</th><th>점수</th><th>시간</th></tr>`;
           data.forEach((entry, index) => {
-            leaderboardHTML += `<li>${entry.username}  ${entry.score}점 ${entry.time}</li>`;
+            leaderboardHTML += `<tr><td>${index + 1}</td><td>${entry.username}</td><td>${entry.score}</td><td>${entry.time}</td></tr>`;
           });
-          leaderboardHTML += "</ol>";
+          leaderboardHTML += "</table>";
           document.getElementById("leaderboard").innerHTML = leaderboardHTML;
           document.getElementById("leaderboard").style.display = "block";
         })
-        .catch((error) => {
+        .catch(() => {
           alert("알 수 없는 오류!");
-        });;
+        });
     }
 
     window.onload = () => {

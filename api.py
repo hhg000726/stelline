@@ -116,11 +116,7 @@ def songGetter():
             logging.error(f"YouTube API 업데이트 오류: {e}")
         time.sleep(60)
 
-@app.route("/songs", methods=["GET"])
-def songs():
-    return jsonify(get_songs())
-
-@app.route("/start_game", methods=["POST"])
+@app.route("/api/start_game", methods=["POST"])
 @limiter.limit("60 per minute")
 def start_game():
     """새로운 게임을 시작"""
@@ -146,7 +142,7 @@ def start_game():
     logging.info(f"{username}이(가) 게임을 시작했습니다.")
     return jsonify({"message": "게임 시작", "left": left, "right": right, "score": 0})
 
-@app.route("/submit_choice", methods=["POST"])
+@app.route("/api/submit_choice", methods=["POST"])
 def submit_choice():
     """사용자의 선택을 받아 점수를 계산"""
     data = request.json
@@ -191,7 +187,7 @@ def submit_score(username):
     save_leaderboard()
     logging.info(f"{username}이(가) {final_score}점으로 리더보드에 등록됨.")
 
-@app.route("/leaderboard", methods=["GET"])
+@app.route("/api/leaderboard", methods=["GET"])
 def get_leaderboard():
     return jsonify(leaderboard)
 

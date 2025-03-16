@@ -125,7 +125,7 @@
       while (!/^[A-Z]{3}$/.test(username)) {  // 영어 대문자 3글자 검사
           username = prompt("사용자 이름을 입력하세요 (영어 3글자):", "").toUpperCase();
       }
-      fetch("http://52.79.113.193/start_game", {
+      fetch("http://52.79.113.193/api/start_game", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: username })
@@ -156,7 +156,7 @@
     } 
 
     function guess(choice) {
-      fetch("http://52.79.113.193/submit_choice", {
+      fetch("http://52.79.113.193/api/submit_choice", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ username: username, choice: choice })
@@ -192,7 +192,7 @@
     }
 
     function loadLeaderboard() {
-      fetch("http://52.79.113.193/leaderboard")
+      fetch("http://52.79.113.193/api/leaderboard")
         .then(response => response.json())
         .then(data => {
           let leaderboardHTML = "<h2>🏆 리더보드</h2>";

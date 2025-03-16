@@ -180,7 +180,7 @@ def submit_choice():
           "usedSongs": session_data["usedSongs"]
         }
     else:
-        message = f"오답! {username}: {session_data['score']}점"
+        message = "오답!\n" + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0] + "\n"
         submit_score(username)
         del game_sessions[username]
 

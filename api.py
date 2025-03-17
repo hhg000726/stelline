@@ -172,7 +172,6 @@ def submit_choice():
             newRight = random.sample(all_songs, 1)[0]
         session_data["usedSongs"].add(newRight["video_id"])
         correct_choice = "left" if newLeft["date"] > newRight["date"] else "right"
-        print(correct_choice)
         game_sessions[username] = {
           "left": newLeft,
           "right": newRight,
@@ -214,7 +213,7 @@ def broadcast_elapsed_time():
         for username, session in list(game_sessions.items()):
             start_time = datetime.fromisoformat(session["startTime"])
             elapsed_time = round((current_time - start_time).total_seconds(), 1)
-            print(username + " " + str(elapsed_time))
+            print(username + " " + session["sid"] + " " + str(elapsed_time))
             socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=session["sid"])  # 개별 유저에게 전송
         time.sleep(0.1)
 

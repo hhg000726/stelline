@@ -118,13 +118,13 @@ def songGetter():
         
         for username, session in list(game_sessions.keys()):
             elapsed_time = round((datetime.now() - datetime.fromisoformat(session["startTime"])).total_seconds(), 1)
-            if elapsed_time > 600:
+            if elapsed_time > 3600:
                 del game_sessions[username]
         
         time.sleep(60)
 
 @app.route("/api/start_game", methods=["GET"])
-@limiter.limit("60 per minute")
+@limiter.limit("30 per minute")
 def start_game():
     """새로운 게임을 시작"""
     characters = string.ascii_letters + string.digits + string.digits

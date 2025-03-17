@@ -125,7 +125,7 @@
     let username = "";
 
     function startGame() {
-      fetch("http://127.0.0.1:5000/api/start_game", {
+      fetch("http://52.79.113.193/api/start_game", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
       })
@@ -167,7 +167,7 @@
     }
 
     function guess(choice) {
-      fetch("http://127.0.0.1:5000/api/submit_choice", {
+      fetch("http://52.79.113.193/api/submit_choice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username, choice: choice })
@@ -203,7 +203,7 @@
     }
 
     function loadLeaderboard() {
-      fetch("http://127.0.0.1:5000/api/leaderboard")
+      fetch("http://52.79.113.193/api/leaderboard")
         .then(response => response.json())
         .then(data => {
           let leaderboardHTML = "<h2>🏆 리더보드</h2>";

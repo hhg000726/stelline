@@ -115,6 +115,12 @@ def songGetter():
                 logging.warning("새로운 데이터 없음, 기존 데이터를 유지합니다.")
         except Exception as e:
             logging.error(f"YouTube API 업데이트 오류: {e}")
+        
+        for username, session in game_sessions:
+            elapsed_time = round((datetime.now() - datetime.fromisoformat(session["startTime"])).total_seconds(), 1)
+            if elapsed_time > 600:
+                del game_sessions[username]
+        
         time.sleep(60)
 
 @app.route("/api/start_game", methods=["GET"])

@@ -223,9 +223,10 @@ def handle_join_game(data):
     """클라이언트가 WebSocket을 통해 게임방에 참가"""
     username = data.get("username")
     if username in game_sessions:
-        game_sessions[username]["sid"] = request.sid
-        join_room(game_sessions[username]["sid"])
-        logging.info(f"{username}이(가) {game_sessions[username]["sid"]}로 입장했습니다.")
+        sid = request.sid
+        game_sessions[username]["sid"] = sid
+        join_room(sid)
+        logging.info(f"{username}이(가) {sid}로 입장했습니다.")
     else:
         emit("error", {"message": "게임 세션이 존재하지 않습니다."})
 
@@ -234,8 +235,9 @@ def handle_leave_game(data):
     """클라이언트가 WebSocket을 통해 게임방에서 퇴장"""
     username = data.get("username")
     if username in game_sessions:
-        leave_room(game_sessions[username]["sid"])
-        logging.info(f"{username}이(가) {game_sessions[username]["sid"]}로 방에서 나갔습니다.")
+        sid = game_sessions[username]["sid"]
+        leave_room(sid)
+        logging.info(f"{username}이(가) {sid}로 방에서 나갔습니다.")
     else:
         emit("error", {"message": "게임 세션이 존재하지 않습니다."})
 

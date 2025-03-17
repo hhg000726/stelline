@@ -128,7 +128,7 @@
     let username = "";
 
     function startGame() {
-      fetch("https://52.79.113.193/api/start_game", {
+      fetch("https://stelline.site/api/start_game", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
       })
@@ -160,7 +160,7 @@
     }
 
     function guess(choice) {
-      fetch("https://52.79.113.193/api/submit_choice", {
+      fetch("https://stelline.site/api/submit_choice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username, choice: choice })
@@ -192,7 +192,7 @@
     }
 
     function loadLeaderboard() {
-      fetch("https://52.79.113.193/api/leaderboard")
+      fetch("https://stelline.site/api/leaderboard")
         .then(response => response.json())
         .then(data => {
           let leaderboardHTML = "<h2>🏆 리더보드</h2>";

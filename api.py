@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_socketio import SocketIO, emit, join_room, leave_room, rooms
+from flask_socketio import SocketIO, emit, rooms
 from datetime import datetime
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
@@ -139,9 +139,12 @@ def start_game():
         "correct": correct_choice,
         "score": 0,
         "usedSongs": {left["video_id"], right["video_id"]},
-        "startTime": (datetime.now()).isoformat()
+        "startTime": (datetime.now()).isoformat(),
+        "sid": request.sid
     }
-    logging.info(f"{username}이(가) 게임을 시작했습니다.")
+    logging.info(f"{username}이(가) {request.sid} 로에 입장했습니다.")
+    room_list = rooms()
+    logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
     return jsonify({"message": "게임 시작", "username": username,"left": left, "right": right, "score": 0})
 
 @app.route("/api/submit_choice", methods=["POST"])
@@ -179,7 +182,8 @@ def submit_choice():
           "correct": correct_choice,
           "score": session_data["score"],
           "startTime": session_data["startTime"],
-          "usedSongs": session_data["usedSongs"]
+          "usedSongs": session_data["usedSongs"],
+          "sid": session_data["sid"]
         }
     else:
         message = "오답!\n코드: " + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0] + "\n"
@@ -217,31 +221,6 @@ def broadcast_elapsed_time():
             socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=session["sid"])  # 개별 유저에게 전송
         time.sleep(0.1)
 
-@socketio.on("join_game")
-def handle_join_game(data):
-    """클라이언트가 WebSocket을 통해 게임방에 참가"""
-    username = data.get("username")
-    if username in game_sessions:
-        game_sessions[username]["sid"] = request.sid
-        join_room(username)
-        logging.info(f"{username}이(가) WebSocket 방에 입장했습니다.")
-        room_list = rooms()
-        logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
-    else:
-        emit("error", {"message": "게임 세션이 존재하지 않습니다."})
-
-@socketio.on("leave_game")
-def handle_leave_game(data):
-    """클라이언트가 WebSocket을 통해 게임방에서 퇴장"""
-    username = data.get("username")
-    if username in game_sessions:
-        leave_room(username)
-        logging.info(f"{username}이(가) WebSocket 방에서 퇴장했습니다.")
-        room_list = rooms()
-        logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
-    else:
-        emit("error", {"message": "게임 세션이 존재하지 않습니다."})
-
 @socketio.on("connect")
 def handle_connect():
     """새로운 사용자가 WebSocket에 연결될 때 실행"""
@@ -261,7 +240,6 @@ def handle_disconnect():
             break
 
     if username_to_remove:
-        leave_room(username_to_remove)
         del game_sessions[username_to_remove]
         logging.info(f"{username_to_remove}이(가) 브라우저 종료로 게임에서 제거됨.")
         room_list = rooms()

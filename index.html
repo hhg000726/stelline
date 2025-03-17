@@ -137,7 +137,6 @@
           username = data.username;
           document.getElementById("start-btn").style.display = "none";
           window.currentGame = data;
-          socket.emit("join_game", { username: data.username });
           nextRound();
         })
         .catch((error) => {
@@ -188,7 +187,6 @@
             document.getElementById("leaderboard").style.display = "block";
             document.getElementById("time").style.display = "none";
             loadLeaderboard();
-            socket.emit("leave_game", { username: data.username });
           }
         })
         .catch((error) => {

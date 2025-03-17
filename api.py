@@ -191,7 +191,7 @@ def submit_score(username):
     """사용자의 점수를 리더보드에 저장"""
     data = game_sessions[username]
     final_score = data["score"]
-    elapsed_time = round((datetime.now() - datetime.fromisoformat(data["startTime"])).total_seconds(), 2)
+    elapsed_time = round((datetime.now() - datetime.fromisoformat(data["startTime"]) - timedelta(hours=9)).total_seconds(), 2)
 
     leaderboard.append({"username": username, "score": final_score, "time": elapsed_time})
     leaderboard.sort(key=lambda x: (-x["score"], x["time"]))

@@ -2,7 +2,8 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from datetime import datetime, timedelta
+from flask_socketio import SocketIO, emit, join_room, leave_room
+from datetime import datetime
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
 import requests, json, os, random, threading, time, logging, string
@@ -27,6 +28,7 @@ LEADERBOARD_FILE = os.getenv("LEADERBOARD_FILE", "leaderboard.json")
 
 app = Flask(__name__)
 CORS(app)
+socketio = SocketIO(app, cors_allowed_origins='*')
 
 limiter = Limiter(key_func=get_remote_address)
 limiter.init_app(app)
@@ -139,9 +141,8 @@ def start_game():
         "usedSongs": {left["video_id"], right["video_id"]},
         "startTime": (datetime.now()).isoformat()
     }
-
     logging.info(f"{username}이(가) 게임을 시작했습니다.")
-    return jsonify({"message": "게임 시작", "username": username,"left": left, "right": right, "score": 0, "startTime": game_sessions[username]["startTime"]})
+    return jsonify({"message": "게임 시작", "username": username,"left": left, "right": right, "score": 0})
 
 @app.route("/api/submit_choice", methods=["POST"])
 def submit_choice():
@@ -166,7 +167,7 @@ def submit_choice():
             submit_score(username)
             del game_sessions[username]
             logging.info(f"{username}이(가) 게임을 종료했습니다. 점수: {session_data['score']}")
-            return jsonify({"message": message, "username": username, "score": session_data["score"], "startTime": session_data["startTime"]})
+            return jsonify({"message": message, "username": username, "score": session_data["score"]})
         while newRight["video_id"] in session_data["usedSongs"]:
             newRight = random.sample(all_songs, 1)[0]
         session_data["usedSongs"].add(newRight["video_id"])
@@ -185,13 +186,13 @@ def submit_choice():
         submit_score(username)
         del game_sessions[username]
 
-    return jsonify({"message": message, "username": username, "score": session_data["score"], "left": newLeft, "right": newRight, "startTime": session_data["startTime"]})
+    return jsonify({"message": message, "username": username, "score": session_data["score"], "left": newLeft, "right": newRight})
 
 def submit_score(username):
     """사용자의 점수를 리더보드에 저장"""
     data = game_sessions[username]
     final_score = data["score"]
-    elapsed_time = round((datetime.now() - datetime.fromisoformat(data["startTime"])).total_seconds(), 2)
+    elapsed_time = round((datetime.now() - datetime.fromisoformat(data["startTime"])).total_seconds(), 1)
 
     leaderboard.append({"username": username, "score": final_score, "time": elapsed_time})
     leaderboard.sort(key=lambda x: (-x["score"], x["time"]))
@@ -206,8 +207,61 @@ def get_leaderboard():
 
 load_leaderboard()
 
+def broadcast_elapsed_time():
+    while True:
+        current_time = datetime.now()
+        for username, session in list(game_sessions.items()):
+            start_time = datetime.fromisoformat(session["startTime"])
+            elapsed_time = round((current_time - start_time).total_seconds(), 1)
+            socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=username)  # 개별 유저에게 전송
+        time.sleep(0.1)
+
+@socketio.on("join_game")
+def handle_join_game(data):
+    """클라이언트가 WebSocket을 통해 게임방에 참가"""
+    username = data.get("username")
+    if username in game_sessions:
+        game_sessions[username]["sid"] = request.sid
+        join_room(username)
+        logging.info(f"{username}이(가) WebSocket 방에 입장했습니다.")
+    else:
+        emit("error", {"message": "게임 세션이 존재하지 않습니다."})
+
+@socketio.on("leave_game")
+def handle_leave_game(data):
+    """클라이언트가 WebSocket을 통해 게임방에서 퇴장"""
+    username = data.get("username")
+    if username in game_sessions:
+        leave_room(username)
+        logging.info(f"{username}이(가) WebSocket 방에 입장했습니다.")
+    else:
+        emit("error", {"message": "게임 세션이 존재하지 않습니다."})
+
+@socketio.on("connect")
+def handle_connect():
+    """새로운 사용자가 WebSocket에 연결될 때 실행"""
+    sid = request.sid
+    logging.info(f"새로운 WebSocket 연결: {sid}")
+     
+@socketio.on("disconnect")
+def handle_disconnect():
+    """클라이언트가 브라우저를 닫거나 네트워크가 끊겼을 때 실행됨"""
+    sid = request.sid  # 현재 사용자의 세션 ID
+
+    # game_sessions에서 해당 사용자를 찾기
+    username_to_remove = None
+    for username, session in game_sessions.items():
+        if session.get("sid") == sid:
+            username_to_remove = username
+            break
+
+    if username_to_remove:
+        leave_room(username_to_remove)
+        del game_sessions[username_to_remove]
+        logging.info(f"{username_to_remove}이(가) 브라우저 종료로 게임에서 제거됨.")
+
 if __name__ == "__main__":
-    watcher_thread = threading.Thread(target=songGetter, daemon=True)
-    watcher_thread.start()
+    threading.Thread(target=songGetter, daemon=True).start()
+    threading.Thread(target=broadcast_elapsed_time, daemon=True).start()
     logging.info("서버 시작됨!")
     app.run(host="0.0.0.0", port=5000, debug=False)

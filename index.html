@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>최신 곡 고르기</title>
+  <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -123,8 +124,10 @@
   <script>
 
     let username = "";
+    let socket = io("http://52.79.113.193");
 
     function startGame() {
+      socket.off("elapsed_time");
       fetch("http://52.79.113.193/api/start_game", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
@@ -134,11 +137,15 @@
           username = data.username;
           document.getElementById("start-btn").style.display = "none";
           window.currentGame = data;
+          socket.emit("join_game", { username: data.username });
           nextRound();
         })
         .catch((error) => {
           alert("알 수 없는 오류!");
         });
+      socket.on("elapsed_time", (data) => {
+        document.getElementById("time").innerText = "시간: " + data.elapsed_time + " 초"
+      });
     }
 
     function nextRound() {
@@ -154,16 +161,6 @@
       document.getElementById("right-title").innerText = right.title;
       document.getElementById("right-thumbnail").src = `https://img.youtube.com/vi/${right.video_id}/0.jpg`;
       document.getElementById("leaderboard").style.display = "none";
-      // 시간 업데이트 시작
-      if (!window.timer) {
-        window.timer = setInterval(updateTime, 10);
-      }
-    }
-
-    function updateTime() {
-      if (!window.currentGame) return;
-      let elapsedTime = (new Date() - new Date(window.currentGame.startTime)) / 1000;
-      document.getElementById("time").innerText = `시간: ${elapsedTime.toFixed(2)} 초`;
     }
 
     function guess(choice) {
@@ -185,16 +182,14 @@
             else {
               alert(`${data.message}점수: ${data.score}`);  // 오답이면 게임 종료
             }
-            // 타이머 정리
-            clearInterval(window.timer);
-            window.timer = null;
             document.getElementById("start-btn").style.display = "inline-block";
             document.getElementById("game").style.display = "none";
             document.getElementById("score").style.display = "none";
             username = "";
             document.getElementById("leaderboard").style.display = "block";
-            document.getElementById("time").style.display = "none"; 
+            document.getElementById("time").style.display = "none";
             loadLeaderboard();
+            socket.emit("leave_game", { username: data.username });
           }
         })
         .catch((error) => {

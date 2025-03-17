@@ -141,7 +141,7 @@ def start_game():
     }
 
     logging.info(f"{username}이(가) 게임을 시작했습니다.")
-    return jsonify({"message": "게임 시작", "username": username,"left": left, "right": right, "score": 0})
+    return jsonify({"message": "게임 시작", "username": username,"left": left, "right": right, "score": 0, "startTime": game_sessions[username]["startTime"]})
 
 @app.route("/api/submit_choice", methods=["POST"])
 def submit_choice():
@@ -166,7 +166,7 @@ def submit_choice():
             submit_score(username)
             del game_sessions[username]
             logging.info(f"{username}이(가) 게임을 종료했습니다. 점수: {session_data['score']}")
-            return jsonify({"message": message, "username": username, "score": session_data["score"]})
+            return jsonify({"message": message, "username": username, "score": session_data["score"], "startTime": session_data["startTime"]})
         while newRight["video_id"] in session_data["usedSongs"]:
             newRight = random.sample(all_songs, 1)[0]
         session_data["usedSongs"].add(newRight["video_id"])
@@ -185,7 +185,7 @@ def submit_choice():
         submit_score(username)
         del game_sessions[username]
 
-    return jsonify({"message": message, "username": username, "score": session_data["score"], "left": newLeft, "right": newRight})
+    return jsonify({"message": message, "username": username, "score": session_data["score"], "left": newLeft, "right": newRight, "startTime": session_data["startTime"]})
 
 def submit_score(username):
     """사용자의 점수를 리더보드에 저장"""

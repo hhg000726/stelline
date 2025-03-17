@@ -99,6 +99,7 @@
   <div id="dashboard">
     <button id="start-btn" onclick="startGame()">게임 시작</button>
     <p id="score" style="display: none;">점수: 0</p>
+    <p id="time" style="display: none;">시간: 0.0 초</p>
   </div>
   <div id="leaderboard" style="display: none;"></div>
 
@@ -146,12 +147,23 @@
       let right = window.currentGame.right;
       document.getElementById("game").style.display = "flex";
       document.getElementById("score").style.display = "block";
+      document.getElementById("time").style.display = "block"; // 시간 표시
       document.getElementById("score").innerText = "점수: " + window.currentGame.score;
       document.getElementById("left-title").innerText = left.title;
       document.getElementById("left-thumbnail").src = `https://img.youtube.com/vi/${left.video_id}/0.jpg`;
       document.getElementById("right-title").innerText = right.title;
       document.getElementById("right-thumbnail").src = `https://img.youtube.com/vi/${right.video_id}/0.jpg`;
       document.getElementById("leaderboard").style.display = "none";
+      // 시간 업데이트 시작
+      if (!window.timer) {
+        window.timer = setInterval(updateTime, 10);
+      }
+    }
+
+    function updateTime() {
+      if (!window.data) return;
+      let elapsedTime = (new Date() - window.data.startTime) / 100;
+      document.getElementById("time").innerText = `시간: ${elapsedTime.toFixed(2)} 초`;
     }
 
     function guess(choice) {
@@ -166,22 +178,22 @@
             window.currentGame = data;
             nextRound();
           }
-          else if (data.message === "끝!") {
-            alert(`${data.message}\n코드: ${data.username}\n점수: ${data.score}`);
-            document.getElementById("start-btn").style.display = "inline-block";
-            document.getElementById("game").style.display = "none";
-            document.getElementById("score").style.display = "none";
-            username = "";
-            document.getElementById("leaderboard").style.display = "block";
-            loadLeaderboard();
-          }
           else {
-            alert(`${data.message}점수: ${data.score}`);  // 오답이면 게임 종료
+            if (data.message === "끝!") {
+              alert(`${data.message}\n코드: ${data.username}\n점수: ${data.score}`);
+            }
+            else {
+              alert(`${data.message}점수: ${data.score}`);  // 오답이면 게임 종료
+            }
+            // 타이머 정리
+            clearInterval(window.timer);
+            window.timer = null;
             document.getElementById("start-btn").style.display = "inline-block";
             document.getElementById("game").style.display = "none";
             document.getElementById("score").style.display = "none";
             username = "";
             document.getElementById("leaderboard").style.display = "block";
+            document.getElementById("time").style.display = "none"; 
             loadLeaderboard();
           }
         })

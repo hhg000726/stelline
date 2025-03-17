@@ -161,8 +161,8 @@
     }
 
     function updateTime() {
-      if (!window.data) return;
-      let elapsedTime = (new Date() - window.data.startTime) / 100;
+      if (!window.currentGame) return;
+      let elapsedTime = (new Date() - new Date(window.currentGame.startTime)) / 1000;
       document.getElementById("time").innerText = `시간: ${elapsedTime.toFixed(2)} 초`;
     }
 

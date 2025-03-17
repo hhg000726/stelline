@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from datetime import datetime
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
 import requests, json, os, random, threading, time, logging, string
@@ -137,7 +137,7 @@ def start_game():
         "correct": correct_choice,
         "score": 0,
         "usedSongs": {left["video_id"], right["video_id"]},
-        "startTime": datetime.now()
+        "startTime": (datetime.now() + timedelta(hours=9)).isoformat()
     }
 
     logging.info(f"{username}이(가) 게임을 시작했습니다.")

@@ -176,8 +176,7 @@ def submit_choice():
           "correct": correct_choice,
           "score": session_data["score"],
           "startTime": session_data["startTime"],
-          "usedSongs": session_data["usedSongs"],
-          "sid": session_data["sid"]
+          "usedSongs": session_data["usedSongs"]
         }
     else:
         message = "오답!\n코드: " + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0] + "\n"

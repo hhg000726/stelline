@@ -140,11 +140,8 @@ def start_game():
         "score": 0,
         "usedSongs": {left["video_id"], right["video_id"]},
         "startTime": (datetime.now()).isoformat(),
-        "sid": request.sid
     }
-    logging.info(f"{username}이(가) {request.sid} 로에 입장했습니다.")
-    room_list = rooms()
-    logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
+    logging.info(f"{username}이(가) 게임을 시작했습니다.")
     return jsonify({"message": "게임 시작", "username": username,"left": left, "right": right, "score": 0})
 
 @app.route("/api/submit_choice", methods=["POST"])
@@ -220,6 +217,31 @@ def broadcast_elapsed_time():
             print(username + " " + str(elapsed_time))
             socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=session["sid"])  # 개별 유저에게 전송
         time.sleep(0.1)
+
+@socketio.on("join_game")
+def handle_join_game(data):
+    """클라이언트가 WebSocket을 통해 게임방에 참가"""
+    username = data.get("username")
+    if username in game_sessions:
+        sid = request.sid
+        game_sessions[username]["sid"] = sid
+        logging.info(f"{username}이(가) {sid} 로에 입장했습니다.")
+        room_list = rooms()
+        logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
+    else:
+        emit("error", {"message": "게임 세션이 존재하지 않습니다."})
+
+@socketio.on("leave_game")
+def handle_leave_game(data):
+    """클라이언트가 WebSocket을 통해 게임방에서 퇴장"""
+    username = data.get("username")
+    if username in game_sessions:
+        sid = game_sessions[username]["sid"]
+        logging.info(f"{username}이(가) {sid}로 퇴장했습니다.")
+        room_list = rooms()
+        logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
+    else:
+        emit("error", {"message": "게임 세션이 존재하지 않습니다."})
 
 @socketio.on("connect")
 def handle_connect():

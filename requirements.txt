@@ -1,0 +1,8 @@
+Flask
+flask_cors
+flask_limiter
+flask_socketio
+python-dotenv
+requests
+eventlet
+gevent-websocket

@@ -214,6 +214,8 @@ def broadcast_elapsed_time():
             start_time = datetime.fromisoformat(session["startTime"])
             elapsed_time = round((current_time - start_time).total_seconds(), 1)
             print(username + " " + session["sid"] + " " + str(elapsed_time))
+            room_list = rooms()
+            logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
             socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=session["sid"])  # 개별 유저에게 전송
         time.sleep(0.1)
 

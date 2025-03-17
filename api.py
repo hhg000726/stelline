@@ -264,4 +264,4 @@ if __name__ == "__main__":
     threading.Thread(target=songGetter, daemon=True).start()
     threading.Thread(target=broadcast_elapsed_time, daemon=True).start()
     logging.info("서버 시작됨!")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    socketio.run(host="0.0.0.0", port=5000, debug=False)

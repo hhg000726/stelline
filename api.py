@@ -2,7 +2,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO, emit, join_room, leave_room, rooms
 from datetime import datetime
 from dotenv import load_dotenv
 from logging.handlers import TimedRotatingFileHandler
@@ -213,9 +213,8 @@ def broadcast_elapsed_time():
         for username, session in list(game_sessions.items()):
             start_time = datetime.fromisoformat(session["startTime"])
             elapsed_time = round((current_time - start_time).total_seconds(), 1)
-            sid = {session["sid"]}
-            print(f"🔔 [DEBUG] {username} {sid} - Elapsed Time: {elapsed_time}초")
-            socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=session["sid"])  # 개별 유저에게 전송
+            print(username + " " + elapsed_time)
+            socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=username)  # 개별 유저에게 전송
         time.sleep(0.1)
 
 @socketio.on("join_game")
@@ -223,10 +222,11 @@ def handle_join_game(data):
     """클라이언트가 WebSocket을 통해 게임방에 참가"""
     username = data.get("username")
     if username in game_sessions:
-        sid = request.sid
-        game_sessions[username]["sid"] = sid
-        join_room(sid)
-        logging.info(f"{username}이(가) {sid}로 입장했습니다.")
+        game_sessions[username]["sid"] = request.sid
+        join_room(username)
+        logging.info(f"{username}이(가) WebSocket 방에 입장했습니다.")
+        room_list = rooms()
+        logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
     else:
         emit("error", {"message": "게임 세션이 존재하지 않습니다."})
 
@@ -235,9 +235,10 @@ def handle_leave_game(data):
     """클라이언트가 WebSocket을 통해 게임방에서 퇴장"""
     username = data.get("username")
     if username in game_sessions:
-        sid = game_sessions[username]["sid"]
-        leave_room(sid)
-        logging.info(f"{username}이(가) {sid}로 방에서 나갔습니다.")
+        leave_room(username)
+        logging.info(f"{username}이(가) WebSocket 방에서 퇴장했습니다.")
+        room_list = rooms()
+        logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
     else:
         emit("error", {"message": "게임 세션이 존재하지 않습니다."})
 
@@ -260,9 +261,11 @@ def handle_disconnect():
             break
 
     if username_to_remove:
-        leave_room(sid)
+        leave_room(username_to_remove)
         del game_sessions[username_to_remove]
         logging.info(f"{username_to_remove}이(가) 브라우저 종료로 게임에서 제거됨.")
+        room_list = rooms()
+        logging.info(f"✅ 현재 존재하는 WebSocket Rooms: {room_list}")
 
 if __name__ == "__main__":
     threading.Thread(target=songGetter, daemon=True).start()

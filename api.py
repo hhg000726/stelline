@@ -213,7 +213,8 @@ def broadcast_elapsed_time():
         for username, session in list(game_sessions.items()):
             start_time = datetime.fromisoformat(session["startTime"])
             elapsed_time = round((current_time - start_time).total_seconds(), 1)
-            print(f"🔔 [DEBUG] {username} {session["sid"]} - Elapsed Time: {elapsed_time}초")
+            sid = {session["sid"]}
+            print(f"🔔 [DEBUG] {username} {sid} - Elapsed Time: {elapsed_time}초")
             socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=session["sid"])  # 개별 유저에게 전송
         time.sleep(0.1)
 

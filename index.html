@@ -5,7 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>최신 곡 고르기</title>
-  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -100,7 +99,6 @@
   <div id="dashboard">
     <button id="start-btn" onclick="startGame()">게임 시작</button>
     <p id="score" style="display: none;">점수: 0</p>
-    <p id="time" style="display: none;">시간: 0.0 초</p>
   </div>
   <div id="leaderboard" style="display: none;"></div>
 
@@ -124,10 +122,8 @@
   <script>
 
     let username = "";
-    let socket = io("http://52.79.113.193");
 
     function startGame() {
-      socket.off("elapsed_time");
       fetch("http://52.79.113.193/api/start_game", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
@@ -137,15 +133,11 @@
           username = data.username;
           document.getElementById("start-btn").style.display = "none";
           window.currentGame = data;
-          socket.emit("join_game", { username: data.username });
           nextRound();
         })
         .catch((error) => {
           alert("알 수 없는 오류!");
         });
-      socket.on("elapsed_time", (data) => {
-        document.getElementById("time").innerText = "시간: " + data.elapsed_time + " 초"
-      });
     }
 
     function nextRound() {
@@ -153,7 +145,6 @@
       let right = window.currentGame.right;
       document.getElementById("game").style.display = "flex";
       document.getElementById("score").style.display = "block";
-      document.getElementById("time").style.display = "block"; // 시간 표시
       document.getElementById("score").innerText = "점수: " + window.currentGame.score;
       document.getElementById("left-title").innerText = left.title;
       document.getElementById("left-thumbnail").src = `https://img.youtube.com/vi/${left.video_id}/0.jpg`;
@@ -186,9 +177,7 @@
             document.getElementById("score").style.display = "none";
             username = "";
             document.getElementById("leaderboard").style.display = "block";
-            document.getElementById("time").style.display = "none";
             loadLeaderboard();
-            socket.emit("leave_game", { username: data.username });
           }
         })
         .catch((error) => {

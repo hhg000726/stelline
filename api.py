@@ -179,11 +179,12 @@ def submit_choice():
           "usedSongs": session_data["usedSongs"]
         }
     else:
-        message = "오답!\n코드: " + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0] + "\n"
+        message = "오답!\n코드: " + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0]
         submit_score(username)
         del game_sessions[username]
 
-    return jsonify({"message": message, "username": username, "score": session_data["score"], "left": newLeft, "right": newRight})
+    elapsed_time = round((datetime.now() - datetime.fromisoformat(session_data["startTime"])).total_seconds(), 1)
+    return jsonify({"message": message, "username": username, "score": session_data["score"], "left": newLeft, "right": newRight, "elapsed_time": elapsed_time})
 
 def submit_score(username):
     """사용자의 점수를 리더보드에 저장"""

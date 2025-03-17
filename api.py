@@ -214,7 +214,7 @@ def broadcast_elapsed_time():
             start_time = datetime.fromisoformat(session["startTime"])
             elapsed_time = round((current_time - start_time).total_seconds(), 1)
             print(username + " " + str(elapsed_time))
-            socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=username)  # 개별 유저에게 전송
+            socketio.emit("elapsed_time", {"elapsed_time": elapsed_time}, room=session["sid"])  # 개별 유저에게 전송
         time.sleep(0.1)
 
 @socketio.on("join_game")

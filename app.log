@@ -154,3 +154,214 @@
 2025-03-17 17:06:30,657 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
 2025-03-17 17:06:32,033 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
 2025-03-17 17:06:33,014 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:10:38,118 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:10:39,706 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:10:40,992 [WARNING] ¸®´õº¸µå ÆÄÀÏ ¾øÀ½ ¶Ç´Â ¿À·ù ¹ß»ý, »õ·Î »ý¼ºÇÕ´Ï´Ù.
+2025-03-17 17:10:40,992 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:10:40,993 [INFO] ¼­¹ö ½ÃÀÛµÊ!
+2025-03-17 17:10:41,000 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.123.100:5000
+2025-03-17 17:10:41,001 [INFO] [33mPress CTRL+C to quit[0m
+2025-03-17 17:10:42,607 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:10:43,927 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:11:43,928 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:11:45,527 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:11:46,820 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:13:40,509 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:13:42,149 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:13:43,414 [WARNING] ¸®´õº¸µå ÆÄÀÏ ¾øÀ½ ¶Ç´Â ¿À·ù ¹ß»ý, »õ·Î »ý¼ºÇÕ´Ï´Ù.
+2025-03-17 17:13:43,414 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:13:43,414 [INFO] ¼­¹ö ½ÃÀÛµÊ!
+2025-03-17 17:13:43,423 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.123.100:5000
+2025-03-17 17:13:43,423 [INFO] [33mPress CTRL+C to quit[0m
+2025-03-17 17:13:45,048 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:13:46,358 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:14:46,359 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:14:47,969 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:14:49,185 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:15:49,185 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:15:50,780 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:15:52,055 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:16:52,057 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:16:53,679 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:16:55,120 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:16:59,769 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:17:01,440 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:17:02,692 [WARNING] ¸®´õº¸µå ÆÄÀÏ ¾øÀ½ ¶Ç´Â ¿À·ù ¹ß»ý, »õ·Î »ý¼ºÇÕ´Ï´Ù.
+2025-03-17 17:17:02,692 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:17:02,692 [INFO] ¼­¹ö ½ÃÀÛµÊ!
+2025-03-17 17:17:02,701 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.123.100:5000
+2025-03-17 17:17:02,701 [INFO] [33mPress CTRL+C to quit[0m
+2025-03-17 17:17:04,357 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:17:05,698 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:19:03,725 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:19:05,405 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:19:06,792 [WARNING] ¸®´õº¸µå ÆÄÀÏ ¾øÀ½ ¶Ç´Â ¿À·ù ¹ß»ý, »õ·Î »ý¼ºÇÕ´Ï´Ù.
+2025-03-17 17:19:06,793 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:19:06,793 [INFO] ¼­¹ö ½ÃÀÛµÊ!
+2025-03-17 17:19:06,801 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.123.100:5000
+2025-03-17 17:19:06,802 [INFO] [33mPress CTRL+C to quit[0m
+2025-03-17 17:19:06,857 [INFO] 127.0.0.1 - - [17/Mar/2025 17:19:06] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:19:06,859 [INFO] XfJlukXpÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:19:06,860 [INFO] 127.0.0.1 - - [17/Mar/2025 17:19:06] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:19:08,401 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:19:09,755 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:20:09,756 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:20:11,349 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:20:12,634 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:21:12,635 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:21:14,242 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:21:15,561 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:22:15,561 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:22:17,165 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:22:18,511 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:22:30,044 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:22:31,702 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:22:33,065 [WARNING] ¸®´õº¸µå ÆÄÀÏ ¾øÀ½ ¶Ç´Â ¿À·ù ¹ß»ý, »õ·Î »ý¼ºÇÕ´Ï´Ù.
+2025-03-17 17:22:33,065 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:22:33,065 [INFO] ¼­¹ö ½ÃÀÛµÊ!
+2025-03-17 17:22:33,073 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.123.100:5000
+2025-03-17 17:22:33,074 [INFO] [33mPress CTRL+C to quit[0m
+2025-03-17 17:22:34,402 [INFO] 127.0.0.1 - - [17/Mar/2025 17:22:34] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:22:34,492 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:22:35,582 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:22:36,420 [INFO] 127.0.0.1 - - [17/Mar/2025 17:22:36] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:22:36,422 [INFO] H26r6qNeÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:22:36,422 [INFO] 127.0.0.1 - - [17/Mar/2025 17:22:36] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:22:42,359 [INFO] 127.0.0.1 - - [17/Mar/2025 17:22:42] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:23:35,583 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:23:37,105 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:23:38,231 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:23:46,155 [INFO] 127.0.0.1 - - [17/Mar/2025 17:23:46] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:23:46,158 [INFO] BPPjkE0oÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:23:46,158 [INFO] 127.0.0.1 - - [17/Mar/2025 17:23:46] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:24:38,233 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:24:39,795 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:24:40,958 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:25:40,959 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:25:44,376 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:25:45,561 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:26:45,562 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:26:47,145 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:26:48,223 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:27:48,224 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:27:49,906 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:27:51,170 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:28:06,264 [INFO] 127.0.0.1 - - [17/Mar/2025 17:28:06] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:28:06,267 [INFO] 127.0.0.1 - - [17/Mar/2025 17:28:06] "POST /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:28:06,860 [INFO] 127.0.0.1 - - [17/Mar/2025 17:28:06] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:28:06,862 [ERROR] Exception on /api/submit_choice [POST]
+Traceback (most recent call last):
+  File "C:\Python312\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\site-packages\flask_cors\extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\site-packages\flask\app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Lib\site-packages\flask\app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\a\oldornew\OldorNew\api.py", line 186, in submit_choice
+    del game_sessions[username]
+    ^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\a\oldornew\OldorNew\api.py", line 195, in submit_score
+TypeError: unsupported operand type(s) for -: 'datetime.datetime' and 'str'
+2025-03-17 17:28:06,898 [INFO] 127.0.0.1 - - [17/Mar/2025 17:28:06] "[35m[1mPOST /api/submit_choice HTTP/1.1[0m" 500 -
+2025-03-17 17:28:51,171 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:28:52,685 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:28:53,845 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:29:52,673 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:29:54,057 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:29:55,178 [WARNING] ¸®´õº¸µå ÆÄÀÏ ¾øÀ½ ¶Ç´Â ¿À·ù ¹ß»ý, »õ·Î »ý¼ºÇÕ´Ï´Ù.
+2025-03-17 17:29:55,178 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:29:55,179 [INFO] ¼­¹ö ½ÃÀÛµÊ!
+2025-03-17 17:29:55,188 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.123.100:5000
+2025-03-17 17:29:55,189 [INFO] [33mPress CTRL+C to quit[0m
+2025-03-17 17:29:56,566 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:29:57,646 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:30:24,561 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:24] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:30:25,160 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:25] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:30:25,163 [INFO] ef4d9y8LÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:30:25,163 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:25] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:30:27,365 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:27] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:30:27,367 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:27] "POST /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:30:28,594 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:28] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:30:28,596 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:28] "POST /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:30:29,259 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:29] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:30:29,263 [INFO] ¸®´õº¸µå ÀúÀå ¿Ï·á!
+2025-03-17 17:30:29,263 [INFO] ef4d9y8LÀÌ(°¡) 2Á¡À¸·Î ¸®´õº¸µå¿¡ µî·ÏµÊ.
+2025-03-17 17:30:29,263 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:29] "POST /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:30:31,928 [INFO] 127.0.0.1 - - [17/Mar/2025 17:30:31] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:30:57,648 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:30:59,072 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:31:00,333 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:31:05,599 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:05] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:31:05,601 [INFO] 346MxTalÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:31:05,601 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:05] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:31:06,282 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:06] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:31:06,285 [INFO] ¸®´õº¸µå ÀúÀå ¿Ï·á!
+2025-03-17 17:31:06,285 [INFO] 346MxTalÀÌ(°¡) 0Á¡À¸·Î ¸®´õº¸µå¿¡ µî·ÏµÊ.
+2025-03-17 17:31:06,286 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:06] "POST /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:31:07,551 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:07] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:31:43,176 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:43] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:31:43,179 [INFO] c8T2KspVÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:31:43,179 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:43] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:31:45,385 [INFO] 127.0.0.1 - - [17/Mar/2025 17:31:45] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:32:00,333 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:32:01,984 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:32:03,377 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:32:45,653 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:32:47,278 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:32:48,754 [INFO] ¸®´õº¸µå ºÒ·¯¿À±â ¼º°ø!
+2025-03-17 17:32:48,754 [INFO] YouTube API¿¡¼­ °î ¸ñ·ÏÀ» °¡Á®¿À´Â Áß...
+2025-03-17 17:32:48,754 [INFO] ¼­¹ö ½ÃÀÛµÊ!
+2025-03-17 17:32:48,762 [INFO] [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.123.100:5000
+2025-03-17 17:32:48,763 [INFO] [33mPress CTRL+C to quit[0m
+2025-03-17 17:32:50,416 [INFO] 136°³ÀÇ °îÀ» °¡Á®¿Ô½À´Ï´Ù.
+2025-03-17 17:32:51,714 [INFO] YouTube µ¥ÀÌÅÍ ¾÷µ¥ÀÌÆ® ¿Ï·á!
+2025-03-17 17:32:56,523 [INFO] 127.0.0.1 - - [17/Mar/2025 17:32:56] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:32:56,525 [INFO] BP8Lki6vÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:32:56,526 [INFO] 127.0.0.1 - - [17/Mar/2025 17:32:56] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:32:57,597 [INFO] 127.0.0.1 - - [17/Mar/2025 17:32:57] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:32:58,022 [INFO] 127.0.0.1 - - [17/Mar/2025 17:32:58] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:32:58,025 [INFO] c7KnlD0OÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:32:58,025 [INFO] 127.0.0.1 - - [17/Mar/2025 17:32:58] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:32:59,845 [INFO] 127.0.0.1 - - [17/Mar/2025 17:32:59] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:32:59,847 [INFO] ¸®´õº¸µå ÀúÀå ¿Ï·á!
+2025-03-17 17:32:59,848 [INFO] c7KnlD0OÀÌ(°¡) 0Á¡À¸·Î ¸®´õº¸µå¿¡ µî·ÏµÊ.
+2025-03-17 17:32:59,848 [INFO] 127.0.0.1 - - [17/Mar/2025 17:32:59] "POST /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:33:01,061 [INFO] 127.0.0.1 - - [17/Mar/2025 17:33:01] "GET /api/leaderboard HTTP/1.1" 200 -
+2025-03-17 17:33:16,169 [INFO] 127.0.0.1 - - [17/Mar/2025 17:33:16] "OPTIONS /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:33:16,171 [INFO] Y5Uq7TTVÀÌ(°¡) °ÔÀÓÀ» ½ÃÀÛÇß½À´Ï´Ù.
+2025-03-17 17:33:16,171 [INFO] 127.0.0.1 - - [17/Mar/2025 17:33:16] "GET /api/start_game HTTP/1.1" 200 -
+2025-03-17 17:33:16,830 [INFO] 127.0.0.1 - - [17/Mar/2025 17:33:16] "OPTIONS /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:33:16,833 [INFO] ¸®´õº¸µå ÀúÀå ¿Ï·á!
+2025-03-17 17:33:16,833 [INFO] Y5Uq7TTVÀÌ(°¡) 0Á¡À¸·Î ¸®´õº¸µå¿¡ µî·ÏµÊ.
+2025-03-17 17:33:16,834 [INFO] 127.0.0.1 - - [17/Mar/2025 17:33:16] "POST /api/submit_choice HTTP/1.1" 200 -
+2025-03-17 17:33:17,986 [INFO] 127.0.0.1 - - [17/Mar/2025 17:33:17] "GET /api/leaderboard HTTP/1.1" 200 -

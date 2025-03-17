@@ -116,7 +116,7 @@ def songGetter():
         except Exception as e:
             logging.error(f"YouTube API 업데이트 오류: {e}")
         
-        for username, session in game_sessions:
+        for username, session in list(game_sessions.keys()):
             elapsed_time = round((datetime.now() - datetime.fromisoformat(session["startTime"])).total_seconds(), 1)
             if elapsed_time > 600:
                 del game_sessions[username]

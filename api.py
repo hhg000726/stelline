@@ -137,7 +137,7 @@ def start_game():
         "correct": correct_choice,
         "score": 0,
         "usedSongs": {left["video_id"], right["video_id"]},
-        "startTime": (datetime.now() + timedelta(hours=9)).isoformat()
+        "startTime": (datetime.now()).isoformat()
     }
 
     logging.info(f"{username}이(가) 게임을 시작했습니다.")
@@ -191,7 +191,7 @@ def submit_score(username):
     """사용자의 점수를 리더보드에 저장"""
     data = game_sessions[username]
     final_score = data["score"]
-    elapsed_time = round((datetime.now() - datetime.fromisoformat(data["startTime"]) + timedelta(hours=9)).total_seconds(), 2)
+    elapsed_time = round((datetime.now() - datetime.fromisoformat(data["startTime"])).total_seconds(), 2)
 
     leaderboard.append({"username": username, "score": final_score, "time": elapsed_time})
     leaderboard.sort(key=lambda x: (-x["score"], x["time"]))

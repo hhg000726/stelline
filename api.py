@@ -124,7 +124,7 @@ def songGetter():
         time.sleep(60)
 
 @app.route("/api/start_game", methods=["GET"])
-@limiter.limit("30 per minute")
+@limiter.limit("30 per minute", error_message="요청이 너무 많습니다. 10분 후 다시 시도하세요.")
 def start_game():
     """새로운 게임을 시작"""
     characters = string.ascii_letters + string.digits + string.digits

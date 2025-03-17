@@ -105,14 +105,18 @@
 
   <div id="game" style="display: none;">
     <div class="song" id="left-song">
-      <img id="left-thumbnail" src="">
+      <a id="left-link" href="#" target="_blank">
+        <img id="left-thumbnail" src="">
+      </a>
       <p id="left-title"></p>
       <p id="left-date"></p>
       <button class="guess-btn" onclick="guess('left')">⬅ 왼쪽이 최신!</button>
     </div>
 
     <div class="song" id="right-song">
-      <img id="right-thumbnail" src="">
+      <a id="right-link" href="#" target="_blank">
+        <img id="right-thumbnail" src="">
+      </a>
       <p id="right-title"></p>
       <p id="right-date"></p>
       <button class="guess-btn" onclick="guess('right')">오른쪽이 최신! ➡</button>
@@ -148,8 +152,10 @@
       document.getElementById("score").innerText = "점수: " + window.currentGame.score;
       document.getElementById("left-title").innerText = left.title;
       document.getElementById("left-thumbnail").src = `https://img.youtube.com/vi/${left.video_id}/0.jpg`;
+      document.getElementById("left-link").href = `https://www.youtube.com/watch?v=${left.video_id}`;
       document.getElementById("right-title").innerText = right.title;
       document.getElementById("right-thumbnail").src = `https://img.youtube.com/vi/${right.video_id}/0.jpg`;
+      document.getElementById("right-link").href = `https://www.youtube.com/watch?v=${right.video_id}`;
       document.getElementById("leaderboard").style.display = "none";
     }
 

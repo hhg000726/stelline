@@ -1,9 +1,5 @@
 Flask
 flask_cors
-flask_limiter
-flask_socketio
 python-dotenv
-requests
 gunicorn
 eventlet
-gevent-websocket

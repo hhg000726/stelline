@@ -15,6 +15,11 @@ def load_recent_data():
         try:
             with open(RECENT_DATA_FILE, "r", encoding="utf-8") as f:
                 recent = json.load(f)
+                songs["all_songs"] = []
+                songs["searched_time"] = "아직 첫 검색 안됨"
+                for i in recent:
+                    songs["all_songs"].append({"query": i, "video_id": recent[i][0]})
+
                 logging.info("recent_data.json 로드 완료")
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("recent_data.json 불러오기 실패")
@@ -27,8 +32,8 @@ def load_recent_data():
         logging.info("recent_data.json이 없으므로 즉시 API 검색 시작")
         threading.Thread(target=search_api.search_api_process, daemon=True, args=(songs,)).start()
 
+# 딜레이 시작
 def delayed_search_start():
-    """ 3시간 후에 API 검색을 시작하는 함수 (스레드에서 실행) """
     time.sleep(3 * 3600)  # 3시간 대기
     logging.info("3시간 후 API 검색 시작")
     search_api.search_api_process(songs)
@@ -50,7 +55,6 @@ def get_not_searched():
 
 # recent 데이터를 recent_data.json에 저장
 def save_recent_data():
-    
     try:
         with open(RECENT_DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(recent, f, ensure_ascii=False, indent=4)

@@ -9,31 +9,46 @@
 </head>
 
 <body>
+  <button onclick="location.href='../index.html'">메인으로</button>
 
   <h1>검색 안되는 노래</h1>
+  <h2>(시크릿 모드 기준 3개 이내)</h2>
   <h3 id="last-updated"></h3>
   <table>
-        <thead>
-            <tr>
-                <th></th>
-                <th>검색어</th>
-            </tr>
-        </thead>
-        <tbody id="songTable">
-        </tbody>
-    </table>
-  <button onclick="location.href='../index.html'">🏠 메인으로</button>
+      <thead>
+          <tr>
+              <th></th>
+              <th>검색어</th>
+          </tr>
+      </thead>
+      <tbody id="songTable">
+      </tbody>
+  </table>
   
   <h3>오리지널 곡은 본 채널 뮤비로 봐주세요</h3>
   <h3>기억날 때마다 한 번씩 검색, 조회수 순으로 정렬 후 들어주세요</h3>
   <h3>댓글과 공유까지 한다면 효과가 더 좋다는 말도 있습니다</h3>
   <h3>그리고 한 번 막힌 영상이 계속 막히는 현상이 반복되고 있습니다</h3>
   <h3>한 번 막혔던 영상도 생각날 때 한 번만 부탁드립니다</h3>
+
+  <h1>7일 이내에 막혔던 곡들</h1>
+
+  <table>
+    <thead>
+        <tr>
+            <th></th>
+            <th>검색어</th>
+        </tr>
+    </thead>
+    <tbody id="recentTable">
+    </tbody>
+  </table>
+
   <h1>정상화 방법</h1>
   <div class="method">
     <h2>PC 기준</h2>
   </div>
-  <img src="1.PGN" class="resize-img">
+  <img src="1.PNG" class="resize-img">
   <h3>1. 필터 클릭</h3>  
   <img src="2.PNG" class="resize-img">
   <h3>2. 정렬기준 - 조회수 순 클릭</h3>
@@ -51,7 +66,6 @@
   <h3>3. 정렬기준 - 조회수 순 클릭</h3>
   <img src="4.jpg" class="resize-img">
   <h3>4. 노래 듣기</h3>
-  
   
   <div class="method">
     <h2>검색어 리스트</h2>

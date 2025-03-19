@@ -30,7 +30,7 @@ def search_api():
                 "part": "snippet",
                 "q": query,
                 "type": "video",
-                "maxResults": 10,
+                "maxResults": 3,
                 "key": SEARCH_API_KEYS[i // batch_size]
             }
             try:
@@ -49,16 +49,13 @@ def search_api():
 # 주기적으로 검색 데이터 가져오기
 def search_api_process(all_songs):
     logging.info("주기적 검색 시작됨")
-    search_api_interval = 6 * 3600
+    search_api_interval = 3 * 3600
     while True:
         try:
             new_songs = search_api()
-            if new_songs and new_songs != all_songs:
-                all_songs.clear()
-                all_songs.update(new_songs)
-                logging.info("검색 데이터 업데이트 완료!")
-            else:
-                logging.info("검색 - 새로운 데이터 없음, 기존 데이터를 유지합니다.")
+            all_songs.clear()
+            all_songs.update(new_songs)
+            logging.info("검색 데이터 업데이트 완료!")
         except Exception as e:
             logging.error(f"검색 업데이트 오류: {e}")
         

@@ -141,7 +141,7 @@ async function fetchSongs() {
         const response = await fetch('https://stelline.site/api/search/not_searched'); // 실제 API 엔드포인트로 변경 필요
         const data = await response.json();
         document.getElementById("last-updated").innerText = "마지막으로 검색된 시간: " + new Date(data.searched_time * 1000).toLocaleString()
-        populateTable(data.all_songs);
+        populateTable(data.all_songs, data.recent);
     } catch (error) {
         console.error('Error fetching songs:', error);
     }
@@ -171,7 +171,7 @@ function shuffleArray(array) {
     }
 }
 
-function populateTable(songs) {
+function populateTable(songs, recent) {
     shuffleArray(songs);
     const tableBody = document.getElementById("songTable");
     tableBody.innerHTML = ""; // 기존 데이터 제거
@@ -198,6 +198,34 @@ function populateTable(songs) {
         row.appendChild(queryCell);
 
         tableBody.appendChild(row);
+    });
+
+    shuffleArray(recent);
+    const tableBody2 = document.getElementById("recentTable");
+    tableBody2.innerHTML = ""; // 기존 데이터 제거
+    recent.forEach(song => {
+        const row = document.createElement("tr");
+
+        const thumbnailCell = document.createElement("td");
+        const img = document.createElement("img");
+        img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
+        thumbnailCell.appendChild(img);
+        row.appendChild(thumbnailCell);
+
+        const queryCell = document.createElement("td");
+        queryCell.textContent = song.query;
+
+        const button = document.createElement("button");
+        button.textContent = "복사 & 이동";
+        button.onclick = () => {
+            navigator.clipboard.writeText(song.query).then(() => {
+                window.location.href = "https://www.youtube.com/";
+            });
+        };
+        queryCell.appendChild(button);
+        row.appendChild(queryCell);
+
+        tableBody2.appendChild(row);
     });
 }
 

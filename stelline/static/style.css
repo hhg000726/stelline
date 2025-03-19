@@ -65,6 +65,7 @@ button {
 
 table {
   width: 50%;
+  min-width: 400px;
   margin: 0 auto;
   border-collapse: collapse;
   background: #333;

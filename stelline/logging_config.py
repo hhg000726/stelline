@@ -21,10 +21,19 @@ def create_log_handler(filename, level):
     return handler
 
 def setup_logging():
+    # 최상위 로거 가져오기
+    logger = logging.getLogger()
+    logger.handlers.clear()
+        
     # 개별 로그 핸들러 설정
     info_handler = create_log_handler("app_info.log", logging.INFO)
     warning_handler = create_log_handler("app_warning.log", logging.WARNING)
     error_handler = create_log_handler("app_error.log", logging.ERROR)
 
-    # 최종 로거 설정
-    logging.basicConfig(level=logging.INFO, handlers=[info_handler, warning_handler, error_handler])
+    # 핸들러 추가
+    logger.addHandler(info_handler)
+    logger.addHandler(warning_handler)
+    logger.addHandler(error_handler)
+
+     # 로깅 레벨 설정
+    logger.setLevel(logging.INFO)

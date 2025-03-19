@@ -1,5 +1,5 @@
-from config import *
-import logging, requests
+from stelline.config import *
+import logging, requests, time
 
 def get_songs():
     logging.info("유튜브 API에서 곡 목록을 가져오는 중...")
@@ -45,7 +45,23 @@ def get_songs():
                     if song["video_id"] == video_id:
                         song["date"] = published_at
 
-        return songs
+        return {"all_songs": songs}
     except Exception as e:
         logging.error(f"YouTube API에서 곡을 가져오는 중 오류 발생: {e}")
         return []
+    
+# 주기적으로 유튜브 데이터 가져오기
+def youtube_api_process(all_songs):
+    while True:
+        try:
+            new_songs = get_songs()
+            if new_songs and new_songs != all_songs:
+                all_songs.clear()
+                all_songs.update(new_songs)
+                logging.info("YouTube 데이터 업데이트 완료!")
+            else:
+                logging.info("새로운 데이터 없음, 기존 데이터를 유지합니다.")
+        except Exception as e:
+            logging.error(f"YouTube API 업데이트 오류: {e}")
+        
+        time.sleep(API_CHECK_INTERVAL)

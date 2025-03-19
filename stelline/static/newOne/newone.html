@@ -1,0 +1,49 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>최신 곡 고르기</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+
+<body>
+
+  <h1>최신 곡 고르기</h1>
+  <div id="dashboard">
+    <button id="start-btn" onclick="startGame()">게임 시작</button>
+    <p id="score" style="display: none;"></p>
+  </div>
+  <div id="leaderboard" style="display: none;"></div>
+
+  <div id="game" style="display: none;">
+    <div class="song" id="left-song">
+      <a id="left-link" href="#" target="_blank">
+        <img id="left-thumbnail" src="">
+      </a>
+      <p id="left-title"></p>
+      <p id="left-date"></p>
+      <button class="guess-btn" onclick="guess('left')">왼쪽이 최신!</button>
+    </div>
+
+    <div class="song" id="right-song">
+      <a id="right-link" href="#" target="_blank">
+        <img id="right-thumbnail" src="">
+      </a>
+      <p id="right-title"></p>
+      <p id="right-date"></p>
+      <button class="guess-btn" onclick="guess('right')">오른쪽이 최신!</button>
+    </div>    
+  </div>
+
+  <div id="main-btn">
+    <button onclick="location.href='../index.html'">🏠 메인으로</button>
+  </div>
+
+  <script src="newOneScript.js"></script>
+
+</body>
+
+</html>

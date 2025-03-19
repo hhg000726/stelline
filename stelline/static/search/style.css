@@ -1,0 +1,107 @@
+body {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background-color: #282c36;
+  color: white;
+}
+
+h1 {
+  margin-top: 20px;
+}
+
+#dashboard {
+  margin-bottom: 20px;
+}
+
+#game {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 50px;
+  margin-top: 20px;
+}
+
+.song {
+  width: 300px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #444;
+}
+
+img {
+  width: 100%;
+  border-radius: 10px;
+}
+
+button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+#start-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.guess-btn {
+  width: 150px;
+  background-color: #2196F3;
+  color: white;
+}
+
+#score {
+  margin-top: 20px;
+  font-size: 20px;
+}
+
+#leaderboard {
+  display: none;
+  margin-top: 20px;
+}
+
+table {
+  width: 80%;
+  max-width: 400px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background: #333;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+th,
+td {
+  border: 1px solid #555;
+  padding: 10px;
+  text-align: center;
+}
+
+th {
+  background: #555;
+}
+
+ul {
+  list-style: none; /* 점 제거 */
+  padding: 0;
+}
+
+.resize-img {
+  width: 80%;
+  max-width: 500px;
+}
+
+.method {
+  width: 80%;
+  max-width: 600px;
+  display: flex;
+  justify-content: center;
+  justify-self: center;
+  outline-color: aliceblue;
+  outline-offset: 1px;
+  outline-color: aliceblue;
+  outline-style:groove
+}

@@ -50,7 +50,6 @@ def get_not_searched():
     for song in new_songs:
         recent[song["query"]] = [song["video_id"], now]
     for song in list(recent.keys()):
-        logging.info(f"{recent[song][1]}")
         if recent[song][1] + 604800 < time.time():
             del recent[song]
     save_recent_data()

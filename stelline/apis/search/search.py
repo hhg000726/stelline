@@ -12,6 +12,7 @@ First = True
 #최근 데이터 불러오기
 def load_recent_data():
     global recent
+    global First
     if os.path.exists(RECENT_DATA_FILE):  # 파일이 존재하면 불러오고 3시간 대기 후 실행
         try:
             with open(RECENT_DATA_FILE, "r", encoding="utf-8") as f:
@@ -30,12 +31,15 @@ def load_recent_data():
         threading.Thread(target=delayed_search_start, daemon=True).start()
 
     else:  # 파일이 없으면 즉시 실행
+        First = False
         logging.info("recent_data.json이 없으므로 즉시 API 검색 시작")
         threading.Thread(target=search_api.search_api_process, daemon=True, args=(songs,)).start()
 
 # 딜레이 시작
 def delayed_search_start():
+    global First
     time.sleep(3 * 3600)  # 3시간 대기
+    First = False
     logging.info("3시간 후 API 검색 시작")
     search_api.search_api_process(songs)
 
@@ -54,7 +58,6 @@ def get_not_searched():
             del recent[song]
     save_recent_data()
     if First:
-        First = False
         now = "아직 첫 검색 안됨"
     return jsonify({"all_songs": new_songs, "searched_time": now, "recent": recent})
 

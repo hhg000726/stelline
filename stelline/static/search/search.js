@@ -145,7 +145,12 @@ async function fetchSongs() {
             video_id: values[0], // 첫 번째 값이 video_id
             timestamp: values[1]  // 두 번째 값이 timestamp
         }));
-        document.getElementById("last-updated").innerText = "마지막으로 검색된 시간: " + new Date(data.searched_time * 1000).toLocaleString()
+        if (typeof(data.searched_time) === String) {
+            document.getElementById("last-updated").innerText = data.searched_time
+        }
+        else {
+            document.getElementById("last-updated").innerText = "마지막으로 검색된 시간: " + new Date(data.searched_time * 1000).toLocaleString()
+        }
         populateTable(data.all_songs, recentArray);
     } catch (error) {
         console.error('Error fetching songs:', error);

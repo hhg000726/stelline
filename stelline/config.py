@@ -6,9 +6,10 @@ load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 PLAYLIST_ID = os.getenv("PLAYLIST_ID")
-LEADERBOARD_FILE = os.getenv("LEADERBOARD_FILE", "leaderboard.json")
+LEADERBOARD_FILE = os.getenv("LEADERBOARD_FILE")
 SEARCH_API_KEYS = os.getenv("SEARCH_API_KEYS").split(',')
-SONG_INFOS_FILE = os.getenv("SONG_INFOS_FILE", "song_infos.json")
+SONG_INFOS_FILE = os.getenv("SONG_INFOS_FILE")
+RECENT_DATA_FILE = os.getenv("RECENT_DATA_FILE")
 
 # 서버 설정
 HOST = "0.0.0.0"

@@ -7,6 +7,7 @@ from stelline.config import *
 songs = {}
 recent = {}
 search_api.load_song_infos(SONG_INFOS_FILE)
+First = True
 
 #최근 데이터 불러오기
 def load_recent_data():
@@ -16,7 +17,7 @@ def load_recent_data():
             with open(RECENT_DATA_FILE, "r", encoding="utf-8") as f:
                 recent = json.load(f)
                 songs["all_songs"] = []
-                songs["searched_time"] = "아직 첫 검색 안됨"
+                songs["searched_time"] = time.time()
                 for i in recent:
                     songs["all_songs"].append({"query": i, "video_id": recent[i][0]})
 
@@ -43,14 +44,19 @@ load_recent_data()
 
 # 내 api
 def get_not_searched():
+    global First
     new_songs = songs["all_songs"]
     now = songs["searched_time"]
     for song in new_songs:
         recent[song["query"]] = [song["video_id"], now]
     for song in list(recent.keys()):
+        logging.info(f"{recent[song][1]}")
         if recent[song][1] + 604800 < time.time():
             del recent[song]
     save_recent_data()
+    if First:
+        First = False
+        now = "아직 첫 검색 안됨"
     return jsonify({"all_songs": new_songs, "searched_time": now, "recent": recent})
 
 # recent 데이터를 recent_data.json에 저장

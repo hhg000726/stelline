@@ -140,8 +140,13 @@ async function fetchSongs() {
     try {
         const response = await fetch('https://stelline.site/api/search/not_searched'); // 실제 API 엔드포인트로 변경 필요
         const data = await response.json();
+        const recentArray = Object.entries(data.recent).map(([query, values]) => ({
+            query: query,
+            video_id: values[0], // 첫 번째 값이 video_id
+            timestamp: values[1]  // 두 번째 값이 timestamp
+        }));
         document.getElementById("last-updated").innerText = "마지막으로 검색된 시간: " + new Date(data.searched_time * 1000).toLocaleString()
-        populateTable(data.all_songs, data.recent);
+        populateTable(data.all_songs, recentArray);
     } catch (error) {
         console.error('Error fetching songs:', error);
     }

@@ -145,7 +145,7 @@ async function fetchSongs() {
             video_id: values[0], // 첫 번째 값이 video_id
             timestamp: values[1]  // 두 번째 값이 timestamp
         }));
-        if (typeof(data.searched_time) === String) {
+        if (typeof(data.searched_time) === "string") {
             document.getElementById("last-updated").innerText = data.searched_time
         }
         else {

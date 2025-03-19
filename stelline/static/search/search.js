@@ -138,7 +138,7 @@ const queries = [
 
 async function fetchSongs() {
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/search/not_searched'); // 실제 API 엔드포인트로 변경 필요
+        const response = await fetch('https://stelline.site/api/search/not_searched'); // 실제 API 엔드포인트로 변경 필요
         const data = await response.json();
         document.getElementById("last-updated").innerText = "마지막으로 검색된 시간: " + new Date(data.searched_time * 1000).toLocaleString()
         populateTable(data.all_songs);

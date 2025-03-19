@@ -8,8 +8,6 @@ setup_logging()
 
 from stelline.apis import api_bp  # 여러 개의 API 블루프린트를 포함하는 Blueprint
 
-
-
 # ✅ 기존 핸들러 유지 (Flask가 덮어쓰지 않도록 설정)
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)

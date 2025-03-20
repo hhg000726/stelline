@@ -72,6 +72,7 @@ def bugs_api_process(recent_data):
                 if new_data and new_data != recent_data.get(name):
                     recent_data[name] = new_data
                     recent_data[name]["title"] = title
+                    recent_data[name]["url_number"] = url_number
                     logging.info(f"벅스 {name} {title} 데이터 업데이트 완료!")
                 else:
                     logging.info(f"벅스 {name} 새로운 데이터 없음, 기존 데이터를 유지")

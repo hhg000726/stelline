@@ -183,51 +183,35 @@ function shuffleArray(array) {
 
 function populateTable(songs, recent) {
     shuffleArray(songs);
-    const tableBody = document.getElementById("songTable");
-    tableBody.innerHTML = ""; // 기존 데이터 제거
-    songs.forEach(song => {
-        const row = document.createElement("tr");
-
-        const thumbnailCell = document.createElement("td");
-        const img = document.createElement("img");
-        img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
-        thumbnailCell.appendChild(img);
-        row.appendChild(thumbnailCell);
-
-        const queryCell = document.createElement("td");
-        queryCell.textContent = song.query;
-
-        const button = document.createElement("button");
-        button.textContent = "복사 & 이동";
-        button.onclick = () => handleButtonClick(song.query);
-        queryCell.appendChild(button);
-        row.appendChild(queryCell);
-
-        tableBody.appendChild(row);
-    });
-
     shuffleArray(recent);
-    const tableBody2 = document.getElementById("recentTable");
-    tableBody2.innerHTML = ""; // 기존 데이터 제거
-    recent.forEach(song => {
-        const row = document.createElement("tr");
+    
+    renderTable(songs, "songTable");
+    renderTable(recent, "recentTable");
+}
 
+function renderTable(data, tableId) {
+    const tableBody = document.getElementById(tableId);
+    tableBody.innerHTML = ""; // 기존 데이터 제거
+    
+    data.forEach(song => {
+        const row = document.createElement("tr");
+        
         const thumbnailCell = document.createElement("td");
         const img = document.createElement("img");
         img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
         thumbnailCell.appendChild(img);
         row.appendChild(thumbnailCell);
-
+        
         const queryCell = document.createElement("td");
         queryCell.textContent = song.query;
-
+        
         const button = document.createElement("button");
         button.textContent = "복사 & 이동";
         button.onclick = () => handleButtonClick(song.query);
         queryCell.appendChild(button);
         row.appendChild(queryCell);
-
-        tableBody2.appendChild(row);
+        
+        tableBody.appendChild(row);
     });
 }
 

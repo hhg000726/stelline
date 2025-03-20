@@ -31,7 +31,7 @@ def load_recent_data():
         now = time.time()
         delay = max(0, searched_time + 3 * 3600 - now)
         formatted_searched_time = time.strftime("%H:%M:%S", time.localtime(searched_time))
-        h, remainder = divmod(delay, 3600)  # 시, 나머지 초
+        h, remainder = divmod(int(delay), 3600)  # 시, 나머지 초
         m, s = divmod(remainder, 60)
         formatted_delay = f"{h}:{m:02}:{s:02}"
         # 대기 후 API 시작

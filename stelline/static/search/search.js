@@ -232,9 +232,9 @@ function populateTable(songs, recent) {
 }
 
 function handleButtonClick(query) {
-    // 🔥 API 요청
+    // API 요청
     fetch("https://stelline.site/api/search/record", {
-        method: "POST",
+        method: "GET",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: query })
     }).then(response => {
@@ -243,7 +243,7 @@ function handleButtonClick(query) {
         }
     }).catch(error => console.error("API 요청 중 오류 발생:", error));
 
-    // 🔥 클립보드 복사 + 유튜브 이동
+    // 클립보드 복사 + 유튜브 이동
     navigator.clipboard.writeText(query).then(() => {
         window.location.href = "https://www.youtube.com/";
     });

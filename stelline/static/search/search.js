@@ -236,10 +236,6 @@ function handleButtonClick(query) {
     fetch("https://stelline.site/api/search/record", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
-    }).then(response => {
-        if (!response.ok) {
-            console.error("API 요청 실패:", response.statusText);
-        }
     }).catch(error => console.error("API 요청 중 오류 발생:", error));
 
     // 클립보드 복사 + 유튜브 이동

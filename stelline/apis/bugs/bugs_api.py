@@ -73,6 +73,6 @@ def bugs_api_process(recent_data):
                 recent_data[name]["title"] = title
                 recent_data[name]["url_number"] = url_number
             except Exception as e:
-                logging.error(f"YouTube API 업데이트 오류: {e}")
+                logging.error(f"bugs 데이터 업데이트 오류: {e}")
         
         time.sleep(API_CHECK_INTERVAL)

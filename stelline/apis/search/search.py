@@ -51,9 +51,6 @@ load_recent_data()
 
 # 내 api
 def get_not_searched():
-    global First
-    if First:
-        songs["searched_time"] = "아직 첫 검색 안됨"
     return jsonify({"all_songs": songs["all_songs"], "searched_time": songs["searched_time"], "recent": recent})
 
 # record 로드

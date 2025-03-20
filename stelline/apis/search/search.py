@@ -31,7 +31,9 @@ def load_recent_data():
         now = time.time()
         delay = max(0, searched_time + 3 * 3600 - now)
         formatted_searched_time = time.strftime("%H:%M:%S", time.localtime(searched_time))
-        formatted_delay = time.strftime("%H:%M:%S", time.localtime(delay))
+        h, remainder = divmod(delay, 3600)  # 시, 나머지 초
+        m, s = divmod(remainder, 60)
+        formatted_delay = f"{h}:{m:02}:{s:02}"
         # 대기 후 API 시작
         logging.info(f"{formatted_searched_time}에 RECENT_DATA_FILE이 있으므로, 첫 검색을 {formatted_delay}만큼 지연..")
         threading.Thread(target=delayed_search_start, daemon=True, args = (delay, )).start()

@@ -60,7 +60,6 @@ def load_record():
     if os.path.exists(RECORD_FILE):
         try:
             with open(RECORD_FILE, "r", encoding="utf-8") as f:
-                logging.info("record.json 불러오기 성공")
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("record.json 불러오기 실패. 기본값으로 설정")
@@ -73,7 +72,6 @@ def save_record(record):
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(record, f, ensure_ascii=False, indent=4)
         os.replace(temp_file, RECORD_FILE)
-        logging.info(f"record.json 업데이트 완료! 총 복사 수: {record['copy_count']}")
     except Exception as e:
         logging.error(f"record.json 저장 오류: {e}")
         if os.path.exists(temp_file):

@@ -20,7 +20,6 @@ def save_leaderboard():
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(leaderboard, f, ensure_ascii=False, indent=4)
         os.replace(temp_file, LEADERBOARD_FILE)
-        logging.info("리더보드 저장 완료!")
     except Exception as e:
         logging.error(f"리더보드 저장 중 오류 발생: {e}")
         if os.path.exists(temp_file):
@@ -43,7 +42,6 @@ def save_record(record):
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(record, f, ensure_ascii=False, indent=4)
         os.replace(temp_file, RECORD_FILE)
-        logging.info(f"record.json 업데이트 완료! 총 플레이 수: {record['total_plays']}, 총 플레이 시간: {record['total_play_time']}초")
     except Exception as e:
         logging.error(f"record.json 저장 오류: {e}")
         if os.path.exists(temp_file):

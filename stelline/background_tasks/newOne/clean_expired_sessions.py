@@ -5,7 +5,6 @@ from stelline.config import SESSION_CHECK_INTERVAL
 # 주기적으로 세션 정리
 def clean_expired_sessions_process(game_sessions):
     while True:
-        logging.info("세션 만료 확인 중")
         expired_users = []
         for user, session in game_sessions.items():
             if session["last_request"] + 300 <= time.time():

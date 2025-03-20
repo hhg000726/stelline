@@ -2,7 +2,6 @@ from stelline.config import *
 import logging, requests, time
 
 def get_songs():
-    logging.info("유튜브 API에서 곡 목록을 가져오는 중...")
     URL = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={PLAYLIST_ID}&maxResults={MAX_RESULTS}&key={API_KEY}"
     songs = []
     video_ids = []
@@ -29,8 +28,6 @@ def get_songs():
             next_page_token = data.get("nextPageToken")
             if not next_page_token:
                 break
-
-        logging.info(f"{len(songs)}개의 곡을 가져왔습니다.")
 
         for i in range(0, len(video_ids), MAX_RESULTS):
             video_id_str = ",".join(video_ids[i:i + MAX_RESULTS])
@@ -59,8 +56,6 @@ def youtube_api_process(all_songs):
                 all_songs.clear()
                 all_songs.update(new_songs)
                 logging.info("YouTube 데이터 업데이트 완료!")
-            else:
-                logging.info("새로운 데이터 없음, 기존 데이터를 유지합니다.")
         except Exception as e:
             logging.error(f"YouTube API 업데이트 오류: {e}")
         

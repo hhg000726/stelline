@@ -12,7 +12,7 @@ SONG_INFOS_FILE = os.getenv("SONG_INFOS_FILE")
 SONGS_DATA_FILE = os.getenv("SONGS_DATA_FILE")
 RECENT_DATA_FILE = os.getenv("RECENT_DATA_FILE")
 RECORD_FILE = os.getenv("RECORD_FILE")
-print(RECORD_FILE)
+TARGETS_FILE = os.getenv("TARGETS_FILE")
 
 # 서버 설정
 HOST = "0.0.0.0"

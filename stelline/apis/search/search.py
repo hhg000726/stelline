@@ -85,4 +85,4 @@ def record_search():
     record["copy_count"] += 1  # 플레이 횟수 증가
     save_record(record)  # 저장
     logging.info(f"record.json 업데이트 완료! (총 플레이 수: {record['total_plays']}, 총 플레이 시간: {record['total_play_time']}초)")
-    return
+    return '', 204

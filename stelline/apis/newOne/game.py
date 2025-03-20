@@ -8,7 +8,7 @@ from . import leaderboard
 
 game_sessions = {}
 songs = {}
-leaderboard.load_leaderboard(LEADERBOARD_FILE)
+leaderboard.load_leaderboard()
 thread = False
 
 # 게임 시작 API
@@ -60,7 +60,7 @@ def submit_choice(data):
         # 끝에 도달한 경우
         if not session_data["unused_songs"]:
             message = "끝!"
-            leaderboard.submit_score(username, session_data["score"], elapsed_time, LEADERBOARD_FILE)
+            leaderboard.submit_score(username, session_data["score"], elapsed_time)
             del game_sessions[username]
             logging.info(f"{username}이(가) 게임을 끝까지 했습니다. 점수: {session_data['score']}, 현재 유저 수: {len(game_sessions)}")
             return jsonify({"message": message, "username": username, "score": session_data["score"], "elapsed_time": elapsed_time})
@@ -77,7 +77,7 @@ def submit_choice(data):
     # 오답일 때
     else:
         message = "오답!\n코드: " + username + "\n왼쪽: " + session_data["left"]["date"].split("T")[0] + "\n오른쪽: " + session_data["right"]["date"].split("T")[0]
-        leaderboard.submit_score(username, session_data["score"], elapsed_time, LEADERBOARD_FILE)
+        leaderboard.submit_score(username, session_data["score"], elapsed_time)
         del game_sessions[username]
         logging.info(f"{username}이(가) 오답으로 게임을 종료했습니다. 점수: {session_data['score']}, 현재 유저 수: {len(game_sessions)}")
 

@@ -55,3 +55,34 @@ def get_not_searched():
     if First:
         songs["searched_time"] = "아직 첫 검색 안됨"
     return jsonify({"all_songs": songs["all_songs"], "searched_time": songs["searched_time"], "recent": recent})
+
+# record 로드
+def load_record():
+    if os.path.exists(RECORD_FILE):
+        try:
+            with open(RECORD_FILE, "r", encoding="utf-8") as f:
+                logging.info("record.json 불러오기 성공")
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            logging.error("record.json 불러오기 실패. 기본값으로 설정")
+    return {"total_plays": 0, "total_play_time": 0.0, "copy_count": 0}
+
+# record 저장
+def save_record(record):
+    try:
+        temp_file = RECORD_FILE + ".tmp"
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(record, f, ensure_ascii=False, indent=4)
+        os.replace(temp_file, RECORD_FILE)
+        logging.info("record.json 저장 완료!")
+    except Exception as e:
+        logging.error(f"record.json 저장 오류: {e}")
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+
+def record_search():
+    record = load_record()
+    record["copy_count"] += 1  # 플레이 횟수 증가
+    save_record(record)  # 저장
+    logging.info(f"record.json 업데이트 완료! (총 플레이 수: {record['total_plays']}, 총 플레이 시간: {record['total_play_time']}초)")
+    return

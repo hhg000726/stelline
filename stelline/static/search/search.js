@@ -199,11 +199,7 @@ function populateTable(songs, recent) {
 
         const button = document.createElement("button");
         button.textContent = "복사 & 이동";
-        button.onclick = () => {
-            navigator.clipboard.writeText(song.query).then(() => {
-                window.location.href = "https://www.youtube.com/";
-            });
-        };
+        button.onclick = () => handleButtonClick(song.query);
         queryCell.appendChild(button);
         row.appendChild(queryCell);
 
@@ -227,15 +223,29 @@ function populateTable(songs, recent) {
 
         const button = document.createElement("button");
         button.textContent = "복사 & 이동";
-        button.onclick = () => {
-            navigator.clipboard.writeText(song.query).then(() => {
-                window.location.href = "https://www.youtube.com/";
-            });
-        };
+        button.onclick = () => handleButtonClick(song.query);
         queryCell.appendChild(button);
         row.appendChild(queryCell);
 
         tableBody2.appendChild(row);
+    });
+}
+
+function handleButtonClick(query) {
+    // 🔥 API 요청
+    fetch("https://stelline.site/api/search/record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: query })
+    }).then(response => {
+        if (!response.ok) {
+            console.error("API 요청 실패:", response.statusText);
+        }
+    }).catch(error => console.error("API 요청 중 오류 발생:", error));
+
+    // 🔥 클립보드 복사 + 유튜브 이동
+    navigator.clipboard.writeText(query).then(() => {
+        window.location.href = "https://www.youtube.com/";
     });
 }
 

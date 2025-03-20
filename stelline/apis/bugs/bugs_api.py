@@ -72,7 +72,6 @@ def bugs_api_process(recent_data):
                 recent_data[name] = new_data
                 recent_data[name]["title"] = title
                 recent_data[name]["url_number"] = url_number
-                logging.info(f"벅스 {name} {title} 데이터 업데이트 완료!")
             except Exception as e:
                 logging.error(f"YouTube API 업데이트 오류: {e}")
         

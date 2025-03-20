@@ -138,7 +138,7 @@ const queries = [
 
 async function fetchSongs() {
     try {
-        const response = await fetch('https://stelline.site/api/search/not_searched'); // 실제 API 엔드포인트로 변경 필요
+        const response = await fetch('https://stelline.site/api/search/not_searched');
         const data = await response.json();
         const recentArray = Object.entries(data.recent).map(([query, values]) => ({
             query: query,

@@ -43,7 +43,7 @@ def save_record(record):
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(record, f, ensure_ascii=False, indent=4)
         os.replace(temp_file, RECORD_FILE)
-        logging.info("record.json 저장 완료!")
+        logging.info(f"record.json 업데이트 완료! 총 플레이 수: {record['total_plays']}, 총 플레이 시간: {record['total_play_time']}초")
     except Exception as e:
         logging.error(f"record.json 저장 오류: {e}")
         if os.path.exists(temp_file):
@@ -62,4 +62,4 @@ def submit_score(username, score, elapsed_time):
     record["total_plays"] += 1  # 플레이 횟수 증가
     record["total_play_time"] += elapsed_time  # 플레이 시간 증가
     save_record(record)  # 저장
-    logging.info(f"record.json 업데이트 완료! (총 플레이 수: {record['total_plays']}, 총 플레이 시간: {record['total_play_time']}초)")
+    

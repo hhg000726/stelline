@@ -66,7 +66,7 @@ def save_record(record):
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(record, f, ensure_ascii=False, indent=4)
         os.replace(temp_file, RECORD_FILE)
-        logging.info("record.json 저장 완료!")
+        logging.info(f"record.json 업데이트 완료! 총 복사 수: {record['copy_count']}")
     except Exception as e:
         logging.error(f"record.json 저장 오류: {e}")
         if os.path.exists(temp_file):
@@ -76,5 +76,5 @@ def record_search():
     record = load_record()
     record["copy_count"] += 1  # 플레이 횟수 증가
     save_record(record)  # 저장
-    logging.info(f"record.json 업데이트 완료! (총 플레이 수: {record['total_plays']}, 총 플레이 시간: {record['total_play_time']}초)")
+    
     return '', 204

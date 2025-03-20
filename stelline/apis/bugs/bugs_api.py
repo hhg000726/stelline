@@ -65,12 +65,14 @@ def bugs_api_process(recent_data):
         targets = load_targets()
         for target in targets:
             name = target["name"]
+            title = target["title"]
             url_number = target["url_number"]
             try:
                 new_data = bugs_api(name, url_number)
                 if new_data and new_data != recent_data.get(name):
                     recent_data[name] = new_data
-                    logging.info(f"벅스 {name} 데이터 업데이트 완료!")
+                    recent_data[name]["title"] = title
+                    logging.info(f"벅스 {name} {title} 데이터 업데이트 완료!")
                 else:
                     logging.info(f"벅스 {name} 새로운 데이터 없음, 기존 데이터를 유지")
             except Exception as e:

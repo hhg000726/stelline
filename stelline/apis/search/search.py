@@ -11,6 +11,7 @@ First = True
 
 #최근 데이터 불러오기
 def load_recent_data():
+    global songs
     global recent
     global First
     if os.path.exists(SONGS_DATA_FILE):  # 파일이 존재하면 불러오기

@@ -51,12 +51,9 @@ def bugs_api(name, url_number):
 
 # targets 로드
 def load_targets():
-    logging.info("hihi")
     if os.path.exists(TARGETS_FILE):
-        logging.info("hihihi")
         try:
             with open(TARGETS_FILE, "r", encoding="utf-8") as f:
-                logging.info("hihihihi")
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("TARGETS_FILE 불러오기 실패")
@@ -66,8 +63,6 @@ def load_targets():
 def bugs_api_process(recent_data):
     while True:
         targets = load_targets()
-        logging.info("hi")
-        logging.info(targets)
         for target in targets:
             name = target["name"]
             title = target["title"]

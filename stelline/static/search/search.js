@@ -235,8 +235,7 @@ function handleButtonClick(query) {
     // API 요청
     fetch("https://stelline.site/api/search/record", {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: query })
+        headers: { "Content-Type": "application/json" }
     }).then(response => {
         if (!response.ok) {
             console.error("API 요청 실패:", response.statusText);

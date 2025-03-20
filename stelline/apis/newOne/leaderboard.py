@@ -59,5 +59,5 @@ def submit_score(username, score, elapsed_time):
     record = load_record()
     record["total_plays"] += 1  # 플레이 횟수 증가
     record["total_play_time"] += elapsed_time  # 플레이 시간 증가
-    save_record(record)  # 저장
+    save_record(record)
     

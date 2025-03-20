@@ -9,6 +9,7 @@ PLAYLIST_ID = os.getenv("PLAYLIST_ID")
 LEADERBOARD_FILE = os.getenv("LEADERBOARD_FILE")
 SEARCH_API_KEYS = os.getenv("SEARCH_API_KEYS").split(',')
 SONG_INFOS_FILE = os.getenv("SONG_INFOS_FILE")
+SONGS_DATA_FILE = os.getenv("SONGS_DATA_FILE")
 RECENT_DATA_FILE = os.getenv("RECENT_DATA_FILE")
 
 # 서버 설정

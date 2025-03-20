@@ -21,6 +21,8 @@ def save_leaderboard(LEADERBOARD_FILE):
         logging.info("리더보드 저장 완료!")
     except Exception as e:
         logging.error(f"리더보드 저장 중 오류 발생: {e}")
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
 
 # 점수 기록
 def submit_score(username, score, elapsed_time, LEADERBOARD_FILE):

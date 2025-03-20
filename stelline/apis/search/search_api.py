@@ -47,16 +47,48 @@ def search_api():
     return {"all_songs": not_searched, "searched_time": time.time()}
 
 # 주기적으로 검색 데이터 가져오기
-def search_api_process(all_songs):
+def search_api_process(songs, recent):
     logging.info("주기적 검색 시작됨")
     search_api_interval = 3 * 3600
     while True:
         try:
             new_songs = search_api()
-            all_songs.clear()
-            all_songs.update(new_songs)
+            songs.clear()
+            songs.update(new_songs)
+
+            now = songs["searched_time"]
+            for song in songs["all_songs"]:
+                recent[song["query"]] = [song["video_id"], now]
+            for song in list(recent.keys()):
+                if recent[song][1] + 604800 < time.time():
+                    del recent[song]
+            save_data(songs, recent)
+
             logging.info("검색 데이터 업데이트 완료!")
         except Exception as e:
             logging.error(f"검색 업데이트 오류: {e}")
         
         time.sleep(search_api_interval)
+
+# songs, recent 데이터를 저장
+def save_data(songs, recent):
+    try:
+        songs_temp_file = SONGS_DATA_FILE + ".tmp"
+        with open(songs_temp_file, "w", encoding="utf-8") as f:
+            json.dump(songs, f, ensure_ascii=False, indent=4)
+        os.replace(songs_temp_file, SONGS_DATA_FILE)
+        logging.info("SONGS_DATA_FILE 저장 완료")
+    except Exception as e:
+        logging.error(f"SONGS_DATA_FILE 저장 오류: {e}")
+        if os.path.exists(songs_temp_file):
+            os.remove(songs_temp_file)
+    try:
+        recent_temp_file = RECENT_DATA_FILE + ".tmp"
+        with open(recent_temp_file, "w", encoding="utf-8") as f:
+            json.dump(recent, f, ensure_ascii=False, indent=4)
+        os.replace(recent_temp_file, RECENT_DATA_FILE)
+        logging.info("RECENT_DATA_FILE 저장 완료")
+    except Exception as e:
+        logging.error(f"RECENT_DATA_FILE 저장 오류: {e}")
+        if os.path.exists(recent_temp_file):
+            os.remove(recent_temp_file)

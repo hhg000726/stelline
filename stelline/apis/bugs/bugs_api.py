@@ -30,19 +30,19 @@ def bugs_api(name, url_number):
         diffs = {}
 
         if rank > 1:
-            diffs["count_diff"] = counts[rank - 2] - counts[rank - 1]
-            diffs["count_to_first"] = counts[0] - counts[rank - 1]
+            diffs["count_diff"] = round(counts[rank - 2] - counts[rank - 1], 2)
+            diffs["count_to_first"] = round(counts[0] - counts[rank - 1], 2)
 
         if rank > 2:
-            diffs["count_to_second"] = counts[1] - counts[rank - 1]
+            diffs["count_to_second"] = round(counts[1] - counts[rank - 1], 2)
 
         if streamings:            
             if rank > 1:
-                diffs["streaming_diff"] = streamings[rank - 2] - streamings[rank - 1]
-                diffs["streaming_to_first"] = streamings[0] - streamings[rank - 1]
+                diffs["streaming_diff"] = round(streamings[rank - 2] - streamings[rank - 1], 2)
+                diffs["streaming_to_first"] = round(streamings[0] - streamings[rank - 1], 2)
 
             if rank > 2:
-                diffs["streaming_to_second"] = streamings[1] - streamings[rank - 1]
+                diffs["streaming_to_second"] = round(streamings[1] - streamings[rank - 1], 2)
         
         return {"rank": rank, "message": message, "diffs": diffs}
 
@@ -69,13 +69,10 @@ def bugs_api_process(recent_data):
             url_number = target["url_number"]
             try:
                 new_data = bugs_api(name, url_number)
-                if new_data and new_data != recent_data.get(name):
-                    recent_data[name] = new_data
-                    recent_data[name]["title"] = title
-                    recent_data[name]["url_number"] = url_number
-                    logging.info(f"벅스 {name} {title} 데이터 업데이트 완료!")
-                else:
-                    logging.info(f"벅스 {name} 새로운 데이터 없음, 기존 데이터를 유지")
+                recent_data[name] = new_data
+                recent_data[name]["title"] = title
+                recent_data[name]["url_number"] = url_number
+                logging.info(f"벅스 {name} {title} 데이터 업데이트 완료!")
             except Exception as e:
                 logging.error(f"YouTube API 업데이트 오류: {e}")
         

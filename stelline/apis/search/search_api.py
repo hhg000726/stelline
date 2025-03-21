@@ -1,4 +1,4 @@
-import json, logging, time, requests
+import json, logging, time, requests, random
 from stelline.config import *
 
 song_infos = []
@@ -15,44 +15,58 @@ def load_song_infos(SONG_INFOS_FILE):
         logging.error("곡 정보 불러오기 실패")
         exit(1)
 
-def search_api():
-    batch_size = len(song_infos) // len(SEARCH_API_KEYS) + 1
-    logging.info(f"검색 시작, 곡수={len(song_infos)} batch_size={batch_size}")
+def search_api(recent):
+    logging.info(f"검색 시작")
     url = "https://www.googleapis.com/youtube/v3/search"
     not_searched = []
-    for i in range(0, len(song_infos), batch_size):
-        logging.info(f"{i // batch_size}번째 배치 실행중..")
-        for song_info in song_infos[i:i + batch_size]:
-            query = song_info["query"]
-            video_id = song_info["video_id"]
-            
-            params = {
-                "part": "snippet",
-                "q": query,
-                "type": "video",
-                "maxResults": 3,
-                "key": SEARCH_API_KEYS[i // batch_size]
-            }
-            try:
-                response = requests.get(url, params=params)
-                response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
-                data = response.json()
-                video_ids = [item["id"]["videoId"] for item in data["items"]]
-                if video_id not in video_ids:
-                    not_searched.append({"query": query, "video_id": video_id})
-            except requests.RequestException as e:
-                logging.error(f"API 요청 실패: {e}")
-                continue
+    search_targets = [
+        {"query": q, "video_id": v[0]}
+        for q, v in recent.items()
+    ]
+    # 25개로 맞추기 위해 필요한 개수 계산
+    needed = 25 - len(search_targets)
+
+    # 중복 방지: converted에 이미 있는 video_id는 제외
+    existing_ids = {item["video_id"] for item in search_targets}
+    available = [info for info in song_infos if info["video_id"] not in existing_ids]
+
+    # 부족한 만큼 랜덤 추출
+    additional = random.sample(available, min(needed, len(available)))
+
+    # 추가
+    search_targets.extend(additional)
+
+    for song_info in search_targets:
+        query = song_info["query"]
+        video_id = song_info["video_id"]
+        
+        params = {
+            "part": "snippet",
+            "q": query,
+            "type": "video",
+            "maxResults": 3,
+            "key": SEARCH_API_KEY
+        }
+        try:
+            response = requests.get(url, params=params)
+            response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
+            data = response.json()
+            video_ids = [item["id"]["videoId"] for item in data["items"]]
+            if video_id not in video_ids:
+                not_searched.append({"query": query, "video_id": video_id})
+        except requests.RequestException as e:
+            logging.error(f"API 요청 실패: {e}")
+            continue
     
     return {"all_songs": not_searched, "searched_time": time.time()}
 
 # 주기적으로 검색 데이터 가져오기
 def search_api_process(songs, recent):
     logging.info("주기적 검색 시작됨")
-    search_api_interval = 3 * 3600
+    search_api_interval = 6 * 3600
     while True:
         try:
-            new_songs = search_api()
+            new_songs = search_api(recent)
             songs.clear()
             songs.update(new_songs)
 

@@ -45,6 +45,7 @@ def search_api(recent):
             "q": query,
             "type": "video",
             "maxResults": 3,
+            "fields": "items(id(videoId))",
             "key": SEARCH_API_KEY
         }
         try:

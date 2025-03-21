@@ -19,7 +19,7 @@ def load_recent_data():
                 logging.info("SONGS_DATA_FILE 로드 완료")
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error("SONGS_DATA_FILE 불러오기 실패")
-    if os.path.exists(RECENT_DATA_FILE):  # 파일이 존재하면 불러오고 대기 후 실행
+    if False:  # 파일이 존재하면 불러오고 대기 후 실행
         try:
             with open(RECENT_DATA_FILE, "r", encoding="utf-8") as f:
                 recent = json.load(f)

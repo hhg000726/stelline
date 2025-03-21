@@ -29,13 +29,13 @@ def load_recent_data():
 
         searched_time = songs["searched_time"]
         now = time.time()
-        delay = max(0, searched_time + 6 * 3600 - now)
+        delay = max(0, searched_time + 21 * 1800 - now)
         formatted_searched_time = time.strftime("%H:%M:%S", time.localtime(searched_time))
         h, remainder = divmod(int(delay), 3600)  # 시, 나머지 초
         m, s = divmod(remainder, 60)
         formatted_delay = f"{h}:{m:02}:{s:02}"
         # 대기 후 API 시작
-        logging.info(f"{formatted_searched_time}에 RECENT_DATA_FILE이 있으므로, 첫 검색을 {formatted_delay}만큼 지연..")
+        logging.info(f"{formatted_searched_time}에 SONGS_DATA_FILE이 있으므로, 첫 검색을 {formatted_delay}만큼 지연..")
         threading.Thread(target=delayed_search_start, daemon=True, args = (delay, )).start()
 
     else:  # 파일이 없으면 즉시 실행

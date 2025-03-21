@@ -25,4 +25,4 @@ jobs:
         EC2_HOST: ${{ secrets.EC2_HOST }}
         EC2_USER: ${{ secrets.EC2_USER }}
       run: |
-        ssh $EC2_USER@$EC2_HOST "echo 'bash ~/deploy.sh'"# | at 15:25"
+        ssh $EC2_USER@$EC2_HOST "echo 'bash ~/deploy.sh'"

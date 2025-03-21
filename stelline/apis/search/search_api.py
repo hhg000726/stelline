@@ -17,14 +17,12 @@ def load_song_infos(SONG_INFOS_FILE):
 
 def search_api(recent):
     logging.info(f"검색 시작")
-    logging.info(recent)
     url = "https://www.googleapis.com/youtube/v3/search"
     not_searched = []
     search_targets = [
         {"query": q, "video_id": v[0]}
         for q, v in recent.items()
     ]
-    logging.info(search_targets)
     # 25개로 맞추기 위해 필요한 개수 계산
     needed = 25 - len(search_targets)
 
@@ -37,8 +35,6 @@ def search_api(recent):
 
     # 추가
     search_targets.extend(additional)
-
-    logging.info(search_targets)
 
     for song_info in search_targets:
         query = song_info["query"]
@@ -70,7 +66,6 @@ def search_api_process(songs, recent):
     search_api_interval = 6 * 3600
     while True:
         try:
-            logging.info(recent)
             new_songs = search_api(recent)
             songs.clear()
             songs.update(new_songs)

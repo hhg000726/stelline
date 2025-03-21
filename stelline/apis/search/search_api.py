@@ -70,6 +70,7 @@ def search_api_process(songs, recent):
     search_api_interval = 6 * 3600
     while True:
         try:
+            logging.info(recent)
             new_songs = search_api(recent)
             songs.clear()
             songs.update(new_songs)

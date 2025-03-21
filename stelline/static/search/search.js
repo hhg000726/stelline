@@ -133,7 +133,8 @@ const queries = [
     "리코 지구를줄게",
     "리코 괴수의꽃노래",
     "리코 용사",
-    "리코 모니터링"
+    "리코 모니터링",
+    "부키 SOS "
 ];
 
 async function fetchSongs() {

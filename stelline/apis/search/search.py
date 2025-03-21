@@ -29,7 +29,7 @@ def load_recent_data():
 
         searched_time = songs["searched_time"]
         now = time.time()
-        delay = max(0, searched_time + 3 * 3600 - now)
+        delay = max(0, searched_time + 9999 * 3600 - now)
         formatted_searched_time = time.strftime("%H:%M:%S", time.localtime(searched_time))
         h, remainder = divmod(int(delay), 3600)  # 시, 나머지 초
         m, s = divmod(remainder, 60)

@@ -63,7 +63,6 @@ def search_api(recent):
 # 주기적으로 검색 데이터 가져오기
 def search_api_process(songs, recent):
     logging.info("주기적 검색 시작됨")
-    search_api_interval = 6 * 3600
     while True:
         try:
             new_songs = search_api(recent)
@@ -82,7 +81,7 @@ def search_api_process(songs, recent):
         except Exception as e:
             logging.error(f"검색 업데이트 오류: {e}")
         
-        time.sleep(search_api_interval)
+        time.sleep(SEARCH_API_INTERVAL)
 
 # songs, recent 데이터를 저장
 def save_data(songs, recent):

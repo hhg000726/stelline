@@ -23,6 +23,7 @@ RELOADER_MODE = False
 # 게임 설정
 API_CHECK_INTERVAL = 300  # 유튜브 API 업데이트 및 세션 정리 주기 (초)
 SESSION_CHECK_INTERVAL = 30 # 세션 정리 주기 (초)
+SEARCH_API_INTERVAL = 6 * 3600
 
 # 유튜브 API 설정
 MAX_RESULTS = 50

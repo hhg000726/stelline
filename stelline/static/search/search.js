@@ -150,7 +150,7 @@ async function fetchSongs() {
             document.getElementById("last-updated").innerText = data.searched_time
         }
         else {
-            document.getElementById("last-updated").innerText = "마지막으로 검색된 시간: " + new Date(data.searched_time * 1000).toLocaleString()
+            document.getElementById("last-updated").innerText = "마지막 검색 시도 시간: " + new Date(data.searched_time * 1000).toLocaleString()
         }
         populateTable(data.all_songs, recentArray);
     } catch (error) {

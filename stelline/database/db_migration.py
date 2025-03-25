@@ -32,7 +32,6 @@ def migrate_json_to_rds_song_infos():
             for item in data:
                 video_id = item.get("video_id", "")
                 query = item.get("query", "")
-                logging.info(f"👉 삽입 시도: {video_id}, {query}")  
                 sql = """
                 INSERT INTO song_infos (video_id, query)
                 VALUES (%s, %s)
@@ -312,7 +311,7 @@ def check_migration():
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")
                     row = cursor.fetchone()
                     if row:
-                        count = row[0]
+                        count = list(row.values())[0]
                         logging.info(f"{table}: {count}건")
                     else:
                         logging.warning(f"{table}: 조회 결과 없음")

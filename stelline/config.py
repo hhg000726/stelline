@@ -19,7 +19,7 @@ TARGETS_FILE = os.getenv("TARGETS_FILE")
 RDS_HOST = os.getenv("RDS_HOST")
 RDS_USER = os.getenv("RDS_USER")
 RDS_PASSWORD = os.getenv("RDS_PASSWORD")
-RDS_SONG_INFOS = os.getenv("RDS_SONG_INFOS")
+RDS_DB = os.getenv("RDS_DB")
 
 # 서버 설정
 HOST = "0.0.0.0"

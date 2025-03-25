@@ -25,6 +25,10 @@ def migrate_json_to_rds_song_infos():
                 );
                 """
             cursor.execute(sql)
+            sql = """
+                TRUNCATE TABLE record_search;
+                """
+            cursor.execute(sql)
             for item in data:
                 video_id = item.get("video_id", "")
                 query = item.get("query", "")
@@ -57,6 +61,10 @@ def migrate_json_to_rds_record_main():
                 CREATE TABLE IF NOT EXISTS record_main (
                     copy_count INT
                 );
+                """
+            cursor.execute(sql)
+            sql = """
+                TRUNCATE TABLE record_search;
                 """
             cursor.execute(sql)
             copy_count = data.get("copy_count", "")
@@ -94,6 +102,10 @@ def migrate_json_to_rds_record_search():
                 );
                 """
             cursor.execute(sql)
+            sql = """
+                TRUNCATE TABLE record_search;
+                """
+            cursor.execute(sql)
             total_plays = data.get("total_plays", "")
             total_play_time = data.get("total_play_time", "")
             copy_count = data.get("copy_count", "")
@@ -128,6 +140,10 @@ def migrate_json_to_rds_songs_data():
                     query VARCHAR(100),
                     searched_time DOUBLE
                 );
+                """
+            cursor.execute(sql)
+            sql = """
+                TRUNCATE TABLE record_search;
                 """
             cursor.execute(sql)
             songs = data.get("all_songs", [])
@@ -167,6 +183,10 @@ def migrate_json_to_rds_targets():
                 );
                 """
             cursor.execute(sql)
+            sql = """
+                TRUNCATE TABLE record_search;
+                """
+            cursor.execute(sql)
             for item in data:
                 name = item.get("name", "")
                 title = item.get("title", "")
@@ -202,6 +222,10 @@ def migrate_json_to_rds_leaderboard():
                     score INT,
                     time DOUBLE
                 );
+                """
+            cursor.execute(sql)
+            sql = """
+                TRUNCATE TABLE record_search;
                 """
             cursor.execute(sql)
             for item in data:
@@ -241,10 +265,15 @@ def migrate_json_to_rds_recent_data():
                 );
                 """
             cursor.execute(sql)
-            for item in data:
-                query = item.get("query", "")
-                video_id = item.get("video_id", "")
-                time = item.get("time", "")
+            sql = """
+                TRUNCATE TABLE record_search;
+                """
+            cursor.execute(sql)
+            for query, value in data.items():
+                if not isinstance(value, list) or len(value) != 2:
+                    logging.warning(f"값 형식 이상 → query: {query}, value: {value}")
+                    continue
+                video_id, time = value
                 sql = """
                 INSERT INTO recent_data (query, video_id, time)
                 VALUES (%s, %s, %s)

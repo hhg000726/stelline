@@ -20,7 +20,7 @@ def migrate_json_to_rds_song_infos():
         with conn.cursor() as cursor:
             sql = """
                 CREATE TABLE IF NOT EXISTS song_infos (
-                    video_id VARCHAR(100) PRIMARY KEY,
+                    video_id VARCHAR(100),
                     query VARCHAR(100)
                 );
                 """

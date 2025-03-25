@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-import logging
+import logging, time
 
 from stelline.logging_config import setup_logging
 # 로깅 설정
@@ -15,6 +15,7 @@ if not logging.getLogger().handlers:
 from stelline.database.db_migration import *
 
 migrate_json_to_rds()
+time.sleep(2)
 check_migration()
 
 # Flask 앱 생성

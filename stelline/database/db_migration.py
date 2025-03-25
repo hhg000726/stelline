@@ -37,7 +37,11 @@ def migrate_json_to_rds_song_infos():
                 INSERT INTO song_infos (video_id, query)
                 VALUES (%s, %s)
                 """
-                cursor.execute(sql, (video_id, query))
+                try:
+                    cursor.execute(sql, (video_id, query))
+                except Exception as e:
+                    logging.warning(f"삽입 실패 → video_id: {video_id}, query: {query}, error: {e}")
+
         conn.commit()
         logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
     finally:

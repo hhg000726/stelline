@@ -277,7 +277,6 @@ def check_migration():
         "recent_data"
     ]
     conn = get_rds_connection()
-    conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:
             for table in tables:

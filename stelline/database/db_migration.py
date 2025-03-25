@@ -26,12 +26,13 @@ def migrate_json_to_rds_song_infos():
                 """
             cursor.execute(sql)
             sql = """
-                TRUNCATE TABLE record_search;
+                TRUNCATE TABLE song_infos;
                 """
             cursor.execute(sql)
             for item in data:
                 video_id = item.get("video_id", "")
                 query = item.get("query", "")
+                logging.info(f"👉 삽입 시도: {video_id}, {query}")  
                 sql = """
                 INSERT INTO song_infos (video_id, query)
                 VALUES (%s, %s)
@@ -64,7 +65,7 @@ def migrate_json_to_rds_record_main():
                 """
             cursor.execute(sql)
             sql = """
-                TRUNCATE TABLE record_search;
+                TRUNCATE TABLE record_main;
                 """
             cursor.execute(sql)
             copy_count = data.get("copy_count", "")
@@ -143,7 +144,7 @@ def migrate_json_to_rds_songs_data():
                 """
             cursor.execute(sql)
             sql = """
-                TRUNCATE TABLE record_search;
+                TRUNCATE TABLE songs_data;
                 """
             cursor.execute(sql)
             songs = data.get("all_songs", [])
@@ -184,7 +185,7 @@ def migrate_json_to_rds_targets():
                 """
             cursor.execute(sql)
             sql = """
-                TRUNCATE TABLE record_search;
+                TRUNCATE TABLE targets;
                 """
             cursor.execute(sql)
             for item in data:
@@ -225,7 +226,7 @@ def migrate_json_to_rds_leaderboard():
                 """
             cursor.execute(sql)
             sql = """
-                TRUNCATE TABLE record_search;
+                TRUNCATE TABLE leaderboard;
                 """
             cursor.execute(sql)
             for item in data:
@@ -266,7 +267,7 @@ def migrate_json_to_rds_recent_data():
                 """
             cursor.execute(sql)
             sql = """
-                TRUNCATE TABLE record_search;
+                TRUNCATE TABLE recent_data;
                 """
             cursor.execute(sql)
             for query, value in data.items():
@@ -291,7 +292,7 @@ def migrate_json_to_rds():
     migrate_json_to_rds_song_infos()
     migrate_json_to_rds_targets()
     migrate_json_to_rds_leaderboard()
-    migrate_json_to_rds_recent_data
+    migrate_json_to_rds_recent_data()
 
 def check_migration():
     tables = [

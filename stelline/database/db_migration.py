@@ -307,15 +307,16 @@ def check_migration():
     conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SHOW TABLES")
-            tables_list = cursor.fetchall()
-            logging.info(f"현재 존재하는 테이블: {tables_list}")
             for table in tables:
                 try:
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                    count = cursor.fetchone()[0]
-                    logging.info(f"{table}: {count}건")
+                    row = cursor.fetchone()
+                    if row:
+                        count = row[0]
+                        logging.info(f"{table}: {count}건")
+                    else:
+                        logging.warning(f"{table}: 조회 결과 없음")
                 except Exception as e:
-                    logging.warning(f"{table} 확인 실패: {e}")
+                    logging.warning(f"{table} 확인 실패: {e.__class__.__name__}: {e}")
     finally:
         conn.close()

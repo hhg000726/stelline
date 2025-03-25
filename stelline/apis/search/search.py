@@ -7,7 +7,6 @@ from stelline.config import *
 songs = {}
 recent = {}
 search_api.load_song_infos(SONG_INFOS_FILE)
-search_api.migrate_json_to_rds(SONG_INFOS_FILE)
 
 #최근 데이터 불러오기
 def load_recent_data():

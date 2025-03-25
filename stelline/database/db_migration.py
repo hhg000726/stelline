@@ -59,13 +59,12 @@ def migrate_json_to_rds_record_main():
                 );
                 """
             cursor.execute(sql)
-            for item in data:
-                copy_count = item.get("copy_count", "")
-                sql = """
-                INSERT INTO record_main (copy_count)
-                VALUES (%s)
-                """
-                cursor.execute(sql, (copy_count))
+            copy_count = data.get("copy_count", "")
+            sql = """
+            INSERT INTO record_main (copy_count)
+            VALUES (%s)
+            """
+            cursor.execute(sql, (copy_count))
         conn.commit()
         logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
     finally:

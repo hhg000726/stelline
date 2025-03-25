@@ -7,6 +7,7 @@ from stelline.config import *
 songs = {}
 recent = {}
 search_api.load_song_infos(SONG_INFOS_FILE)
+search_api.migrate_json_to_rds(SONG_INFOS_FILE)
 
 #최근 데이터 불러오기
 def load_recent_data():
@@ -57,23 +58,23 @@ def get_not_searched():
 
 # record 로드
 def load_record():
-    if os.path.exists(RECORD_FILE):
+    if os.path.exists(RECORD_SEARCH):
         try:
-            with open(RECORD_FILE, "r", encoding="utf-8") as f:
+            with open(RECORD_SEARCH, "r", encoding="utf-8") as f:
                 return json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
-            logging.error("record.json 불러오기 실패. 기본값으로 설정")
+            logging.error("RECORD_SEARCH 불러오기 실패. 기본값으로 설정")
     return {"total_plays": 0, "total_play_time": 0.0, "copy_count": 0}
 
 # record 저장
 def save_record(record):
     try:
-        temp_file = RECORD_FILE + ".tmp"
+        temp_file = RECORD_SEARCH + ".tmp"
         with open(temp_file, "w", encoding="utf-8") as f:
             json.dump(record, f, ensure_ascii=False, indent=4)
-        os.replace(temp_file, RECORD_FILE)
+        os.replace(temp_file, RECORD_SEARCH)
     except Exception as e:
-        logging.error(f"record.json 저장 오류: {e}")
+        logging.error(f"RECORD_SEARCH 저장 오류: {e}")
         if os.path.exists(temp_file):
             os.remove(temp_file)
 

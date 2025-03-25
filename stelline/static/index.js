@@ -9,6 +9,10 @@ function toggleContent(id, button) {
 
 function copyText(id) {
   let text = document.getElementById(id).innerText;
+  fetch("https://stelline.site/api/main/record", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+  }).catch(error => console.error("API 요청 중 오류 발생:", error));
   navigator.clipboard.writeText(text).then(() => {
     window.location.href = "https://www.x.com/";
   }).catch(err => {

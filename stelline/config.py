@@ -11,8 +11,15 @@ SEARCH_API_KEY = os.getenv("SEARCH_API_KEY").split(',')
 SONG_INFOS_FILE = os.getenv("SONG_INFOS_FILE")
 SONGS_DATA_FILE = os.getenv("SONGS_DATA_FILE")
 RECENT_DATA_FILE = os.getenv("RECENT_DATA_FILE")
-RECORD_FILE = os.getenv("RECORD_FILE")
+RECORD_SEARCH = os.getenv("RECORD_SEARCH")
+RECORD_MAIN = os.getenv("RECORD_MAIN")
 TARGETS_FILE = os.getenv("TARGETS_FILE")
+
+# RDS
+RDS_HOST = os.getenv("RDS_HOST")
+RDS_USER = os.getenv("RDS_USER")
+RDS_PASSWORD = os.getenv("RDS_PASSWORD")
+RDS_SONG_INFOS = os.getenv("RDS_SONG_INFOS")
 
 # 서버 설정
 HOST = "0.0.0.0"

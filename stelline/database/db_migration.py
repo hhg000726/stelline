@@ -94,15 +94,14 @@ def migrate_json_to_rds_record_search():
                 );
                 """
             cursor.execute(sql)
-            for item in data:
-                total_plays = item.get("total_plays", "")
-                total_play_time = item.get("total_play_time", "")
-                copy_count = item.get("copy_count", "")
-                sql = """
-                INSERT INTO record_search (total_plays, total_play_time, copy_count)
-                VALUES (%s, %s, %s)
-                """
-                cursor.execute(sql, (total_plays, total_play_time, copy_count))
+            total_plays = data.get("total_plays", "")
+            total_play_time = data.get("total_play_time", "")
+            copy_count = data.get("copy_count", "")
+            sql = """
+            INSERT INTO record_search (total_plays, total_play_time, copy_count)
+            VALUES (%s, %s, %s)
+            """
+            cursor.execute(sql, (total_plays, total_play_time, copy_count))
         conn.commit()
         logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
     finally:

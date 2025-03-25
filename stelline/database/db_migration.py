@@ -309,7 +309,7 @@ def check_migration():
         with conn.cursor() as cursor:
             cursor.execute("SHOW TABLES")
             tables_list = cursor.fetchall()
-            logging.info(f"현재 존재하는 테이블: {[row[0] for row in tables_list]}")
+            logging.info(f"현재 존재하는 테이블: {tables_list}")
             for table in tables:
                 try:
                     cursor.execute(f"SELECT COUNT(*) FROM {table}")

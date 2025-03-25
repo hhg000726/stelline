@@ -1,16 +1,16 @@
 import json, logging, time, requests, random
 from stelline.config import *
-import pymysql
+#import pymysql
 
-def get_rds_connection():
-    return pymysql.connect(
-        host=RDS_HOST,
-        user=RDS_USER,
-        password=RDS_PASSWORD,
-        database=RDS_SONG_INFOS,
-        charset="utf8",
-        cursorclass=pymysql.cursors.DictCursor,
-    )
+#def get_rds_connection():
+#    return pymysql.connect(
+#        host=RDS_HOST,
+#        user=RDS_USER,
+#        password=RDS_PASSWORD,
+#        database=RDS_SONG_INFOS,
+#        charset="utf8",
+#        cursorclass=pymysql.cursors.DictCursor,
+#    )
 
 song_infos = []
 

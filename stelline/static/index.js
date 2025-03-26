@@ -26,11 +26,11 @@ document.querySelectorAll(".copy-button").forEach(button => {
   });
 });
 
-async function fetchSongs() {
+async function fetchBugs() {
   try {
       const response = await fetch('https://stelline.site/api/bugs/rank');
       const recentData = await response.json();
-      const rankingsDiv = document.getElementById("rankings");
+      const bugsDiv = document.getElementById("bugs");
 
       for (const name in recentData) {
           const data = recentData[name];
@@ -58,11 +58,11 @@ async function fetchSongs() {
           displayHtml += `<p>광고를 시청하여 하트를 얻을 수도 있습니다</p>`;
           displayHtml += `<button onclick="window.location.href='https://favorite.bugs.co.kr/${url_number}'">벅스 바로가기</button>`
           displayHtml += `</div>`;
-          rankingsDiv.innerHTML += displayHtml;
+          bugsDiv.innerHTML += displayHtml;
       }
   } catch (error) {
       console.error('Error fetching songs:', error);
   }
 }
 
-fetchSongs()
+fetchBugs()

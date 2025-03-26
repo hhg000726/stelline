@@ -1,27 +1,69 @@
-import json, logging, time, requests, random
+import logging, time, requests, random
+
 from stelline.config import *
+from stelline.database.db_connection import get_rds_connection
 
-song_infos = []
-
-def load_song_infos(SONG_INFOS_FILE):
+def load_song_infos():
     logging.info("곡 정보 불러오는 중..")
-    global song_infos
+    conn = get_rds_connection()
     try:
-        global song_infos
-        with open(SONG_INFOS_FILE, "r", encoding="utf-8") as f:
-            song_infos = json.load(f)
-            logging.info("곡 정보 불러오기 성공")
-    except (FileNotFoundError, json.JSONDecodeError):
-        logging.error("곡 정보 불러오기 실패")
-        exit(1)
+        with conn.cursor() as cursor:
+            sql = "SELECT * FROM song_infos"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+        logging.info("RDS에서 곡 정보 불러오기 성공")
+    except Exception as e:
+        logging.error(f"RDS 곡 정보 불러오기 실패: {e}")
+    finally:
+        conn.close()
+    return result
 
-def search_api(recent):
+def load_songs_data():
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = "SELECT * FROM songs_data"
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            all_songs = []
+            for row in rows:
+                all_songs.append({
+                    "query": row.get("query"),
+                    "video_id": row.get("video_id")
+                })
+            searched_time = rows[0]["searched_time"] if rows else 0
+    except Exception as e:
+        all_songs = []
+        searched_time = 0
+        logging.error(f"RDS songs 정보 불러오기 실패: {e}")
+    finally:
+        conn.close()
+    return all_songs, searched_time
+
+def load_recent_data():
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = "SELECT * FROM recent_data"
+            cursor.execute(sql)
+            recent = cursor.fetchall()
+    except Exception as e:
+        recent = []
+        logging.error(f"RDS recent 정보 불러오기 실패: {e}")
+    finally:
+        conn.close()
+    return recent
+
+
+def search_api():
+    song_infos = load_song_infos()
+    recent = load_recent_data()
     logging.info(f"검색 시작")
     url = "https://www.googleapis.com/youtube/v3/search"
     not_searched = []
     search_targets = [
-        {"query": q, "video_id": v[0]}
-        for q, v in recent.items()
+        {"query": row["query"], "video_id": row["video_id"]}
+        for row in recent
     ]
     # 25개로 맞추기 위해 필요한 개수 계산
     needed = 25 - len(search_targets)
@@ -61,47 +103,45 @@ def search_api(recent):
     return {"all_songs": not_searched, "searched_time": time.time()}
 
 # 주기적으로 검색 데이터 가져오기
-def search_api_process(songs, recent):
+def search_api_process():
     logging.info("주기적 검색 시작됨")
     while True:
         try:
-            new_songs = search_api(recent)
-            songs.clear()
-            songs.update(new_songs)
+            new_songs = search_api()
+            all_songs = new_songs["all_songs"]
+            searched_time = new_songs["searched_time"]
+            conn = get_rds_connection()
+            try:
+                with conn.cursor() as cursor:
+                    sql = """
+                        TRUNCATE TABLE songs_data;
+                        """
+                    cursor.execute(sql)
+                    
+                    for item in all_songs:
+                        video_id = item.get("video_id", "")
+                        query = item.get("query", "")
+                        sql = """
+                        INSERT INTO songs_data (video_id, query, searched_time)
+                        VALUES (%s, %s, %s)
+                        """
+                        cursor.execute(sql, (video_id, query, searched_time))
+                    sql = """
+                        INSERT INTO recent_data (video_id, query, searched_time)
+                        SELECT video_id, query, searched_time
+                        FROM songs_data
+                        ON DUPLICATE KEY UPDATE
+                            time = VALUES(searched_time)
+                    """
+                    cursor.execute(sql)
 
-            now = songs["searched_time"]
-            for song in songs["all_songs"]:
-                recent[song["query"]] = [song["video_id"], now]
-            for song in list(recent.keys()):
-                if recent[song][1] + 604800 < time.time():
-                    del recent[song]
-            save_data(songs, recent)
+                    logging.info("검색 데이터 업데이트 완료!")
+            except Exception as e:
+                logging.error(f"RDS search 업데이트 실패: {e}")
+            finally:
+                conn.close()
 
-            logging.info("검색 데이터 업데이트 완료!")
         except Exception as e:
             logging.error(f"검색 업데이트 오류: {e}")
         
         time.sleep(SEARCH_API_INTERVAL)
-
-# songs, recent 데이터를 저장
-def save_data(songs, recent):
-    try:
-        songs_temp_file = SONGS_DATA_FILE + ".tmp"
-        with open(songs_temp_file, "w", encoding="utf-8") as f:
-            json.dump(songs, f, ensure_ascii=False, indent=4)
-        os.replace(songs_temp_file, SONGS_DATA_FILE)
-        logging.info("SONGS_DATA_FILE 저장 완료")
-    except Exception as e:
-        logging.error(f"SONGS_DATA_FILE 저장 오류: {e}")
-        if os.path.exists(songs_temp_file):
-            os.remove(songs_temp_file)
-    try:
-        recent_temp_file = RECENT_DATA_FILE + ".tmp"
-        with open(recent_temp_file, "w", encoding="utf-8") as f:
-            json.dump(recent, f, ensure_ascii=False, indent=4)
-        os.replace(recent_temp_file, RECENT_DATA_FILE)
-        logging.info("RECENT_DATA_FILE 저장 완료")
-    except Exception as e:
-        logging.error(f"RECENT_DATA_FILE 저장 오류: {e}")
-        if os.path.exists(recent_temp_file):
-            os.remove(recent_temp_file)

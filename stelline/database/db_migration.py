@@ -72,7 +72,7 @@ def migrate_json_to_rds_record_main():
             INSERT INTO record_main (copy_count)
             VALUES (%s)
             """
-            cursor.execute(sql, (copy_count))
+            cursor.execute(sql, (copy_count,))
         conn.commit()
         logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
     finally:
@@ -136,7 +136,7 @@ def migrate_json_to_rds_songs_data():
         with conn.cursor() as cursor:
             sql = """
                 CREATE TABLE IF NOT EXISTS songs_data (
-                    video_id VARCHAR(100),
+                    video_id VARCHAR(100) PRIMARY KEY,
                     query VARCHAR(100),
                     searched_time DOUBLE
                 );
@@ -258,7 +258,7 @@ def migrate_json_to_rds_recent_data():
     try:
         with conn.cursor() as cursor:
             sql = """
-                CREATE TABLE IF NOT EXISTS recent_data (
+                CREATE TABLE IF NOT EXISTS recent_data PRIMARY KEY (
                     query VARCHAR(100),
                     video_id VARCHAR(100),
                     time DOUBLE

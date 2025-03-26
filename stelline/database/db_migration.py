@@ -134,6 +134,9 @@ def migrate_json_to_rds_songs_data():
     conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:
+            sql = "DROP TABLE IF EXISTS songs_data"
+            cursor.execute(sql)
+            
             sql = """
                 CREATE TABLE IF NOT EXISTS songs_data (
                     video_id VARCHAR(100) PRIMARY KEY,
@@ -257,6 +260,9 @@ def migrate_json_to_rds_recent_data():
     conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:
+            sql = "DROP TABLE IF EXISTS songs_data"
+            cursor.execute(sql)
+
             sql = """
                 CREATE TABLE IF NOT EXISTS recent_data PRIMARY KEY (
                     query VARCHAR(100),

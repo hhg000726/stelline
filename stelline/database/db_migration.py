@@ -279,12 +279,12 @@ def migrate_json_to_rds_recent_data():
                 if not isinstance(value, list) or len(value) != 2:
                     logging.warning(f"값 형식 이상 → query: {query}, value: {value}")
                     continue
-                video_id, time = value
+                video_id, searched_time = value
                 sql = """
-                INSERT INTO recent_data (query, video_id, time)
+                INSERT INTO recent_data (query, video_id, searched_time)
                 VALUES (%s, %s, %s)
                 """
-                cursor.execute(sql, (query, video_id, time))
+                cursor.execute(sql, (query, video_id, searched_time))
         conn.commit()
         logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
     finally:

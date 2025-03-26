@@ -260,7 +260,7 @@ def migrate_json_to_rds_recent_data():
     conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:
-            sql = "DROP TABLE IF EXISTS songs_data"
+            sql = "DROP TABLE IF EXISTS recent_data"
             cursor.execute(sql)
 
             sql = """

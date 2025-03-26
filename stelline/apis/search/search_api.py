@@ -131,7 +131,7 @@ def search_api_process():
                         SELECT video_id, query, searched_time
                         FROM songs_data
                         ON DUPLICATE KEY UPDATE
-                            time = VALUES(searched_time)
+                            searched_time = VALUES(searched_time)
                     """
                     cursor.execute(sql)
 

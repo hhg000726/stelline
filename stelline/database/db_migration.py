@@ -267,7 +267,7 @@ def migrate_json_to_rds_recent_data():
                 CREATE TABLE IF NOT EXISTS recent_data (
                     query VARCHAR(100) PRIMARY KEY,
                     video_id VARCHAR(100),
-                    time DOUBLE
+                    searched_time DOUBLE
                 );
                 """
             cursor.execute(sql)

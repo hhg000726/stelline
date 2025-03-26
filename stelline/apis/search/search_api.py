@@ -109,10 +109,18 @@ def search_api_process():
         try:
             new_songs = search_api()
             all_songs = new_songs["all_songs"]
+            logging.info(all_songs)
             searched_time = new_songs["searched_time"]
+            logging.info(searched_time)
             conn = get_rds_connection()
             try:
                 with conn.cursor() as cursor:
+                    sql = """
+                        SELECT * FROM songs_data;
+                        """
+                    cursor.execute(sql)
+                    result = cursor.fetchall()
+                    logging.info(result)
                     sql = """
                         TRUNCATE TABLE songs_data;
                         """
@@ -126,6 +134,13 @@ def search_api_process():
                         VALUES (%s, %s, %s)
                         """
                         cursor.execute(sql, (video_id, query, searched_time))
+                        logging.info(video_id, query, searched_time)
+                    sql = """
+                        SELECT * FROM songs_data;
+                        """
+                    cursor.execute(sql)
+                    result = cursor.fetchall()
+                    logging.info(result)
                     sql = """
                         INSERT INTO recent_data (video_id, query, searched_time)
                         SELECT video_id, query, searched_time

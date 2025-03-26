@@ -119,50 +119,6 @@ def migrate_json_to_rds_record_search():
     finally:
         conn.close()
 
-def migrate_json_to_rds_songs_data():
-    """
-    JSON 파일에 들어있는 song_infos 데이터를 RDS에 한 번 저장해주는 함수.
-    """
-    try:
-        with open(SONGS_DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        logging.error(f"{SONGS_DATA_FILE} 정보 JSON 불러오기 실패")
-        return
-    
-    logging.info("JSON 데이터 -> RDS 마이그레이션 시작...")
-    conn = get_rds_connection()
-    try:
-        with conn.cursor() as cursor:
-            sql = "DROP TABLE IF EXISTS songs_data"
-            cursor.execute(sql)
-            
-            sql = """
-                CREATE TABLE IF NOT EXISTS songs_data (
-                    video_id VARCHAR(100) PRIMARY KEY,
-                    query VARCHAR(100),
-                    searched_time DOUBLE
-                );
-                """
-            cursor.execute(sql)
-            sql = """
-                TRUNCATE TABLE songs_data;
-                """
-            cursor.execute(sql)
-            songs = data.get("all_songs", [])
-            searched_time = data.get("searched_time", 0)
-            for item in songs:
-                video_id = item.get("video_id", "")
-                query = item.get("query", "")
-                cursor.execute("""
-                    INSERT INTO songs_data (video_id, query, searched_time)
-                    VALUES (%s, %s, %s)
-                """, (video_id, query, searched_time))
-        conn.commit()
-        logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
-    finally:
-        conn.close()
-
 def migrate_json_to_rds_targets():
     """
     JSON 파일에 들어있는 song_infos 데이터를 RDS에 한 번 저장해주는 함수.
@@ -245,59 +201,12 @@ def migrate_json_to_rds_leaderboard():
     finally:
         conn.close()
 
-def migrate_json_to_rds_recent_data():
-    """
-    JSON 파일에 들어있는 song_infos 데이터를 RDS에 한 번 저장해주는 함수.
-    """
-    try:
-        with open(RECENT_DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        logging.error(f"{RECENT_DATA_FILE} 정보 JSON 불러오기 실패")
-        return
-    
-    logging.info("JSON 데이터 -> RDS 마이그레이션 시작...")
-    conn = get_rds_connection()
-    try:
-        with conn.cursor() as cursor:
-            sql = "DROP TABLE IF EXISTS recent_data"
-            cursor.execute(sql)
-
-            sql = """
-                CREATE TABLE IF NOT EXISTS recent_data (
-                    query VARCHAR(100) PRIMARY KEY,
-                    video_id VARCHAR(100),
-                    searched_time DOUBLE
-                );
-                """
-            cursor.execute(sql)
-            sql = """
-                TRUNCATE TABLE recent_data;
-                """
-            cursor.execute(sql)
-            for query, value in data.items():
-                if not isinstance(value, list) or len(value) != 2:
-                    logging.warning(f"값 형식 이상 → query: {query}, value: {value}")
-                    continue
-                video_id, searched_time = value
-                sql = """
-                INSERT INTO recent_data (query, video_id, searched_time)
-                VALUES (%s, %s, %s)
-                """
-                cursor.execute(sql, (query, video_id, searched_time))
-        conn.commit()
-        logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
-    finally:
-        conn.close()
-
 def migrate_json_to_rds():
     migrate_json_to_rds_record_main()
     migrate_json_to_rds_record_search()
-    migrate_json_to_rds_songs_data()
     migrate_json_to_rds_song_infos()
     migrate_json_to_rds_targets()
     migrate_json_to_rds_leaderboard()
-    migrate_json_to_rds_recent_data()
 
 def check_migration():
     tables = [

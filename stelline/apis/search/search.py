@@ -1,7 +1,7 @@
 from flask import jsonify
 import threading, time, logging
 
-from search_api import *
+from .search_api import *
 from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 

@@ -141,18 +141,13 @@ async function fetchSongs() {
     try {
         const response = await fetch('https://stelline.site/api/search/not_searched');
         const data = await response.json();
-        const recentArray = Object.entries(data.recent).map(([query, values]) => ({
-            query: query,
-            video_id: values[0], // 첫 번째 값이 video_id
-            timestamp: values[1]  // 두 번째 값이 timestamp
-        }));
         if (typeof(data.searched_time) === "string") {
             document.getElementById("last-updated").innerText = data.searched_time
         }
         else {
             document.getElementById("last-updated").innerText = "마지막 검색 시도 시간: " + new Date(data.searched_time * 1000).toLocaleString()
         }
-        populateTable(data.all_songs, recentArray);
+        populateTable(data.all_songs, data.recent);
     } catch (error) {
         console.error('Error fetching songs:', error);
     }

@@ -9,7 +9,7 @@ from stelline.database.db_connection import get_rds_connection
 def processing():
     all_songs, searched_time = load_songs_data()
     now = time.time()
-    delay = max(0, searched_time + 6 * 3600 - now)
+    delay = max(10, searched_time + 6 * 3600 - now)
     formatted_searched_time = time.strftime("%H:%M:%S", time.localtime(searched_time))
     h, remainder = divmod(int(delay), 3600)  # 시, 나머지 초
     m, s = divmod(remainder, 60)

@@ -24,6 +24,8 @@ def delayed_search_start(delay):
     logging.info(f"{delay}초 후 API 검색 시작")
     search_api_process()
 
+processing()
+
 # 내 api
 def get_not_searched():
     logging.info("곡 정보 불러오는 중..")

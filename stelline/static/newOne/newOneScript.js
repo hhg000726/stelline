@@ -74,7 +74,7 @@ function loadLeaderboard() {
     .then(response => response.json())
     .then(data => {
       let rows = data.map((entry, index) =>
-        `<tr><td>${index + 1}</td><td>${entry.username}</td><td>${entry.score}</td><td>${entry.time}</td></tr>`
+        `<tr><td>${index + 1}</td><td>${entry.username}</td><td>${entry.score}</td><td>${entry.elapsed_time}</td></tr>`
       ).join("");
 
       document.getElementById("leaderboard").innerHTML = `

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request
 from functools import wraps
 from stelline.database.db_connection import get_rds_connection  # 이미 있는 pymysql 연결 함수 사용
+import logging
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -25,6 +26,8 @@ def admin_index():
 
     with conn.cursor() as cursor:
         for table in table_names:
+            cursor.execute("SHOW TABLES")
+            logging.info(cursor.fetchall())
             cursor.execute(f"SELECT * FROM {table}")
             data[table] = cursor.fetchall()
             cursor.execute(f"SHOW COLUMNS FROM {table}")

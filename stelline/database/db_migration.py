@@ -178,16 +178,13 @@ def migrate_json_to_rds_leaderboard():
             sql = """
                 DROP TABLE IF EXISTS leaderboard;
                 """
+            cursor.execute(sql)
             sql = """
                 CREATE TABLE IF NOT EXISTS leaderboard (
                     username VARCHAR(100),
                     score INT,
                     elapsed_time DOUBLE
                 );
-                """
-            cursor.execute(sql)
-            sql = """
-                TRUNCATE TABLE leaderboard;
                 """
             cursor.execute(sql)
             for item in data:

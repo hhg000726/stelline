@@ -10,7 +10,6 @@ def load_leaderboard():
             sql = "SELECT * FROM leaderboard"
             cursor.execute(sql)
             leaderboard = cursor.fetchall()
-            logging.info("리더보드 불러오기 성공!")
     except (FileNotFoundError, json.JSONDecodeError):
         logging.error("리더보드 불러오기 오류 발생.")
         leaderboard = []
@@ -25,8 +24,6 @@ def submit_score(username, score, elapsed_time):
             sql = "SELECT * FROM leaderboard"
             cursor.execute(sql)
             leaderboard = cursor.fetchall()
-            logging.info(leaderboard)
-
             try:
                 leaderboard.append(data)
             except Exception as e:
@@ -45,7 +42,6 @@ def submit_score(username, score, elapsed_time):
                 cursor.execute(sql, (item["username"], item["score"], item["elapsed_time"]))
             sql = "UPDATE record_search SET total_plays = total_plays + 1"
             cursor.execute(sql)
-            logging.info("hi")
             sql = """
                 UPDATE record_search SET total_play_time = total_play_time + %s
             """

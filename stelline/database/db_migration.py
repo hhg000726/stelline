@@ -182,7 +182,7 @@ def migrate_json_to_rds_leaderboard():
                 CREATE TABLE IF NOT EXISTS leaderboard (
                     username VARCHAR(100),
                     score INT,
-                    time DOUBLE
+                    elapsed_time DOUBLE
                 );
                 """
             cursor.execute(sql)

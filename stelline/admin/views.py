@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, session, redirect, url_for, request
 from functools import wraps
 from stelline.database.db_connection import get_rds_connection  # 이미 있는 pymysql 연결 함수 사용
-import logging
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 

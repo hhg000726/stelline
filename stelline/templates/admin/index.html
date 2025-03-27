@@ -37,7 +37,6 @@
     {% for table_name, rows in data.items() %}
         <details>
             <summary>{{ table_name }}</summary>
-            {% if rows %}
                 <form method="POST" action="{{ url_for('admin.add_row', table_name=table_name) }}">
                     {% for key in columns[table_name] %}
                         <input name="{{ key }}" placeholder="{{ key }}">

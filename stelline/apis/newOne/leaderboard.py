@@ -31,7 +31,6 @@ def submit_score(username, score, elapsed_time):
                 leaderboard.append(data)
             except Exception as e:
                 logging.info(e)
-            logging.info(leaderboard)
             leaderboard.sort(key=lambda x: (-x["score"], x["time"]))
             leaderboard[:] = leaderboard[:10]
 
@@ -46,6 +45,7 @@ def submit_score(username, score, elapsed_time):
                 cursor.execute(sql, (item["username"], item["score"], item["elapsed_time"]))
             sql = "UPDATE record_search SET total_plays = total_plays + 1"
             cursor.execute(sql)
+            logging.info("hi")
             sql = """
                 UPDATE record_search SET total_play_time = total_play_time + %s
             """

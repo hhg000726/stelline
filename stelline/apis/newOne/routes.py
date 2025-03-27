@@ -1,7 +1,6 @@
 from flask import jsonify, request
 from . import newOne_bp
-from .game import start_game, submit_choice
-from .leaderboard import leaderboard
+from .game import start_game, submit_choice, get_leaderboard
 
 @newOne_bp.route("/start_game", methods=["GET"])
 def start_game_api():
@@ -13,4 +12,4 @@ def submit_choice_api():
 
 @newOne_bp.route("/leaderboard", methods=["GET"])
 def get_leaderboard_api():
-    return jsonify(leaderboard)
+    return jsonify(get_leaderboard())

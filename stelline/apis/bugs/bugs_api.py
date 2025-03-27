@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 import requests, logging, time, json
 
 from stelline.config import *
+from stelline.database.db_connection import get_rds_connection
 
 def bugs_api(name, url_number):
     headers = {
@@ -49,15 +50,17 @@ def bugs_api(name, url_number):
     else:
         print(f"오류 발생: {response.status_code}")
 
-# targets 로드
 def load_targets():
-    if os.path.exists(TARGETS_FILE):
-        try:
-            with open(TARGETS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            logging.error("TARGETS_FILE 불러오기 실패")
-            return {}
+    try:
+        conn = get_rds_connection()
+        with conn.cursor() as cursor:
+            sql = "SELECT * FROM targets"
+            cursor.execute(sql)
+            targets = cursor.fetchall()
+    except (FileNotFoundError, json.JSONDecodeError):
+        logging.error("벅스 타켓 불러오기 오류 발생.")
+        targets = []
+    return targets
 
 # 주기적으로 벅스 데이터 가져오기
 def bugs_api_process(recent_data):

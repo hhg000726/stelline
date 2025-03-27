@@ -26,12 +26,12 @@ def admin_index():
 
     with conn.cursor() as cursor:
         for table in table_names:
-            cursor.execute("SHOW TABLES")
-            logging.info(cursor.fetchall())
             cursor.execute(f"SELECT * FROM {table}")
             data[table] = cursor.fetchall()
             cursor.execute(f"SHOW COLUMNS FROM {table}")
-            columns[table] = [row[0] for row in cursor.fetchall()]
+            t = cursor.fetchall()
+            logging.info(t)
+            columns[table] = [row[0] for row in t]
 
     conn.close()
     return render_template('admin/index.html', data=data, columns=columns)

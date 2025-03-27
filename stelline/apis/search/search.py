@@ -8,7 +8,7 @@ from stelline.database.db_connection import get_rds_connection
 #최근 데이터 불러오기
 def processing():
     all_songs, searched_time = load_songs_data()
-    delay = max(5, 3600 * 6 - searched_time % (3600 * 6))
+    delay = max(5, 3600 * 6 - time.time() % (3600 * 6))
     formatted_searched_time = time.strftime("%H:%M:%S", time.localtime(searched_time))
     h, remainder = divmod(int(delay), 3600)  # 시, 나머지 초
     m, s = divmod(remainder, 60)

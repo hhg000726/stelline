@@ -193,12 +193,12 @@ def migrate_json_to_rds_leaderboard():
             for item in data:
                 username = item.get("username", "")
                 score = item.get("score", "")
-                time = item.get("time", "")
+                elapsed_time = item.get("elapsed_time", "")
                 sql = """
-                INSERT INTO leaderboard (username, score, time)
+                INSERT INTO leaderboard (username, score, elapsed_time)
                 VALUES (%s, %s, %s)
                 """
-                cursor.execute(sql, (username, score, time))
+                cursor.execute(sql, (username, score, elapsed_time))
         conn.commit()
         logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
     finally:

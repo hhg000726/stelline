@@ -27,7 +27,11 @@ def submit_score(username, score, elapsed_time):
             leaderboard = cursor.fetchall()
             logging.info(leaderboard)
 
-            leaderboard.append(data)
+            try:
+                leaderboard.append(data)
+            except Exception as e:
+                logging.info(e)
+            logging.info(leaderboard)
             leaderboard.sort(key=lambda x: (-x["score"], x["time"]))
             leaderboard[:] = leaderboard[:10]
 
@@ -36,7 +40,7 @@ def submit_score(username, score, elapsed_time):
 
             for item in leaderboard:
                 sql = """
-                    INSERT INTO leaderboard (username, score,elapsed_time)
+                    INSERT INTO leaderboard (username, score, elapsed_time)
                     VALUES (%s, %s, %s)
                 """
                 cursor.execute(sql, (item["username"], item["score"], item["elapsed_time"]))

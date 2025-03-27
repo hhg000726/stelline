@@ -71,6 +71,7 @@ def submit_choice(data):
         session_data["right"] = new_right
         session_data["correct"] = "left" if session_data["left"]["date"] > session_data["right"]["date"] else "right"
         session_data["unused_songs"].remove(new_right_id)
+        logging.info(session_data["correct"])
 
     # 오답일 때
     else:

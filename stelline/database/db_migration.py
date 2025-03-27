@@ -176,6 +176,9 @@ def migrate_json_to_rds_leaderboard():
     try:
         with conn.cursor() as cursor:
             sql = """
+                DROP TABLE IF EXISTS leaderboard;
+                """
+            sql = """
                 CREATE TABLE IF NOT EXISTS leaderboard (
                     username VARCHAR(100),
                     score INT,

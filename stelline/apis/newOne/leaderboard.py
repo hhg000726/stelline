@@ -25,6 +25,7 @@ def submit_score(username, score, elapsed_time):
             sql = "SELECT * FROM leaderboard"
             cursor.execute(sql)
             leaderboard = cursor.fetchall()
+            logging.info(leaderboard)
 
             leaderboard.append(data)
             leaderboard.sort(key=lambda x: (-x["score"], x["time"]))

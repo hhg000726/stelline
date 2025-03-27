@@ -8,8 +8,6 @@ from . import leaderboard
 
 game_sessions = {}
 songs = {}
-leaderboard.load_leaderboard()
-thread = False
 
 # 게임 시작 API
 def start_game():
@@ -84,7 +82,7 @@ def submit_choice(data):
     return jsonify({"message": message, "username": username, "score": session_data["score"], "left": session_data["left"], "right": session_data["right"], "elapsed_time": elapsed_time})
 
 def get_leaderboard():
-    return jsonify(leaderboard.leaderboard)
+    return jsonify(leaderboard.load_leaderboard())
 
 threading.Thread(target = clean_expired_sessions_process, daemon=True, args = (game_sessions, )).start()
 threading.Thread(target = youtube_api_process, daemon=True, args = (songs, )).start()

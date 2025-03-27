@@ -145,4 +145,4 @@ def search_api_process():
         except Exception as e:
             logging.error(f"검색 업데이트 오류: {e}")
         
-        time.sleep(SEARCH_API_INTERVAL)
+        time.sleep(3600 * 6 - time.time() % (3600 * 6))

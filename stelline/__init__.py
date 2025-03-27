@@ -14,9 +14,6 @@ if not logging.getLogger().handlers:
 
 from stelline.database.db_migration import *
 
-migrate_json_to_rds()
-check_migration()
-
 # Flask 앱 생성
 app = Flask(__name__)
 CORS(app)

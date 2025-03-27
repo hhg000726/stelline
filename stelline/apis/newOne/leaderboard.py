@@ -18,7 +18,7 @@ def load_leaderboard():
 
 # 점수 기록
 def submit_score(username, score, elapsed_time):
-    data = {"username": username, "score": score, "time": elapsed_time}
+    data = {"username": username, "score": score, "elapsed_time": elapsed_time}
     conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:

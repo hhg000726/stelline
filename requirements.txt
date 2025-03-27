@@ -5,3 +5,5 @@ bs4
 gunicorn
 eventlet
 pymysql
+flask_sqlalchemy
+flask_admin

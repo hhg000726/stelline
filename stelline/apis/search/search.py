@@ -25,7 +25,6 @@ processing()
 
 # 내 api
 def get_not_searched():
-    logging.info("곡 정보 불러오는 중..")
     all_songs, searched_time = load_songs_data()
     recent = load_recent_data()
     return jsonify({

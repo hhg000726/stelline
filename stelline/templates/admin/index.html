@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>관리자 페이지</title>
+    <style>
+        details {
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            padding: 0.5rem;
+            background-color: #f8f8f8;
+        }
+        summary {
+            font-weight: bold;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.5rem;
+        }
+        th, td {
+            border: 1px solid #aaa;
+            padding: 0.4rem;
+            text-align: left;
+        }
+        th {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>관리자 페이지</h1>
+    <p><a href="{{ url_for('auth.logout') }}">로그아웃</a></p>
+
+    {% for table_name, rows in data.items() %}
+        <details>
+            <summary>{{ table_name }}</summary>
+            {% if rows %}
+                <table>
+                    <thead>
+                        <tr>
+                            {% for key in rows[0].keys() %}
+                                <th>{{ key }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            <tr>
+                                {% for value in row.values() %}
+                                    <td>{{ value }}</td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>데이터가 없습니다.</p>
+            {% endif %}
+        </details>
+    {% endfor %}
+</body>
+</html>

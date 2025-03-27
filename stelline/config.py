@@ -8,6 +8,10 @@ API_KEY = os.getenv("API_KEY")
 PLAYLIST_ID = os.getenv("PLAYLIST_ID")
 SEARCH_API_KEY = os.getenv("SEARCH_API_KEY").split(',')
 
+# 관리자 아이디
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
 # RDS
 RDS_HOST = os.getenv("RDS_HOST")
 RDS_USER = os.getenv("RDS_USER")

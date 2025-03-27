@@ -12,8 +12,6 @@ from stelline.apis import api_bp  # 여러 개의 API 블루프린트를 포함�
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
-from stelline.database.db_migration import *
-
 # Flask 앱 생성
 app = Flask(__name__)
 CORS(app)

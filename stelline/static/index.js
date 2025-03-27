@@ -65,4 +65,27 @@ async function fetchBugs() {
   }
 }
 
+async function fetchEvents() {
+  const container = document.getElementById("button-container");
+
+  try {
+    const res = await fetch("https://stelline.site/api/main/events", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+
+    const events = await res.json();  // 응답을 JSON으로 파싱
+
+    events.forEach(event => {
+      const button = document.createElement("button");
+      button.textContent = event.title;
+      button.onclick = () => window.location.href = event.link;
+      container.appendChild(button);
+    });
+  } catch (error) {
+    console.error("API 요청 중 오류 발생:", error);
+  }
+}
+
+fetchEvents()
 fetchBugs()

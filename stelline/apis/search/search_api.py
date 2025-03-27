@@ -12,9 +12,10 @@ def load_song_infos():
             cursor.execute(sql)
             result = cursor.fetchall()
         logging.info("RDS에서 곡 정보 불러오기 성공")
+        conn.close()
     except Exception as e:
         logging.error(f"RDS 곡 정보 불러오기 실패: {e}")
-    finally:
+        result = []
         conn.close()
     return result
 
@@ -32,12 +33,13 @@ def load_songs_data():
                     "video_id": row.get("video_id")
                 })
             searched_time = rows[0]["searched_time"] if rows else 0
+        conn.close()
     except Exception as e:
         all_songs = []
         searched_time = 0
         logging.error(f"RDS songs 정보 불러오기 실패: {e}")
-    finally:
         conn.close()
+        
     return all_songs, searched_time
 
 def load_recent_data():
@@ -47,10 +49,10 @@ def load_recent_data():
             sql = "SELECT * FROM recent_data"
             cursor.execute(sql)
             recent = cursor.fetchall()
+        conn.close()
     except Exception as e:
         recent = []
         logging.error(f"RDS recent 정보 불러오기 실패: {e}")
-    finally:
         conn.close()
     return recent
 
@@ -137,9 +139,9 @@ def search_api_process():
                     conn.commit()
 
                     logging.info("검색 데이터 업데이트 완료!")
+                conn.close()
             except Exception as e:
                 logging.error(f"RDS search 업데이트 실패: {e}")
-            finally:
                 conn.close()
 
         except Exception as e:

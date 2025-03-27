@@ -33,6 +33,9 @@ def get_not_searched():
         "recent": recent
     })
 
+def get_song_infos():
+    return jsonify(load_song_infos())
+
 def record_search():
     conn = get_rds_connection()
     try:
@@ -40,9 +43,9 @@ def record_search():
             sql = "UPDATE record_search SET total_plays = total_plays + 1"
             cursor.execute(sql)
             conn.commit()
+        conn.close()
     except Exception as e:
         logging.error(f"RDS record_search의 copy_count 업데이트 실패: {e}")
-    finally:
         conn.close()
 
     return '', 204

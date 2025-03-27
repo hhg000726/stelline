@@ -1,4 +1,3 @@
-from flask import jsonify, request
 from . import bugs_bp
 from .bugs import rank
 

@@ -15,6 +15,25 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
+from stelline.database.db_connection import get_rds_connection
+
+try:
+    conn = get_rds_connection()
+    with conn.cursor() as cursor:
+        cursor.execute("DROP TABLE IF EXISTS events")
+        
+        create_sql = """
+        CREATE TABLE IF NOT EXISTS events (
+            title VARCHAR(100),
+            link VARCHAR(300)
+        )
+        """
+        cursor.execute(create_sql)
+        
+        conn.commit()
+finally:
+    conn.close()
+
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

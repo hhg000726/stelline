@@ -11,6 +11,7 @@ SEARCH_API_KEY = os.getenv("SEARCH_API_KEY").split(',')
 # 관리자 아이디
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # RDS
 RDS_HOST = os.getenv("RDS_HOST")

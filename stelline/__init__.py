@@ -3,6 +3,7 @@ from flask_cors import CORS
 import logging
 
 from stelline.logging_config import setup_logging
+from stelline.config import SECRET_KEY
 # 로깅 설정
 setup_logging()
 
@@ -16,6 +17,7 @@ if not logging.getLogger().handlers:
 
 # Flask 앱 생성
 app = Flask(__name__)
+app.secret_key = SECRET_KEY
 CORS(app)
 
 # Flask 기본 로거 활성화

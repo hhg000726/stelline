@@ -6,14 +6,7 @@ load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
 PLAYLIST_ID = os.getenv("PLAYLIST_ID")
-LEADERBOARD_FILE = os.getenv("LEADERBOARD_FILE")
 SEARCH_API_KEY = os.getenv("SEARCH_API_KEY").split(',')
-SONG_INFOS_FILE = os.getenv("SONG_INFOS_FILE")
-SONGS_DATA_FILE = os.getenv("SONGS_DATA_FILE")
-RECENT_DATA_FILE = os.getenv("RECENT_DATA_FILE")
-RECORD_SEARCH = os.getenv("RECORD_SEARCH")
-RECORD_MAIN = os.getenv("RECORD_MAIN")
-TARGETS_FILE = os.getenv("TARGETS_FILE")
 
 # RDS
 RDS_HOST = os.getenv("RDS_HOST")

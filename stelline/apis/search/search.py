@@ -7,14 +7,12 @@ from stelline.database.db_connection import get_rds_connection
 
 #최근 데이터 불러오기
 def processing():
-    all_songs, searched_time = load_songs_data()
-    delay = max(5, 3600 * 6 - time.time() % (3600 * 6))
-    formatted_searched_time = time.strftime("%H:%M:%S", time.localtime(searched_time))
+    delay = max(5, SEARCH_API_INTERVAL - time.time() % (SEARCH_API_INTERVAL))
     h, remainder = divmod(int(delay), 3600)  # 시, 나머지 초
     m, s = divmod(remainder, 60)
     formatted_delay = f"{h}:{m:02}:{s:02}"
     # 대기 후 API 시작
-    logging.info(f"{formatted_searched_time}에 SONGS_DATA_FILE이 있으므로, 첫 검색을 {formatted_delay}만큼 지연..")
+    logging.info(f"첫 검색을 {formatted_delay}만큼 지연..")
     threading.Thread(target=delayed_search_start, daemon=True, args = (delay, )).start()
 
 # 딜레이 시작

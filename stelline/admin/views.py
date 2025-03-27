@@ -21,14 +21,17 @@ def admin_index():
         "record_search", "leaderboard", "targets"
     ]
     data = {}
+    columns = {}
 
     with conn.cursor() as cursor:
         for table in table_names:
             cursor.execute(f"SELECT * FROM {table}")
             data[table] = cursor.fetchall()
+            cursor.execute(f"SHOW COLUMNS FROM {table}")
+            columns[table] = [row[0] for row in cursor.fetchall()]
 
     conn.close()
-    return render_template('admin/index.html', data=data)
+    return render_template('admin/index.html', data=data, columns=columns)
 
 @admin_bp.route('/delete/<table_name>', methods=['POST'])
 @login_required

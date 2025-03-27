@@ -39,7 +39,7 @@
             <summary>{{ table_name }}</summary>
             {% if rows %}
                 <form method="POST" action="{{ url_for('admin.add_row', table_name=table_name) }}">
-                    {% for key in rows[0].keys() %}
+                    {% for key in columns[table_name] %}
                         <input name="{{ key }}" placeholder="{{ key }}">
                     {% endfor %}
                     <button type="submit">추가</button>

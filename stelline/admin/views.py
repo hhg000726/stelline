@@ -29,9 +29,7 @@ def admin_index():
             cursor.execute(f"SELECT * FROM {table}")
             data[table] = cursor.fetchall()
             cursor.execute(f"SHOW COLUMNS FROM {table}")
-            t = cursor.fetchall()
-            logging.info(t)
-            columns[table] = [row[0] for row in t]
+            columns[table] = [row['Field'] for row in cursor.fetchall()]
 
     conn.close()
     return render_template('admin/index.html', data=data, columns=columns)

@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, flash
-from config import ADMIN_USERNAME, ADMIN_PASSWORD
+from stelline.config import ADMIN_USERNAME, ADMIN_PASSWORD
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 

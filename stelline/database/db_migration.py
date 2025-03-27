@@ -160,53 +160,11 @@ def migrate_json_to_rds_targets():
     finally:
         conn.close()
 
-def migrate_json_to_rds_leaderboard():
-    """
-    JSON 파일에 들어있는 song_infos 데이터를 RDS에 한 번 저장해주는 함수.
-    """
-    try:
-        with open(LEADERBOARD_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
-        logging.error(f"{LEADERBOARD_FILE} 정보 JSON 불러오기 실패")
-        return
-    
-    logging.info("JSON 데이터 -> RDS 마이그레이션 시작...")
-    conn = get_rds_connection()
-    try:
-        with conn.cursor() as cursor:
-            sql = """
-                DROP TABLE IF EXISTS leaderboard;
-                """
-            cursor.execute(sql)
-            sql = """
-                CREATE TABLE IF NOT EXISTS leaderboard (
-                    username VARCHAR(100),
-                    score INT,
-                    elapsed_time DOUBLE
-                );
-                """
-            cursor.execute(sql)
-            for item in data:
-                username = item.get("username", "")
-                score = item.get("score", "")
-                elapsed_time = item.get("time", "")
-                sql = """
-                INSERT INTO leaderboard (username, score, elapsed_time)
-                VALUES (%s, %s, %s)
-                """
-                cursor.execute(sql, (username, score, elapsed_time))
-        conn.commit()
-        logging.info("JSON 데이터 -> RDS 마이그레이션 완료")
-    finally:
-        conn.close()
-
 def migrate_json_to_rds():
     migrate_json_to_rds_record_main()
     migrate_json_to_rds_record_search()
     migrate_json_to_rds_song_infos()
     migrate_json_to_rds_targets()
-    migrate_json_to_rds_leaderboard()
 
 def check_migration():
     tables = [

@@ -19,7 +19,7 @@ async function fetchQueries() {
         // HTML 요소 가져오기
         const listElement = document.getElementById("query-list");
 
-        const response = await fetch('https://stelline.site/api/search/sogns');
+        const response = await fetch('https://stelline.site/api/search/songs');
         const songs = await response.json();
 
         // JSON 데이터를 순회하면서 query 값만 추가

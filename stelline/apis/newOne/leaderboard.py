@@ -31,7 +31,7 @@ def submit_score(username, score, elapsed_time):
                 leaderboard.append(data)
             except Exception as e:
                 logging.info(e)
-            leaderboard.sort(key=lambda x: (-x["score"], x["time"]))
+            leaderboard.sort(key=lambda x: (-x["score"], x["elapsed_time"]))
             leaderboard[:] = leaderboard[:10]
 
             sql = "TRUNCATE TABLE leaderboard"

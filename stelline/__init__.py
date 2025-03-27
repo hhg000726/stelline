@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-import logging, time
+import logging
 
 from stelline.logging_config import setup_logging
 # 로깅 설정

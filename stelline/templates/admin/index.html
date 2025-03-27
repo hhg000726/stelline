@@ -38,6 +38,12 @@
         <details>
             <summary>{{ table_name }}</summary>
             {% if rows %}
+                <form method="POST" action="{{ url_for('admin.add_row', table_name=table_name) }}">
+                    {% for key in rows[0].keys() %}
+                        <input name="{{ key }}" placeholder="{{ key }}">
+                    {% endfor %}
+                    <button type="submit">추가</button>
+                </form>
                 <table>
                     <thead>
                         <tr>
@@ -52,6 +58,14 @@
                                 {% for value in row.values() %}
                                     <td>{{ value }}</td>
                                 {% endfor %}
+                                <td>
+                                    <form method="POST" action="{{ url_for('admin.delete_row', table_name=table_name) }}">
+                                        {% for key, value in row.items() %}
+                                            <input type="hidden" name="{{ key }}" value="{{ value }}">
+                                        {% endfor %}
+                                        <button type="submit">삭제</button>
+                                    </form>
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>

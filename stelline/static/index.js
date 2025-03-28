@@ -128,7 +128,7 @@ async function fetchTwits() {
             <span>${keyword}</span><br>
             ${tagLines}
           </p>
-          <button class="copy-button" data-id="${copyIds[i]}">복사 & 이동</button>
+          <button class="copy-button" data-id="${copyIds[i]}">복사<br>이동</button>
         `;
         copyContainer.innerHTML = tagText;
         wrapper.appendChild(copyContainer);

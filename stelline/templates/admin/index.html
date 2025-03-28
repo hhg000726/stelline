@@ -4,6 +4,32 @@
     <meta charset="UTF-8">
     <title>관리자 페이지</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #EDF6FF;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            padding: 20px 0 10px 0;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #5F94D6;
+            font-weight: bold;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
         details {
             margin: 10px auto;
             max-width: 580px;
@@ -13,25 +39,33 @@
             background-color: #D6E9FE;
             text-align: center;
         }
+
         summary {
             font-weight: bold;
             font-size: 18px;
             cursor: pointer;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
             font-size: 16px;
+            word-break: break-all;
         }
+
         th, td {
             border: 1px solid #aaa;
             padding: 8px;
             text-align: center;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
+
         th {
             background-color: #EDF6FF;
         }
+
         input {
             margin: 5px;
             padding: 6px;
@@ -39,6 +73,7 @@
             border: 1px solid #aaa;
             font-size: 14px;
         }
+
         form {
             margin-top: 10px;
         }

@@ -40,7 +40,7 @@ def record_search():
     conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:
-            sql = "UPDATE record_search SET total_plays = total_plays + 1"
+            sql = "UPDATE record_search SET copy_count = copy_count + 1"
             cursor.execute(sql)
             conn.commit()
         conn.close()

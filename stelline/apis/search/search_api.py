@@ -11,7 +11,6 @@ def load_song_infos():
             sql = "SELECT * FROM song_infos"
             cursor.execute(sql)
             result = cursor.fetchall()
-        logging.info("RDS에서 곡 정보 불러오기 성공")
         conn.close()
     except Exception as e:
         logging.error(f"RDS 곡 정보 불러오기 실패: {e}")

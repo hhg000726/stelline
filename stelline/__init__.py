@@ -25,6 +25,7 @@ try:
         sql = """
             CREATE TABLE IF NOT EXISTS twits (
                 title VARCHAR(100),
+                time VARCHAR(100),
                 keywords VARCHAR(300),
                 tags VARCHAR(300)
             )

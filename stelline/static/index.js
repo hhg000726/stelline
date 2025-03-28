@@ -96,7 +96,7 @@ async function fetchTwits() {
       const button = document.createElement("button");
       button.className = "toggle-button";
 
-      const timeText = item.time?.trim() ? item.time : "임시 연기";
+      const timeText = item.time.trim() ? item.time : "임시 연기";
       button.innerText = `${item.title}`;
       button.setAttribute("onclick", `toggleContent('${btnId}', this)`);
 

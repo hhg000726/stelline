@@ -66,7 +66,6 @@ def add_row(table_name):
             values = list(request.form.values())
             cursor.execute(f"INSERT INTO {table_name} ({keys}) VALUES ({placeholders})", values)
             conn.commit()
-            conn.close()
             return redirect(url_for('admin.admin_index'))
     except Exception as e:
         logging.info(e)

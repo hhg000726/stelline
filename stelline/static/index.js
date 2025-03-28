@@ -91,7 +91,7 @@ async function fetchTwits() {
 
     data.forEach((item, idx) => {
       const btnId = `hiddenContent${idx}`;
-      const copyIds = item.keywords.map((_, i) => `copyText${idx}_${i}`);
+      const copyIds = item.keywords.split(',').map(keyword => keyword.trim()).map((_, i) => `copyText${idx}_${i}`);
 
       const button = document.createElement("button");
       button.className = "toggle-button";
@@ -118,7 +118,7 @@ async function fetchTwits() {
       const wrapper = document.createElement("div");
       wrapper.className = "wrapper";
 
-      item.keywords.split(',').map(tag => tag.trim()).forEach((keyword, i) => {
+      item.keywords.split(',').map(keyword => keyword.trim()).forEach((keyword, i) => {
         const copyContainer = document.createElement("div");
         copyContainer.className = "copy-container";
 

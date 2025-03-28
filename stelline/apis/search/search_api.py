@@ -4,7 +4,6 @@ from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 
 def load_song_infos():
-    logging.info("곡 정보 불러오는 중..")
     conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:

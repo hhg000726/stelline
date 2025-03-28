@@ -17,6 +17,27 @@ if not logging.getLogger().handlers:
 
 from stelline.database.db_connection import get_rds_connection
 
+
+conn = get_rds_connection()
+try:
+    with conn.cursor() as cursor:
+        cursor.execute("DROP TABLE IF EXISTS twits")
+        sql = """
+            CREATE TABLE IF NOT EXISTS twits (
+                title VARCHAR(100),
+                keywords VARCHAR(300),
+                tags VARCHAR(300)
+            )
+        """
+        cursor.execute(sql)
+    conn.commit()
+except Exception as e:
+    logging.info(e)
+finally:
+    conn.close()
+
+
+
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

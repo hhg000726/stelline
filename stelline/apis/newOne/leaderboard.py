@@ -48,8 +48,8 @@ def submit_score(username, score, elapsed_time):
             cursor.execute(sql, (elapsed_time,))
             conn.commit()
         logging.info("RDS에서 leaderboard, record_search 업데이트 성공")
-        conn.close()
     except Exception as e:
         logging.error(f"RDS leaderboard, record_search 업데이트 실패: {e}")
+    finally:
         conn.close()
     

@@ -43,9 +43,9 @@ def record_search():
             sql = "UPDATE record_search SET copy_count = copy_count + 1"
             cursor.execute(sql)
             conn.commit()
-        conn.close()
     except Exception as e:
         logging.error(f"RDS record_search의 copy_count 업데이트 실패: {e}")
+    finally:
         conn.close()
 
     return '', 204

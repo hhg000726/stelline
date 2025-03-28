@@ -20,12 +20,6 @@ function copyText(id) {
   });
 }
 
-document.querySelectorAll(".copy-button").forEach(button => {
-  button.addEventListener("click", function () {
-    copyText(this.getAttribute("data-id"));
-  });
-});
-
 async function fetchBugs() {
   try {
       const response = await fetch('https://stelline.site/api/bugs/rank');
@@ -60,6 +54,7 @@ async function fetchBugs() {
           displayHtml += `</div>`;
           bugsDiv.innerHTML += displayHtml;
       }
+      
   } catch (error) {
       console.error('Error fetching songs:', error);
   }
@@ -87,5 +82,74 @@ async function fetchEvents() {
   }
 }
 
+async function fetchTwits() {
+  try {
+    const res = await fetch("https://stelline.site/api/main/twits");
+    const data = await res.json();
+
+    const container = document.getElementById("twitContainer");
+
+    data.forEach((item, idx) => {
+      const btnId = `hiddenContent${idx}`;
+      const copyIds = item.keywords.map((_, i) => `copyText${idx}_${i}`);
+
+      const button = document.createElement("button");
+      button.className = "toggle-button";
+
+      const timeText = item.time?.trim() ? item.time : "임시 연기";
+      button.innerText = `${item.title}`;
+      button.setAttribute("onclick", `toggleContent('${btnId}', this)`);
+
+      const content = document.createElement("div");
+      content.className = "content";
+      content.id = btnId;
+
+      const descHTML = `
+        <p>태그와 키워드를 사용하여 트윗 작성</p>
+        <p>태그 검색후 다른 트윗 리트윗 & 좋아요 누르기</p>
+        <p>${timeText}</p>
+        <p>시간상 참여가 어려우신 분들은 예약 트윗을 활용해주세요<br>
+        예약 트윗을 작성할 때, 같은 내용의 트윗은 작성 되지 않습니다<br>
+        하고 싶은 말 부분을 필수로 작성해주시기 바랍니다</p>
+        <h2>태그 & 키워드</h2>
+      `;
+      content.innerHTML = descHTML;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "wrapper";
+
+      item.keywords.split(',').map(tag => tag.trim()).forEach((keyword, i) => {
+        const copyContainer = document.createElement("div");
+        copyContainer.className = "copy-container";
+
+        const tagLines =  item.tags.split(',').map(tag => tag.trim()).map(tag => `<span>#${tag}</span>`).join("<br>");
+        const tagText = `
+          <p class="copy-text" id="${copyIds[i]}">
+            <span>${keyword}</span><br>
+            ${tagLines}
+          </p>
+          <button class="copy-button" data-id="${copyIds[i]}">복사 & 이동</button>
+        `;
+        copyContainer.innerHTML = tagText;
+        wrapper.appendChild(copyContainer);
+      });
+
+      content.appendChild(wrapper);
+      container.appendChild(button);
+      container.appendChild(content);
+    });
+
+    document.querySelectorAll(".copy-button").forEach(button => {
+      button.addEventListener("click", function () {
+        copyText(this.getAttribute("data-id"));
+      });
+    });
+
+  } catch (err) {
+    console.error("트윗 데이터 로드 실패:", err);
+  }
+}
+
+fetchTwits();
 fetchEvents()
 fetchBugs()

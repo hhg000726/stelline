@@ -8,3 +8,7 @@ def record_main_api():
 @main_bp.route("/events", methods=["GET"])
 def get_events_api():
     return get_events()
+
+@main_bp.route("/twits", methods=["GET"])
+def get_twits_api():
+    return get_twits()

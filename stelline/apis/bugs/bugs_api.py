@@ -8,7 +8,7 @@ def bugs_api(name, url_number):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
     }
-    page_url = "https://favorite.bugs.co.kr/" + url_number
+    page_url = "https://favorite.bugs.co.kr/" + str(url_number)
     response = requests.get(page_url, headers=headers)
 
     # 응답 확인

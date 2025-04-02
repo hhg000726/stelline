@@ -22,7 +22,7 @@ def bugs_api(name, url_number):
         streamings = list(map(float, [streaming.get_text(strip=True).replace(",", "").replace("%", "") for streaming in soup.select("span.streaming")]))
 
         for i in range(len(names)):
-            if names[i] == name:
+            if name in names[i]:
                 rank = i + 1
                 break
         

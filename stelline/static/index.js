@@ -34,7 +34,7 @@ async function fetchBugs() {
           const contentId = "hiddenContent_" + name.replace(/\s+/g, "_");
           let displayHtml = `<button class="toggle-button" data-name="${name}" onclick="toggleContent('${contentId}', this)">벅스 ${name} ${title}</button>`;
           displayHtml += `<div class="content" id="${contentId}">`;
-          displayHtml += `<h2>${data.rank}위</h2><p>`;
+          displayHtml += `<h2>현재 ${data.rank}위</h2><p>`;
           
           if (data.rank === 2) {
               displayHtml += `1등과의 차이: ${diffs.count_to_first}표${diffs.streaming_to_first ? ` / ${diffs.streaming_to_first}%` : ''}<br>`;

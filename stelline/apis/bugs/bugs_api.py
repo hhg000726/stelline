@@ -66,16 +66,19 @@ def load_targets():
 def bugs_api_process(recent_data):
     while True:
         targets = load_targets()
-        for target in targets:
-            name = target["name"]
-            title = target["title"]
-            url_number = target["url_number"]
-            try:
-                new_data = bugs_api(name, url_number)
-                recent_data[name] = new_data
-                recent_data[name]["title"] = title
-                recent_data[name]["url_number"] = url_number
-            except Exception as e:
-                logging.error(f"bugs 데이터 업데이트 오류: {e}")
+        if targets:
+            for target in targets:
+                name = target["name"]
+                title = target["title"]
+                url_number = target["url_number"]
+                try:
+                    new_data = bugs_api(name, url_number)
+                    recent_data[name] = new_data
+                    recent_data[name]["title"] = title
+                    recent_data[name]["url_number"] = url_number
+                except Exception as e:
+                    logging.error(f"bugs 데이터 업데이트 오류: {e}")
+        else:
+            recent_data = {}
         
         time.sleep(API_CHECK_INTERVAL)

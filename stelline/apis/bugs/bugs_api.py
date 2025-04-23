@@ -11,6 +11,8 @@ def bugs_api(name, url_number):
     page_url = "https://favorite.bugs.co.kr/" + str(url_number)
     response = requests.get(page_url, headers=headers)
 
+    logging.info(response)
+
     # 응답 확인
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")

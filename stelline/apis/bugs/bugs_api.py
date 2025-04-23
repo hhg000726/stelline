@@ -76,7 +76,6 @@ def bugs_api_process(recent_data):
                     recent_data[name] = new_data
                     recent_data[name]["title"] = title
                     recent_data[name]["url_number"] = url_number
-                    logging.info(recent_data)
                 except Exception as e:
                     logging.error(f"bugs 데이터 업데이트 오류: {e}")
         else:

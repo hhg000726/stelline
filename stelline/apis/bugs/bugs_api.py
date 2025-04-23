@@ -11,8 +11,6 @@ def bugs_api(name, url_number):
     page_url = "https://favorite.bugs.co.kr/" + str(url_number)
     response = requests.get(page_url, headers=headers)
 
-    logging.info(response)
-
     # 응답 확인
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
@@ -69,6 +67,7 @@ def bugs_api_process(recent_data):
     while True:
         targets = load_targets()
         if targets:
+            logging.info("벅스 검색")
             for target in targets:
                 name = target["name"]
                 title = target["title"]
@@ -81,6 +80,7 @@ def bugs_api_process(recent_data):
                 except Exception as e:
                     logging.error(f"bugs 데이터 업데이트 오류: {e}")
         else:
+            logging.info("타겟 없음")
             recent_data = {}
         
         time.sleep(API_CHECK_INTERVAL)

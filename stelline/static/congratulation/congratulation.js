@@ -32,8 +32,21 @@ function renderTable(data, tableId) {
         row.appendChild(queryCell);
 
         const timeCell = document.createElement("td");
-        const date = new Date(new Date(song.counted_time).getTime() - 9 * 60 * 60 * 1000);
-        timeCell.textContent = date.toLocaleString("ko-KR");
+        const timeDifference = Date.now() - new Date(song.counted_time).getTime() + 9 * 60 * 60 * 1000;
+        const seconds = Math.floor(timeDifference / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (days > 0) {
+            timeCell.textContent = `${days}일 전`;
+        } else if (hours > 0) {
+            timeCell.textContent = `${hours}시간 전`;
+        } else if (minutes > 0) {
+            timeCell.textContent = `${minutes}분 전`;
+        } else {
+            timeCell.textContent = `${seconds}초 전`;
+        }
         row.appendChild(timeCell);
         
         tableBody.appendChild(row);

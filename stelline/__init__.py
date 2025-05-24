@@ -21,7 +21,7 @@ conn = get_rds_connection()
 try:
     with conn.cursor() as cursor:
         sql = """
-        DROP TABLE IF EXISTS song_infos
+        DROP TABLE IF EXISTS song_counts
         """
         cursor.execute(sql)
         sql = """

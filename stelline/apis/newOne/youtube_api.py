@@ -94,7 +94,7 @@ def youtube_api_process(all_songs):
                         existing_song = cursor.fetchone()
                     if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
                         with conn.cursor() as cursor:
-                            sql = "SELECT token FROM fcm_tokens WHERE counted_time >= %s"
+                            sql = "SELECT token FROM fcm_tokens WHERE registered_at >= %s"
                             yesterday = datetime.now() - timedelta(days=1)
                             cursor.execute(sql, (yesterday,))
                             rows = cursor.fetchall()

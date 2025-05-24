@@ -34,4 +34,4 @@ SEARCH_API_INTERVAL = 6 * 3600
 MAX_RESULTS = 50
 
 # 알림 설정
-SERVICE_ACCOUNT_FILE = "path/to/your/service-account.json"
+SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")

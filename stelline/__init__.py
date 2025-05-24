@@ -29,7 +29,6 @@ try:
         )
         """
         cursor.execute(sql)
-        leaderboard = cursor.fetchall()
 except:
     logging.error("테이블 오류 발생.")
 finally:

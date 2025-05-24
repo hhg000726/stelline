@@ -20,23 +20,17 @@ if not logging.getLogger().handlers:
 conn = get_rds_connection()
 try:
     with conn.cursor() as cursor:
-        sql = """
-        DROP TABLE IF EXISTS song_counts
-        """
+        sql = "DROP TABLE IF EXISTS fcm_tokens;"
         cursor.execute(sql)
-        sql = """
-        CREATE TABLE IF NOT EXISTS song_counts (
-            title VARCHAR(255),
-            video_id VARCHAR(255),
-            count INT,
-            counted_time DATETIME
-        )
-        """
+        sql = """CREATE TABLE fcm_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            token TEXT NOT NULL UNIQUE,
+            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );"""
         cursor.execute(sql)
         conn.commit()
-        logging.info("테이블 생성 성공.")
 except Exception as e:
-    logging.error(f"테이블 생성 실패: {e}")
+    logging.error(f"FCM 토큰 테이블 생성 중 오류 발생: {e}")
 finally:
     conn.close()
 

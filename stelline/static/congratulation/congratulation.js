@@ -2,7 +2,8 @@ async function fetchSongs() {
     try {
         const response = await fetch('https://stelline.site/api/congratulation/congratulations');
         const data = await response.json();
-        populateTable(data);
+        data.sort((a, b) => new Date(b.counted_time) - new Date(a.counted_time));
+        renderTable(data, "congratulationTable");
     } catch (error) {
         console.error('Error fetching songs:', error);
     }
@@ -13,12 +14,6 @@ function shuffleArray(array) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]]; // 배열 요소 스왑
     }
-}
-
-function populateTable(songs) {
-    shuffleArray(songs);
-    
-    renderTable(songs, "songTable");
 }
 
 function renderTable(data, tableId) {
@@ -35,13 +30,18 @@ function renderTable(data, tableId) {
         row.appendChild(thumbnailCell);
         
         const queryCell = document.createElement("td");
-        queryCell.textContent = Math.floor(song.count / 100000) + "만 달성!";
+        queryCell.textContent = Math.floor(song.count / 100000) + "0만 달성!";
         
         const button = document.createElement("button");
         button.textContent = "이동";
         button.onclick = () => handleButtonClick(song.query);
         queryCell.appendChild(button);
         row.appendChild(queryCell);
+
+        const timeCell = document.createElement("td");
+        const date = new Date(song.counted_time);
+        timeCell.textContent = date.toLocaleString("ko-KR");
+        row.appendChild(timeCell);
         
         tableBody.appendChild(row);
     });
@@ -53,4 +53,3 @@ function handleButtonClick(video_id) {
 }
 
 document.addEventListener("DOMContentLoaded", fetchSongs);
-fetchQueries();

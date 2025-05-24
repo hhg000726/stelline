@@ -1,8 +1,14 @@
-import datetime
 from stelline.config import *
-import logging, requests, time
-
 from stelline.database.db_connection import get_rds_connection
+import logging, requests, time
+from datetime import datetime, timedelta
+import google.auth
+from google.auth.transport.requests import Request
+
+def get_access_token():
+    credentials, project = google.auth.load_credentials_from_file(SERVICE_ACCOUNT_FILE)
+    credentials.refresh(Request())
+    return credentials.token
 
 def get_songs():
     URL = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={PLAYLIST_ID}&maxResults={MAX_RESULTS}&key={API_KEY}"
@@ -69,10 +75,11 @@ def youtube_api_process(all_songs):
     while True:
         try:
             new_songs = get_songs()
-            if new_songs.get("songs") and new_songs.get("songs") != all_songs:
+            if new_songs.get("all_songs") and new_songs.get("all_songs") != all_songs:
                 all_songs.clear()
-                all_songs.update(new_songs.get("songs"))
+                all_songs.update(new_songs.get("all_songs"))
                 logging.info("YouTube 데이터 업데이트 완료!")
+            access_token = get_access_token()
             for song in new_songs.get("songs_for_counts", []):
                 conn = get_rds_connection()
                 try:
@@ -81,6 +88,33 @@ def youtube_api_process(all_songs):
                         cursor.execute(sql, (song["video_id"],))
                         existing_song = cursor.fetchone()
                     if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
+                        with conn.cursor() as cursor:
+                            sql = "SELECT token FROM fcm_tokens WHERE last_updated >= %s"
+                            yesterday = datetime.now() - timedelta(days=1)
+                            cursor.execute(sql, (yesterday,))
+                            rows = cursor.fetchall()
+                            tokens = [row['token'] for row in rows]
+                            for token in tokens:
+                                url = "https://fcm.googleapis.com/v1/projects/stelline/messages:send"
+                                headers = {
+                                    "Authorization": f"Bearer {access_token}",
+                                    "Content-Type": "application/json"
+                                }
+                                payload = {
+                                    "message":{
+                                        "token": token,
+                                        "notification": {
+                                            "title": song['title'],
+                                            "body": f"{song['count']}0만회 달성!",
+                                            "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg"
+                                        }
+                                    }
+                                }
+                                response = requests.post(url, headers=headers, json=payload)
+                                if response.status_code == 200:
+                                    logging.info(f"FCM 알림 발송 성공: {token}")
+                                else:
+                                    logging.error(f"FCM 알림 실패 ({response.status_code}): {response.text}")
                         with conn.cursor() as cursor:
                             sql = """
                                 UPDATE song_counts
@@ -95,7 +129,7 @@ def youtube_api_process(all_songs):
                                 INSERT INTO song_counts (title, video_id, count, counted_time)
                                 VALUES (%s, %s, %s, %s)
                             """
-                            cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime.datetime(2000, 1, 1)))
+                            cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime(2000, 1, 1)))
                             conn.commit()
                 except Exception as e:
                     logging.error(f"RDS song_counts 업데이트 오류: {e}")
@@ -106,3 +140,4 @@ def youtube_api_process(all_songs):
             logging.error(f"YouTube API 업데이트 오류: {e}")
         
         time.sleep(API_CHECK_INTERVAL)
+

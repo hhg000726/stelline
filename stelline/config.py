@@ -32,3 +32,6 @@ SEARCH_API_INTERVAL = 6 * 3600
 
 # 유튜브 API 설정
 MAX_RESULTS = 50
+
+# 알림 설정
+SERVICE_ACCOUNT_FILE = "path/to/your/service-account.json"

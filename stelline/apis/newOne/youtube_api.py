@@ -35,7 +35,7 @@ def get_songs():
 
         for i in range(0, len(video_ids), MAX_RESULTS):
             video_id_str = ",".join(video_ids[i:i + MAX_RESULTS])
-            video_url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id_str}&key={API_KEY}"
+            video_url = f"https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id={video_id_str}&key={API_KEY}"
             video_response = requests.get(video_url).json()
 
             for item in video_response.get("items", []):
@@ -49,12 +49,14 @@ def get_songs():
             for item in video_response.get("items", []):
                 video_id = item["id"]
                 title = item["snippet"]["title"]
-                view_count = item["statistics"]["viewCount"]
+                
+                statistics = item.get("statistics", {})
+                view_count = int(statistics.get("viewCount", 0))
 
                 songs_for_counts.append({
                     "title": title,
                     "video_id": video_id,
-                    "count": int(view_count)
+                    "count": view_count
                 })
 
         return {"all_songs": songs, "songs_for_counts": songs_for_counts}

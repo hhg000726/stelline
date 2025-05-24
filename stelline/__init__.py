@@ -4,6 +4,8 @@ import logging
 
 from stelline.logging_config import setup_logging
 from stelline.config import SECRET_KEY
+from stelline.stelline.database.db_connection import get_rds_connection
+
 # 로깅 설정
 setup_logging()
 
@@ -14,6 +16,24 @@ from stelline.auth import auth_bp
 # 기존 핸들러 유지 (Flask가 덮어쓰지 않도록 설정)
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
+
+try:
+    conn = get_rds_connection()
+    with conn.cursor() as cursor:
+        sql = """
+        CREATE TABLE IF NOT EXISTS song_counts (
+            video_id VARCHAR(255),
+            count INT,
+            counted_time DATETIME,
+            FOREIGN KEY (video_id) REFERENCES song_infos(video_id)
+        )
+        """
+        cursor.execute(sql)
+        leaderboard = cursor.fetchall()
+except:
+    logging.error("테이블 오류 발생.")
+finally:
+    conn.close()
 
 # Flask 앱 생성
 app = Flask(__name__)

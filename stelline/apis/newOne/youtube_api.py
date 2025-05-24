@@ -49,7 +49,7 @@ def get_songs():
             for item in video_response.get("items", []):
                 video_id = item["id"]
                 title = item["snippet"]["title"]
-                
+
                 statistics = item.get("statistics", {})
                 view_count = int(statistics.get("viewCount", 0))
 
@@ -71,8 +71,9 @@ def youtube_api_process(all_songs):
             new_songs = get_songs()
             if new_songs.get("songs") and new_songs.get("songs") != all_songs:
                 all_songs.clear()
-                all_songs.update(new_songs)
+                all_songs.update(new_songs.get("songs"))
                 logging.info("YouTube 데이터 업데이트 완료!")
+            logging.info(new_songs.get("songs_for_counts", []))
             for song in new_songs.get("songs_for_counts", []):
                 conn = get_rds_connection()
                 try:

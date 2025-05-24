@@ -80,15 +80,15 @@ def youtube_api_process(all_songs):
                         sql = "SELECT * FROM song_counts WHERE video_id = %s"
                         cursor.execute(sql, (song["video_id"],))
                         existing_song = cursor.fetchone()
-                    logging.info(f"기존 곡: {existing_song}, {not existing_song}")
                     if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
-                        sql = """
-                            UPDATE song_counts
-                            SET count = %s, counted_time = %s
-                            WHERE video_id = %s
-                        """
                         with conn.cursor() as cursor:
+                            sql = """
+                                UPDATE song_counts
+                                SET count = %s, counted_time = %s
+                                WHERE video_id = %s
+                            """
                             cursor.execute(sql, (song["count"], datetime.now(), song["video_id"]))
+                            conn.commit()
                     if not existing_song:
                         with conn.cursor() as cursor:
                             sql = """
@@ -96,6 +96,7 @@ def youtube_api_process(all_songs):
                                 VALUES (%s, %s, %s, %s)
                             """
                             cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime.datetime(2000, 1, 1)))
+                            conn.commit()
                 except Exception as e:
                     logging.error(f"RDS song_counts 업데이트 오류: {e}")
                     continue

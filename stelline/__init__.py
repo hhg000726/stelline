@@ -4,7 +4,7 @@ import logging
 
 from stelline.logging_config import setup_logging
 from stelline.config import SECRET_KEY
-from stelline.stelline.database.db_connection import get_rds_connection
+from stelline.database.db_connection import get_rds_connection
 
 # 로깅 설정
 setup_logging()

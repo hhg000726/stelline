@@ -24,8 +24,7 @@ try:
         CREATE TABLE IF NOT EXISTS song_counts (
             video_id VARCHAR(255),
             count INT,
-            counted_time DATETIME,
-            FOREIGN KEY (video_id) REFERENCES song_infos(video_id)
+            counted_time DATETIME
         )
         """
         cursor.execute(sql)

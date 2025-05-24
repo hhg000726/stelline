@@ -63,8 +63,8 @@ def get_songs():
 def youtube_api_process(all_songs):
     while True:
         try:
-            new_songs = get_songs().get("all_songs", [])
-            if new_songs and new_songs != all_songs:
+            new_songs = get_songs()
+            if new_songs.get("songs") and new_songs.get("songs") != all_songs:
                 all_songs.clear()
                 all_songs.update(new_songs)
                 logging.info("YouTube 데이터 업데이트 완료!")

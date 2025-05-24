@@ -17,8 +17,8 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
+conn = get_rds_connection()
 try:
-    conn = get_rds_connection()
     with conn.cursor() as cursor:
         sql = """
         CREATE TABLE IF NOT EXISTS song_counts (
@@ -30,7 +30,7 @@ try:
         """
         cursor.execute(sql)
         conn.commit()
-        logging.error("테이블 생성 성공.")
+        logging.info("테이블 생성 성공.")
 except:
     logging.error("테이블 오류 발생.")
 finally:

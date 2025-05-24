@@ -2,11 +2,16 @@ from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 import logging, requests, time
 from datetime import datetime, timedelta
-import google.auth
+from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
+SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
+
 def get_access_token():
-    credentials, project = google.auth.load_credentials_from_file(SERVICE_ACCOUNT_FILE)
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE,
+        scopes=SCOPES
+    )
     credentials.refresh(Request())
     return credentials.token
 

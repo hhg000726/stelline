@@ -73,7 +73,6 @@ def youtube_api_process(all_songs):
                 all_songs.clear()
                 all_songs.update(new_songs.get("songs"))
                 logging.info("YouTube 데이터 업데이트 완료!")
-            logging.info(new_songs.get("songs_for_counts", []))
             for song in new_songs.get("songs_for_counts", []):
                 conn = get_rds_connection()
                 try:
@@ -81,6 +80,7 @@ def youtube_api_process(all_songs):
                         sql = "SELECT * FROM song_counts WHERE video_id = %s"
                         cursor.execute(sql, (song["video_id"],))
                         existing_song = cursor.fetchone()
+                    logging.info(f"기존 곡: {existing_song}, {not existing_song}")
                     if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
                         sql = """
                             UPDATE song_counts

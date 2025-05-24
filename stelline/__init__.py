@@ -31,8 +31,8 @@ try:
         cursor.execute(sql)
         conn.commit()
         logging.info("테이블 생성 성공.")
-except:
-    logging.error("테이블 오류 발생.")
+except Exception as e:
+    logging.error(f"테이블 생성 실패: {e}")
 finally:
     conn.close()
 

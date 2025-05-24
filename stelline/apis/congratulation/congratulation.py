@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta
 import logging
 from flask import jsonify
 
@@ -14,7 +14,7 @@ def congratulations():
             cursor.execute(sql)
             song_counts = cursor.fetchall()
             for item in song_counts:
-                if item.get("counted_time") >= datetime.now() - datetime.timedelta(days=1):
+                if item.get("counted_time") >= datetime.now() - timedelta(days=1):
                     result.append(item)
     except Exception as e:
         logging.error(f"DB에서 congratulation 데이터 가져오기 실패: {e}")

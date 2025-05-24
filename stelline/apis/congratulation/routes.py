@@ -1,4 +1,4 @@
-from flask import json, request
+from flask import request
 
 from stelline.database import db_connection
 from . import congratulation_bp
@@ -16,7 +16,7 @@ def register_token():
     if not token:
         return jsonify({"error": "Token is missing"}), 400
 
-    conn = db_connection()
+    conn = get_rds_connection()
     try:
         with conn.cursor() as cursor:
             # 이미 있는지 확인

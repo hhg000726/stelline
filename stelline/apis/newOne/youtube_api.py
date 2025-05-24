@@ -1,11 +1,15 @@
+import datetime
 from stelline.config import *
 import logging, requests, time
+
+from stelline.database.db_connection import get_rds_connection
 
 def get_songs():
     URL = f"https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={PLAYLIST_ID}&maxResults={MAX_RESULTS}&key={API_KEY}"
     songs = []
     video_ids = []
     next_page_token = None
+    songs_for_counts = []
 
     try:
         while True:
@@ -23,7 +27,7 @@ def get_songs():
                 songs.append({
                     "title": item["snippet"]["title"],
                     "video_id": video_id
-                })
+                })            
 
             next_page_token = data.get("nextPageToken")
             if not next_page_token:
@@ -42,7 +46,15 @@ def get_songs():
                     if song["video_id"] == video_id:
                         song["date"] = published_at
 
-        return {"all_songs": songs}
+            for item in video_response.get("items", []):
+                video_id = item["snippet"]["resourceId"]["videoId"]
+                songs_for_counts.append({
+                    "title": item["snippet"]["title"],
+                    "video_id": video_id,
+                    "count": item["statistics"]["viewCount"]
+                })
+
+        return {"all_songs": songs, "songs_for_counts": songs_for_counts}
     except Exception as e:
         logging.error(f"YouTube API에서 곡을 가져오는 중 오류 발생: {e}")
         return []
@@ -51,11 +63,38 @@ def get_songs():
 def youtube_api_process(all_songs):
     while True:
         try:
-            new_songs = get_songs()
+            new_songs = get_songs().get("all_songs", [])
             if new_songs and new_songs != all_songs:
                 all_songs.clear()
                 all_songs.update(new_songs)
                 logging.info("YouTube 데이터 업데이트 완료!")
+            for song in new_songs.get("songs_for_counts", []):
+                conn = get_rds_connection()
+                try:
+                    with conn.cursor() as cursor:
+                        sql = "SELECT * FROM song_counts WHERE video_id = %s"
+                        cursor.execute(sql, (song["video_id"],))
+                        existing_song = cursor.fetchone()
+                    if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
+                        sql = """
+                            UPDATE song_counts
+                            SET count = %s, counted_time = %s
+                            WHERE video_id = %s
+                        """
+                        with conn.cursor() as cursor:
+                            cursor.execute(sql, (song["count"], datetime.now(), song["video_id"]))
+                    if not existing_song:
+                        with conn.cursor() as cursor:
+                            sql = """
+                                INSERT INTO song_counts (title, video_id, count, counted_time)
+                                VALUES (%s, %s, %s, %s)
+                            """
+                            cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime.datetime(2000, 1, 1)))
+                except Exception as e:
+                    logging.error(f"RDS song_counts 업데이트 오류: {e}")
+                    continue
+                finally:
+                    conn.close()
         except Exception as e:
             logging.error(f"YouTube API 업데이트 오류: {e}")
         

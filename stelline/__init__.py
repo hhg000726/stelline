@@ -21,7 +21,12 @@ conn = get_rds_connection()
 try:
     with conn.cursor() as cursor:
         sql = """
+        DROP TABLE IF EXISTS song_infos
+        """
+        cursor.execute(sql)
+        sql = """
         CREATE TABLE IF NOT EXISTS song_counts (
+            title VARCHAR(255),
             video_id VARCHAR(255),
             count INT,
             counted_time DATETIME

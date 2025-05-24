@@ -3,7 +3,7 @@ from stelline.apis.newOne import newOne_bp
 from stelline.apis.search import search_bp
 from stelline.apis.bugs import bugs_bp
 from stelline.apis.main import main_bp
-
+from stelline.apis.congratulation import congratulation_bp
 
 api_bp = Blueprint("api", __name__)
 
@@ -12,3 +12,4 @@ api_bp.register_blueprint(newOne_bp, url_prefix="/newOne")
 api_bp.register_blueprint(search_bp, url_prefix="/search")
 api_bp.register_blueprint(bugs_bp, url_prefix="/bugs")
 api_bp.register_blueprint(main_bp, url_prefix="/main")
+api_bp.register_blueprint(congratulation_bp, url_prefix="/congratulation")

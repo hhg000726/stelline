@@ -77,7 +77,7 @@ def youtube_api_process(all_songs):
             new_songs = get_songs()
             if new_songs.get("all_songs") and new_songs.get("all_songs") != all_songs:
                 all_songs.clear()
-                all_songs.update(new_songs.get("all_songs"))
+                all_songs["all_songs"] = new_songs.get("all_songs")
                 logging.info("YouTube 데이터 업데이트 완료!")
             access_token = get_access_token()
             for song in new_songs.get("songs_for_counts", []):

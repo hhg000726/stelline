@@ -25,7 +25,8 @@ try:
         sql = """CREATE TABLE fcm_tokens (
             id INT AUTO_INCREMENT PRIMARY KEY,
             token TEXT NOT NULL UNIQUE,
-            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX(token(255))
         );"""
         cursor.execute(sql)
         conn.commit()

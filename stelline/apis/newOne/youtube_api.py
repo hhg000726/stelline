@@ -47,11 +47,14 @@ def get_songs():
                         song["date"] = published_at
 
             for item in video_response.get("items", []):
-                video_id = item["snippet"]["resourceId"]["videoId"]
+                video_id = item["id"]
+                title = item["snippet"]["title"]
+                view_count = item["statistics"]["viewCount"]
+
                 songs_for_counts.append({
-                    "title": item["snippet"]["title"],
+                    "title": title,
                     "video_id": video_id,
-                    "count": item["statistics"]["viewCount"]
+                    "count": int(view_count)
                 })
 
         return {"all_songs": songs, "songs_for_counts": songs_for_counts}

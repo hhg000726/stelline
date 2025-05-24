@@ -9,13 +9,6 @@ async function fetchSongs() {
     }
 }
 
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]]; // 배열 요소 스왑
-    }
-}
-
 function renderTable(data, tableId) {
     const tableBody = document.getElementById(tableId);
     tableBody.innerHTML = ""; // 기존 데이터 제거
@@ -39,7 +32,7 @@ function renderTable(data, tableId) {
         row.appendChild(queryCell);
 
         const timeCell = document.createElement("td");
-        const date = new Date(song.counted_time);
+        const date = new Date(new Date(song.counted_time).getTime() - 9 * 60 * 60 * 1000);
         timeCell.textContent = date.toLocaleString("ko-KR");
         row.appendChild(timeCell);
         

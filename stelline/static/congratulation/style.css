@@ -20,7 +20,7 @@ img {
 
 button {
   cursor: pointer;
-  width: 80%;
+  width: 100px;
   max-width: 500px;
   padding: 12px;
   font-size: 18px;
@@ -51,7 +51,7 @@ button:hover {
 
 table {
   width: 80%;
-  max-width: 400px;
+  max-width: 600px;
   margin: 0 auto;
   border-collapse: collapse;
   border-radius: 5px;

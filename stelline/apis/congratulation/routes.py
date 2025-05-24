@@ -1,6 +1,6 @@
 from flask import json, request
 
-from stelline.stelline.database import db_connection
+from stelline.database import db_connection
 from . import congratulation_bp
 from .congratulation import *
 

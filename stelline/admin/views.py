@@ -20,7 +20,8 @@ def admin_index():
     conn = get_rds_connection()
     table_names = [
         "song_infos", "songs_data", "recent_data", "record_main",
-        "record_search", "leaderboard", "targets", "events", "twits"
+        "record_search", "leaderboard", "targets", "events", "twits",
+        "song_counts"
     ]
     data = {}
     columns = {}

@@ -56,8 +56,6 @@ function updateNotificationUI() {
         enableButton.textContent = '알림 허용됨';
         enableButton.style.backgroundColor = '#28a745'; // 성공 색상 (선택 사항)
         enableButton.style.cursor = 'default';
-        // 이미 허용된 상태이므로, 토큰 가져오기 함수도 실행 (새 토큰 또는 기존 토큰 확인)
-        getExistingToken(); 
     } else if (Notification.permission === 'denied') {
         statusElement.textContent = '알림이 차단되었습니다. 브라우저 설정에서 해제해주세요.';
         enableButton.disabled = true;

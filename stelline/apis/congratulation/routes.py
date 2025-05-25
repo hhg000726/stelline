@@ -15,7 +15,7 @@ except ValueError:
     # 예: cred = credentials.Certificate('/path/to/your/serviceAccountKey.json')
     # 개발 환경에서는 환경 변수 등으로 경로를 관리하는 것이 좋습니다.
     # 또는 GAE, Cloud Run 등 Google Cloud 환경에서는 서비스 계정 키 없이도 자동 인증됩니다.
-    cred = credentials.Certificate('path/to/your/serviceAccountKey.json') 
+    cred = credentials.Certificate(SERVICE_ACCOUNT_FILE) 
     firebase_admin.initialize_app(cred)
     
 @congratulation_bp.route("/congratulations", methods=["GET"])

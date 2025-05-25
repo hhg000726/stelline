@@ -251,7 +251,6 @@ async function unsubscribeNotifications() {
     statusElement.className = 'info';
 
     try {
-        const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
         const currentToken = await messaging.getToken({ vapidKey: VAPID_KEY }); // 현재 활성화된 토큰 가져오기
         if (currentToken) {
             // 1. Firebase에서 구독 해지 시도

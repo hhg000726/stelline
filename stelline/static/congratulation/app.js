@@ -62,6 +62,7 @@ async function checkAndSetUIBasedOnToken() {
     const permission = Notification.permission; // 브라우저 알림 권한 확인
 
     if (permission === 'denied') {
+        // 이 부분은 그대로 유지: 브라우저에서 알림이 차단된 상태
         statusElement.textContent = '알림이 브라우저 설정에서 차단되었습니다. 새로고침 하거나 수동으로 설정해주세요.';
         statusElement.className = 'error';
         enableButton.disabled = true;
@@ -72,21 +73,37 @@ async function checkAndSetUIBasedOnToken() {
         disableButton.textContent = '알림 취소 불가';
         disableButton.style.backgroundColor = '#cccccc';
         disableButton.style.cursor = 'not-allowed';
-        return; // 일찍 종료
+        return;
     }
 
     let currentToken = null;
     try {
-        // Service Worker가 등록되지 않았거나 문제가 있다면 getToken은 실패할 수 있음.
-        // 이 경우에는 try-catch 블록에서 처리되므로 여기서는 permission === 'granted'일 때만 getToken을 시도.
-        if (permission === 'granted') { // 권한이 'granted'일 때만 토큰 가져오기 시도
-            currentToken = await messaging.getToken({ vapidKey: VAPID_KEY });
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+             // 서비스 워커가 활성화된 경우에만 getToken 시도
+            if (permission === 'granted') {
+                currentToken = await messaging.getToken({ vapidKey: VAPID_KEY });
+            }
+        } else {
+             // 서비스 워커가 없으면 토큰을 가져올 수 없으므로 early exit
+            console.warn('Service Worker가 활성화되지 않아 토큰을 가져올 수 없습니다.');
+            statusElement.textContent = '알림을 사용하려면 Service Worker 등록이 필요합니다.';
+            statusElement.className = 'error';
+            enableButton.disabled = true; // Service Worker 없으면 알림 허용 불가
+            enableButton.textContent = '알림 지원 안됨';
+            enableButton.style.backgroundColor = '#cccccc';
+            enableButton.style.cursor = 'not-allowed';
+            disableButton.disabled = true;
+            disableButton.textContent = '알림 취소하기';
+            disableButton.style.backgroundColor = '#cccccc';
+            disableButton.style.cursor = 'not-allowed';
+            return;
         }
+
     } catch (err) {
         console.error('FCM 토큰 가져오는 중 오류 발생 (checkAndSetUIBasedOnToken):', err);
-        statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}`;
+        statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}. (권한: ${permission})`; // 권한 상태 추가
         statusElement.className = 'error';
-        // 토큰 가져오기 실패 시, 다시 '알림 허용하기'를 누를 수 있도록 허용
+        // 토큰 가져오기 실패 시, 'granted' 상태라면 다시 '알림 허용하기'를 누를 수 있도록
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
         enableButton.style.backgroundColor = '#007bff';
@@ -100,7 +117,7 @@ async function checkAndSetUIBasedOnToken() {
 
     // ⭐ 핵심 수정 부분 ⭐
     if (currentToken) {
-        // 토큰이 존재하면 알림이 활성화된 것으로 간주
+        // 1. 토큰이 존재하고 브라우저 권한도 granted인 경우 (가장 이상적인 상태)
         statusElement.textContent = '알림이 허용되었고, 토큰이 발급되었습니다.';
         statusElement.className = 'success';
         enableButton.disabled = true;
@@ -113,21 +130,23 @@ async function checkAndSetUIBasedOnToken() {
         disableButton.style.backgroundColor = '#6c757d';
         disableButton.style.cursor = 'pointer';
     } else if (permission === 'granted' && !currentToken) {
-        // 브라우저 권한은 'granted'인데, 토큰이 없는 경우:
-        // 사용자에게 '알림 허용하기'를 다시 시도하도록 유도 (토큰 발급 재시도)
-        statusElement.textContent = '알림 권한은 허용되었으나 토큰이 필요합니다. 알림 허용하기를 다시 눌러주세요.';
-        statusElement.className = 'warning'; // 경고 상태 표시
+        // 2. 브라우저 권한은 'granted'인데, 토큰이 없는 경우:
+        //    (예: 토큰 삭제 후, 또는 토큰 발급에 실패했으나 권한은 유지되는 경우)
+        statusElement.textContent = '알림 권한은 허용되었으나, 토큰이 필요합니다. "알림 허용하기"를 눌러 토큰을 발급받으세요.';
+        statusElement.className = 'warning';
         enableButton.disabled = false; // '알림 허용하기' 버튼 활성화
-        enableButton.textContent = '알림 허용하기 (토큰 발급)';
-        enableButton.style.backgroundColor = '#ffc107'; // 경고 색상
+        enableButton.textContent = '알림 허용하기'; // 문구 변경: (토큰 발급) 제거
+        enableButton.style.backgroundColor = '#ffc107';
         enableButton.style.cursor = 'pointer';
 
         disableButton.disabled = true;
         disableButton.textContent = '알림 취소하기';
         disableButton.style.backgroundColor = '#cccccc';
         disableButton.style.cursor = 'not-allowed';
-    } else { // permission === 'default' (아직 묻지 않음) 또는 그 외 토큰 없는 경우
-        statusElement.textContent = '앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.';
+    } else {
+        // 3. 브라우저 권한이 'default'이거나, 그 외 토큰이 없는 경우 (첫 방문 또는 권한 거부 후)
+        statusElement.textContent = '알림을 받으려면 "알림 허용하기" 버튼을 클릭하세요.';
+        statusElement.className = 'info';
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
         enableButton.style.backgroundColor = '#007bff';

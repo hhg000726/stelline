@@ -22,7 +22,7 @@ try:
     with conn.cursor() as cursor:
         # 테이블이 존재하면 변경
         sql = """
-        ALTER TABLE IF EXISTS fcm_tokens
+        ALTER TABLE IF EXISTS song_counts
         ADD COLUMN IF NOT EXISTS channel VARCHAR(255);
         """
         cursor.execute(sql)

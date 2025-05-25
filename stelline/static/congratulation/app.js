@@ -233,7 +233,7 @@ async function unsubscribeNotifications() {
     try {
         const currentToken = await messaging.getToken(); // 현재 활성화된 토큰 가져오기
         if (currentToken) {
-            // 1. Firebase에서 구독 해지
+            // 1. Firebase에서 구독 해지 시도
             await messaging.deleteToken(currentToken);
             console.log('Firebase 구독 해지 성공');
             statusElement.textContent = 'Firebase에서 구독이 해지되었습니다. 서버에 알리는 중...';
@@ -251,25 +251,32 @@ async function unsubscribeNotifications() {
 
             if (response.ok) {
                 console.log('웹 푸시 토큰 서버 삭제 성공');
-                statusElement.textContent = '알림 구독이 완전히 취소되었습니다.';
-                statusElement.className = 'info';
+                statusElement.textContent = '알림 구독이 완전히 취소되었습니다. UI를 업데이트합니다.'; // 메시지 변경
+                statusElement.className = 'success'; // 성공 상태로 표시
+                
+                // ⭐ 핵심 수정 부분: 잠시 후 UI를 완전히 업데이트하도록 지연 ⭐
+                // deleteToken이 완전히 반영될 시간을 줌
+                setTimeout(() => {
+                    checkAndSetUIBasedOnToken();
+                }, 500); // 500ms (0.5초) 지연 후 UI 상태 확인
+                
             } else {
                 console.error('서버에서 토큰 삭제 실패:', response.status, response.statusText);
                 statusElement.textContent = `서버에서 토큰 삭제 실패: ${response.status}`;
                 statusElement.className = 'error';
+                checkAndSetUIBasedOnToken(); // 실패 시 바로 UI 상태 재조정
             }
         } else {
             console.warn('구독 해지할 토큰이 없습니다. 이미 해지되었거나 알림이 허용되지 않았습니다.');
             statusElement.textContent = '구독 해지할 토큰이 없습니다.';
             statusElement.className = 'info';
+            checkAndSetUIBasedOnToken(); // 토큰이 없으니 UI 상태 재조정
         }
     } catch (error) {
         console.error('알림 구독 해지 중 에러 발생:', error);
         statusElement.textContent = `알림 구독 해지 실패: ${error.message}`;
         statusElement.className = 'error';
-    } finally {
-        // 구독 해지 후 UI 상태 업데이트 (버튼 상태 재조정)
-        checkAndSetUIBasedOnToken();
+        checkAndSetUIBasedOnToken(); // 에러 발생 시 UI 상태 재조정
     }
 }
 

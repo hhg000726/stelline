@@ -54,7 +54,6 @@ def get_songs():
                 published_at = item["snippet"]["publishedAt"]
                 title = item["snippet"]["title"]
                 view_count = int(item.get("statistics", {}).get("viewCount", 0))
-                channel_title = item["snippet"]["channelTitle"]
 
                 for song in songs:
                     if song["video_id"] == video_id:
@@ -63,8 +62,7 @@ def get_songs():
                 songs_for_counts.append({
                     "title": title,
                     "video_id": video_id,
-                    "count": view_count,
-                    "channel": channel_title
+                    "count": view_count
                 })
 
         return {"all_songs": songs, "songs_for_counts": songs_for_counts}
@@ -89,16 +87,6 @@ def youtube_api_process(all_songs):
                         sql = "SELECT * FROM song_counts WHERE video_id = %s"
                         cursor.execute(sql, (song["video_id"],))
                         existing_song = cursor.fetchone()
-                    if existing_song and existing_song["channel"] != song["channel"]:
-                        with conn.cursor() as cursor:
-                            sql = """
-                                UPDATE song_counts
-                                SET channel = %s
-                                WHERE video_id = %s
-                            """
-                            cursor.execute(sql, (song["channel"], song["video_id"]))
-                            conn.commit()
-                            logging.info(f"채널 정보 업데이트: {song['video_id']} - {song['channel']}")
                     if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
                         with conn.cursor() as cursor:
                             sql = "SELECT token FROM fcm_tokens"
@@ -161,9 +149,9 @@ def youtube_api_process(all_songs):
                         with conn.cursor() as cursor:
                             sql = """
                                 INSERT INTO song_counts (title, video_id, count, counted_time)
-                                VALUES (%s, %s, %s, %s, %s)
+                                VALUES (%s, %s, %s, %s)
                             """
-                            cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime(2000, 1, 1), song["channel"]))
+                            cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime(2000, 1, 1)))
                             conn.commit()
             except Exception as e:
                 logging.error(f"RDS song_counts 업데이트 오류: {e}")

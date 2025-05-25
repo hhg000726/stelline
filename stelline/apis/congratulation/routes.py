@@ -34,7 +34,7 @@ def register_token():
     try:
         with conn.cursor() as cursor:
             # 이미 있는지 확인
-            check_sql = "SELECT id FROM fcm_tokens WHERE token = %s"
+            check_sql = "SELECT token FROM fcm_tokens WHERE token = %s"
             cursor.execute(check_sql, (token,))
             existing = cursor.fetchone()
 

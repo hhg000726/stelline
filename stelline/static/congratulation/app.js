@@ -19,6 +19,7 @@ const messaging = firebase.messaging();
 
 const statusElement = document.getElementById('status');
 const enableButton = document.getElementById('enableNotificationsButton');
+const disableButton = document.getElementById('disableNotificationsButton');
 
 /**
  * 1. Service Worker를 등록합니다.

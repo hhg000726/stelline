@@ -59,10 +59,9 @@ function registerServiceWorker() {
 async function checkAndSetUIBasedOnToken() {
     statusElement.className = 'info';
 
-    const permission = Notification.permission;
+    const permission = Notification.permission; // 브라우저 알림 권한 확인
 
     if (permission === 'denied') {
-        // ... (기존 'denied' 처리 로직 유지)
         statusElement.textContent = '알림이 브라우저 설정에서 차단되었습니다. 새로고침 하거나 수동으로 설정해주세요.';
         statusElement.className = 'error';
         enableButton.disabled = true;
@@ -73,42 +72,21 @@ async function checkAndSetUIBasedOnToken() {
         disableButton.textContent = '알림 취소 불가';
         disableButton.style.backgroundColor = '#cccccc';
         disableButton.style.cursor = 'not-allowed';
-        return;
+        return; // 일찍 종료
     }
 
     let currentToken = null;
     try {
-        // Service Worker가 활성화되어 있는지 확인 (가장 중요)
-        const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-        if (!('serviceWorker' in navigator) || !registration || !registration.active) {
-            console.warn('Service Worker가 활성화되지 않았거나 등록되지 않았습니다. 알림 기능을 사용할 수 없습니다.');
-            statusElement.textContent = '알림을 사용하려면 Service Worker 등록이 필요합니다. 새로고침 해주세요.';
-            statusElement.className = 'error';
-            enableButton.disabled = true;
-            enableButton.textContent = '알림 지원 안됨';
-            enableButton.style.backgroundColor = '#cccccc';
-            enableButton.style.cursor = 'not-allowed';
-            disableButton.disabled = true;
-            disableButton.textContent = '알림 취소하기';
-            disableButton.style.backgroundColor = '#cccccc';
-            disableButton.style.cursor = 'not-allowed';
-            return;
+        // Service Worker가 등록되지 않았거나 문제가 있다면 getToken은 실패할 수 있음.
+        // 이 경우에는 try-catch 블록에서 처리되므로 여기서는 permission === 'granted'일 때만 getToken을 시도.
+        if (permission === 'granted') { // 권한이 'granted'일 때만 토큰 가져오기 시도
+            currentToken = await messaging.getToken({ vapidKey: VAPID_KEY });
         }
-
-        if (permission === 'granted') {
-            // ⭐ forceRefresh 옵션을 사용하여 토큰을 강제로 새로 가져오도록 시도 ⭐
-            // 이는 캐시된 토큰이 아닌 최신 상태를 얻는 데 도움을 줄 수 있습니다.
-            currentToken = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
-            // messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration, forceRefresh: true });
-            // Firebase JS SDK v9부터 forceRefresh는 명시적으로 지원되지 않지만,
-            // serviceWorkerRegistration을 명시적으로 전달하는 것이 좋습니다.
-            // 최신 버전의 Firebase SDK는 getToken 시 내부적으로 최신 상태를 확인합니다.
-        }
-
     } catch (err) {
         console.error('FCM 토큰 가져오는 중 오류 발생 (checkAndSetUIBasedOnToken):', err);
-        statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}. (권한: ${permission})`;
+        statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}`;
         statusElement.className = 'error';
+        // 토큰 가져오기 실패 시, 다시 '알림 허용하기'를 누를 수 있도록 허용
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
         enableButton.style.backgroundColor = '#007bff';
@@ -120,8 +98,9 @@ async function checkAndSetUIBasedOnToken() {
         return;
     }
 
-    // --- (이하 기존 로직 유지) ---
+    // ⭐ 핵심 수정 부분 ⭐
     if (currentToken) {
+        // 토큰이 존재하면 알림이 활성화된 것으로 간주
         statusElement.textContent = '알림이 허용되었고, 토큰이 발급되었습니다.';
         statusElement.className = 'success';
         enableButton.disabled = true;
@@ -134,20 +113,21 @@ async function checkAndSetUIBasedOnToken() {
         disableButton.style.backgroundColor = '#6c757d';
         disableButton.style.cursor = 'pointer';
     } else if (permission === 'granted' && !currentToken) {
-        statusElement.textContent = '알림 권한은 허용되었으나, 토큰이 필요합니다. "알림 허용하기"를 눌러 토큰을 발급받으세요.';
-        statusElement.className = 'warning';
-        enableButton.disabled = false;
-        enableButton.textContent = '알림 허용하기';
-        enableButton.style.backgroundColor = '#ffc107';
+        // 브라우저 권한은 'granted'인데, 토큰이 없는 경우:
+        // 사용자에게 '알림 허용하기'를 다시 시도하도록 유도 (토큰 발급 재시도)
+        statusElement.textContent = '알림 권한은 허용되었으나 토큰이 필요합니다. 알림 허용하기를 다시 눌러주세요.';
+        statusElement.className = 'warning'; // 경고 상태 표시
+        enableButton.disabled = false; // '알림 허용하기' 버튼 활성화
+        enableButton.textContent = '알림 허용하기 (토큰 발급)';
+        enableButton.style.backgroundColor = '#ffc107'; // 경고 색상
         enableButton.style.cursor = 'pointer';
 
         disableButton.disabled = true;
         disableButton.textContent = '알림 취소하기';
         disableButton.style.backgroundColor = '#cccccc';
         disableButton.style.cursor = 'not-allowed';
-    } else {
-        statusElement.textContent = '알림을 받으려면 "알림 허용하기" 버튼을 클릭하세요.';
-        statusElement.className = 'info';
+    } else { // permission === 'default' (아직 묻지 않음) 또는 그 외 토큰 없는 경우
+        statusElement.textContent = '앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.';
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
         enableButton.style.backgroundColor = '#007bff';
@@ -251,9 +231,9 @@ async function unsubscribeNotifications() {
     statusElement.className = 'info';
 
     try {
-        const currentToken = await messaging.getToken({ vapidKey: VAPID_KEY }); // 현재 활성화된 토큰 가져오기
+        const currentToken = await messaging.getToken(); // 현재 활성화된 토큰 가져오기
         if (currentToken) {
-            // 1. Firebase에서 구독 해지 시도
+            // 1. Firebase에서 구독 해지
             await messaging.deleteToken(currentToken);
             console.log('Firebase 구독 해지 성공');
             statusElement.textContent = 'Firebase에서 구독이 해지되었습니다. 서버에 알리는 중...';
@@ -271,40 +251,25 @@ async function unsubscribeNotifications() {
 
             if (response.ok) {
                 console.log('웹 푸시 토큰 서버 삭제 성공');
-                statusElement.textContent = '알림 구독이 완전히 취소되었습니다. 다시 알림을 받으려면 "알림 허용하기"를 눌러주세요.';
-                statusElement.className = 'info'; // 정보성 메시지로 변경
-
-                // ⭐ 직접 UI 상태를 원하는 대로 변경 (토큰 삭제 성공 후) ⭐
-                enableButton.disabled = false;
-                enableButton.textContent = '알림 허용하기';
-                enableButton.style.backgroundColor = '#007bff';
-                enableButton.style.cursor = 'pointer';
-
-                disableButton.disabled = true;
-                disableButton.textContent = '알림 취소하기';
-                disableButton.style.backgroundColor = '#cccccc';
-                disableButton.style.cursor = 'not-allowed';
-
-                // (선택 사항) 혹시 모를 경우를 대비해 약간의 지연 후 checkAndSetUIBasedOnToken 호출
-                // setTimeout(() => {
-                //     checkAndSetUIBasedOnToken();
-                // }, 100);
-
+                statusElement.textContent = '알림 구독이 완전히 취소되었습니다.';
+                statusElement.className = 'info';
             } else {
-                // ... 서버 에러 처리
-                checkAndSetUIBasedOnToken(); // 에러 발생 시 원래 상태로 돌림
+                console.error('서버에서 토큰 삭제 실패:', response.status, response.statusText);
+                statusElement.textContent = `서버에서 토큰 삭제 실패: ${response.status}`;
+                statusElement.className = 'error';
             }
         } else {
             console.warn('구독 해지할 토큰이 없습니다. 이미 해지되었거나 알림이 허용되지 않았습니다.');
             statusElement.textContent = '구독 해지할 토큰이 없습니다.';
             statusElement.className = 'info';
-            checkAndSetUIBasedOnToken(); // 토큰이 없으니 UI 상태 재조정
         }
     } catch (error) {
         console.error('알림 구독 해지 중 에러 발생:', error);
         statusElement.textContent = `알림 구독 해지 실패: ${error.message}`;
         statusElement.className = 'error';
-        checkAndSetUIBasedOnToken(); // 에러 발생 시 UI 상태 재조정
+    } finally {
+        // 구독 해지 후 UI 상태 업데이트 (버튼 상태 재조정)
+        checkAndSetUIBasedOnToken();
     }
 }
 

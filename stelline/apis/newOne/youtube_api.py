@@ -112,6 +112,9 @@ def youtube_api_process(all_songs):
                                             "title": song['title'],
                                             "body": f"{song['count']}0만회 달성!",
                                             "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg"
+                                        },
+                                        "fcm_options": {
+                                            "link": f"https://www.youtube.com/watch?v={song['video_id']}"
                                         }
                                     }
                                 }

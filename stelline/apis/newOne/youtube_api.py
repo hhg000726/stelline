@@ -113,9 +113,20 @@ def youtube_api_process(all_songs):
                                             "body": f"{song['count']}0만회 달성!",
                                             "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg"
                                         },
-                                        "webpush": {
-                                            "fcm_options": {
-                                                "link": f"https://www.youtube.com/watch?v={song['video_id']}"
+                                        "data": {
+                                            "title": song['title'],
+                                            "body": f"{song['count'] // 100000}0만회 달성!",
+                                            "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg",
+                                            "video_url": f"https://www.youtube.com/watch?v={song['video_id']}"
+                                        },
+                                        "android": {
+                                            "priority": "HIGH",
+                                            "notification": {
+                                                "channel_id": "high_importance_channel",
+                                                "default_vibrate_timings": True,
+                                                "default_sound": True,
+                                                "visibility": "PUBLIC",
+                                                "click_action": "OPEN_YOUTUBE"
                                             }
                                         }
                                     }
@@ -125,6 +136,13 @@ def youtube_api_process(all_songs):
                                     logging.info(f"FCM 알림 발송 성공: {token}")
                                 else:
                                     logging.error(f"FCM 알림 실패 ({response.status_code}): {response.text}")
+                                    if response.status_code == 404 and "UNREGISTERED" in response.text:
+                                        sql = """
+                                            DELETE FROM fcm_tokens
+                                            WHERE token = %s
+                                        """
+                                        cursor.execute(sql, (token,))
+                                        print(f"토큰 만료 혹은 등록 해제됨, 삭제 처리: {token}")
                         with conn.cursor() as cursor:
                             sql = """
                                 UPDATE song_counts

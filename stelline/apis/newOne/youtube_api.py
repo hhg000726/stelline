@@ -1,7 +1,7 @@
 from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 import logging, requests, time
-from datetime import datetime, timedelta
+from datetime import datetime
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 
@@ -52,17 +52,12 @@ def get_songs():
             for item in video_response.get("items", []):
                 video_id = item["id"]
                 published_at = item["snippet"]["publishedAt"]
+                title = item["snippet"]["title"]
+                view_count = int(item.get("statistics", {}).get("viewCount", 0))
 
                 for song in songs:
                     if song["video_id"] == video_id:
                         song["date"] = published_at
-
-            for item in video_response.get("items", []):
-                video_id = item["id"]
-                title = item["snippet"]["title"]
-
-                statistics = item.get("statistics", {})
-                view_count = int(statistics.get("viewCount", 0))
 
                 songs_for_counts.append({
                     "title": title,
@@ -85,18 +80,17 @@ def youtube_api_process(all_songs):
                 all_songs["all_songs"] = new_songs.get("all_songs")
                 logging.info("YouTube 데이터 업데이트 완료!")
             access_token = get_access_token()
-            for song in new_songs.get("songs_for_counts", []):
-                conn = get_rds_connection()
-                try:
+            conn = get_rds_connection()
+            try:
+                for song in new_songs.get("songs_for_counts", []):
                     with conn.cursor() as cursor:
                         sql = "SELECT * FROM song_counts WHERE video_id = %s"
                         cursor.execute(sql, (song["video_id"],))
                         existing_song = cursor.fetchone()
                     if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
                         with conn.cursor() as cursor:
-                            sql = "SELECT token FROM fcm_tokens WHERE registered_at >= %s"
-                            yesterday = datetime.now() - timedelta(days=1)
-                            cursor.execute(sql, (yesterday,))
+                            sql = "SELECT token FROM fcm_tokens"
+                            cursor.execute(sql, )
                             rows = cursor.fetchall()
                             tokens = [row['token'] for row in rows]
                             for token in tokens:
@@ -110,7 +104,7 @@ def youtube_api_process(all_songs):
                                         "token": token,
                                         "notification": {
                                             "title": song['title'],
-                                            "body": f"{song['count']}0만회 달성!",
+                                            "body": f"{song['count'] // 100000}0만회 달성!",
                                             "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg"
                                         },
                                         "data": {
@@ -135,14 +129,14 @@ def youtube_api_process(all_songs):
                                 if response.status_code == 200:
                                     logging.info(f"FCM 알림 발송 성공: {token}")
                                 else:
-                                    logging.error(f"FCM 알림 실패 ({response.status_code}): {response.text}")
+                                    logging.info(f"FCM 알림 실패 ({response.status_code}): {response.text}")
                                     if response.status_code == 404 and "UNREGISTERED" in response.text:
                                         sql = """
                                             DELETE FROM fcm_tokens
                                             WHERE token = %s
                                         """
                                         cursor.execute(sql, (token,))
-                                        print(f"토큰 만료 혹은 등록 해제됨, 삭제 처리: {token}")
+                                        logging.info(f"토큰 만료 혹은 등록 해제됨, 삭제 처리: {token}")
                         with conn.cursor() as cursor:
                             sql = """
                                 UPDATE song_counts
@@ -159,11 +153,11 @@ def youtube_api_process(all_songs):
                             """
                             cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime(2000, 1, 1)))
                             conn.commit()
-                except Exception as e:
-                    logging.error(f"RDS song_counts 업데이트 오류: {e}")
-                    continue
-                finally:
-                    conn.close()
+            except Exception as e:
+                logging.error(f"RDS song_counts 업데이트 오류: {e}")
+                continue
+            finally:
+                conn.close()
         except Exception as e:
             logging.error(f"YouTube API 업데이트 오류: {e}")
         

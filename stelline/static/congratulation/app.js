@@ -14,7 +14,9 @@ const firebaseConfig = {
 const VAPID_KEY = "BARjqsXZvm70GJ12i6w6OPJX8U8v5fPdBG7r9pkwwNJL_MC7GXzdb4c-g_I2fPb5U_tTO0B5MlUzM0kWvcUHwIs";
 
 // Firebase 초기화
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const messaging = firebase.messaging();
 
 const statusElement = document.getElementById('status');
@@ -99,7 +101,7 @@ async function checkAndSetUIBasedOnToken() {
     }
 
     // ⭐ 핵심 수정 부분 ⭐
-    if (currentToken) {
+    if (await currentTokenIsValid(currentToken)) {
         // 토큰이 존재하면 알림이 활성화된 것으로 간주
         statusElement.textContent = '알림이 허용되었고, 토큰이 발급되었습니다.';
         statusElement.className = 'success';
@@ -112,20 +114,6 @@ async function checkAndSetUIBasedOnToken() {
         disableButton.textContent = '알림 취소하기';
         disableButton.style.backgroundColor = '#6c757d';
         disableButton.style.cursor = 'pointer';
-    } else if (permission === 'granted' && !currentToken) {
-        // 브라우저 권한은 'granted'인데, 토큰이 없는 경우:
-        // 사용자에게 '알림 허용하기'를 다시 시도하도록 유도 (토큰 발급 재시도)
-        statusElement.textContent = '알림 권한은 허용되었으나 토큰이 필요합니다. 알림 허용하기를 다시 눌러주세요.';
-        statusElement.className = 'warning'; // 경고 상태 표시
-        enableButton.disabled = false; // '알림 허용하기' 버튼 활성화
-        enableButton.textContent = '알림 허용하기 (토큰 발급)';
-        enableButton.style.backgroundColor = '#ffc107'; // 경고 색상
-        enableButton.style.cursor = 'pointer';
-
-        disableButton.disabled = true;
-        disableButton.textContent = '알림 취소하기';
-        disableButton.style.backgroundColor = '#cccccc';
-        disableButton.style.cursor = 'not-allowed';
     } else { // permission === 'default' (아직 묻지 않음) 또는 그 외 토큰 없는 경우
         statusElement.textContent = '앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.';
         enableButton.disabled = false;
@@ -138,6 +126,34 @@ async function checkAndSetUIBasedOnToken() {
         disableButton.style.backgroundColor = '#cccccc';
         disableButton.style.cursor = 'not-allowed';
     }
+}
+
+async function currentTokenIsValid(token) {
+    if (!token) {
+        // 토큰이 null인 경우 유효하지 않음
+        return false;
+    }
+    const serverUrl = "https://stelline.site/api/congratulation/check-token";
+    try {
+        const response = await fetch(serverUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ token: token, platform: 'web' })
+        });
+
+        if (response.ok) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        console.error('서버 확인 실패:', error);
+        statusElement.textContent = `서버 확인 실패: ${error.message}`;
+        statusElement.className = 'error';
+    } 
+    return false; // 기본적으로 유효하지 않음으로 간주
 }
 
 /**
@@ -231,7 +247,7 @@ async function unsubscribeNotifications() {
     statusElement.className = 'info';
 
     try {
-        const currentToken = await messaging.getToken(); // 현재 활성화된 토큰 가져오기
+        const currentToken = await messaging.getToken({ vapidKey: VAPID_KEY }); // 현재 활성화된 토큰 가져오기
         if (currentToken) {
             // 1. Firebase에서 구독 해지
             await messaging.deleteToken(currentToken);

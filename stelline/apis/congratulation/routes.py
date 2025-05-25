@@ -105,3 +105,30 @@ def unregister_token():
     finally:
         if conn:
             conn.close()
+
+@congratulation_bp.route("/check-token", methods=["POST"])
+def check_token():
+    data = request.get_json()
+    token = data.get("token")
+
+    if not token:
+        return jsonify({"error": "Token is missing"}), 400
+
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            check_sql = "SELECT token FROM fcm_tokens WHERE token = %s"
+            cursor.execute(check_sql, (token,))
+            result = cursor.fetchone()
+
+            if result:
+                return jsonify({"valid": True}), 200
+            else:
+                return jsonify({"valid": False}), 200
+
+    except Exception as e:
+        logging.error(f"FCM 토큰 확인 실패: {e}")
+        return jsonify({"error": "DB check failed"}), 500
+
+    finally:
+        conn.close()

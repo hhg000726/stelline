@@ -4,6 +4,7 @@ import logging
 
 from stelline.logging_config import setup_logging
 from stelline.config import SECRET_KEY
+from stelline.database.db_connection import get_rds_connection
 
 # 로깅 설정
 setup_logging()
@@ -15,6 +16,19 @@ from stelline.auth import auth_bp
 # 기존 핸들러 유지 (Flask가 덮어쓰지 않도록 설정)
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
+
+conn = get_rds_connection()  # RDS 연결 설정
+try:
+    with conn.cursor() as cursor:
+        # 테이블이 존재하면 변경
+        sql = """
+        ALTER TABLE IF EXISTS fcm_tokens
+        ADD COLUMN IF NOT EXISTS channel VARCHAR(255);
+        """
+        cursor.execute(sql)
+        conn.commit()
+except Exception as e:
+    logging.error(f"FCM 토큰 테이블 변경 실패: {e}")
 
 # Flask 앱 생성
 app = Flask(__name__)

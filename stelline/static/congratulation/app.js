@@ -270,20 +270,28 @@ async function unsubscribeNotifications() {
 
             if (response.ok) {
                 console.log('웹 푸시 토큰 서버 삭제 성공');
-                statusElement.textContent = '알림 구독이 완전히 취소되었습니다. UI를 업데이트합니다.'; // 메시지 변경
-                statusElement.className = 'success'; // 성공 상태로 표시
-                
-                // ⭐ 핵심 수정 부분: 잠시 후 UI를 완전히 업데이트하도록 지연 ⭐
-                // deleteToken이 완전히 반영될 시간을 줌
-                setTimeout(() => {
-                    checkAndSetUIBasedOnToken();
-                }, 500); // 500ms (0.5초) 지연 후 UI 상태 확인
-                
+                statusElement.textContent = '알림 구독이 완전히 취소되었습니다. 다시 알림을 받으려면 "알림 허용하기"를 눌러주세요.';
+                statusElement.className = 'info'; // 정보성 메시지로 변경
+
+                // ⭐ 직접 UI 상태를 원하는 대로 변경 (토큰 삭제 성공 후) ⭐
+                enableButton.disabled = false;
+                enableButton.textContent = '알림 허용하기';
+                enableButton.style.backgroundColor = '#007bff';
+                enableButton.style.cursor = 'pointer';
+
+                disableButton.disabled = true;
+                disableButton.textContent = '알림 취소하기';
+                disableButton.style.backgroundColor = '#cccccc';
+                disableButton.style.cursor = 'not-allowed';
+
+                // (선택 사항) 혹시 모를 경우를 대비해 약간의 지연 후 checkAndSetUIBasedOnToken 호출
+                // setTimeout(() => {
+                //     checkAndSetUIBasedOnToken();
+                // }, 100);
+
             } else {
-                console.error('서버에서 토큰 삭제 실패:', response.status, response.statusText);
-                statusElement.textContent = `서버에서 토큰 삭제 실패: ${response.status}`;
-                statusElement.className = 'error';
-                checkAndSetUIBasedOnToken(); // 실패 시 바로 UI 상태 재조정
+                // ... 서버 에러 처리
+                checkAndSetUIBasedOnToken(); // 에러 발생 시 원래 상태로 돌림
             }
         } else {
             console.warn('구독 해지할 토큰이 없습니다. 이미 해지되었거나 알림이 허용되지 않았습니다.');

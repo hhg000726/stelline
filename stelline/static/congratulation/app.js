@@ -26,7 +26,7 @@ const enableButton = document.getElementById('enableNotificationsButton');
  */
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        navigator.serviceWorker.register('/congratulation/firebase-messaging-sw.js')
             .then((registration) => {
                 console.log('Service Worker 등록 성공:', registration);
                 // Service Worker 등록 성공 후 알림 상태 확인 및 UI 업데이트

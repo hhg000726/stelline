@@ -100,7 +100,7 @@ def youtube_api_process(all_songs):
                             rows = cursor.fetchall()
                             tokens = [row['token'] for row in rows]
                             for token in tokens:
-                                url = "https://fcm.googleapis.com/v1/projects/stelline/messages:send"
+                                url = f"https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send"
                                 headers = {
                                     "Authorization": f"Bearer {access_token}",
                                     "Content-Type": "application/json"
@@ -113,8 +113,10 @@ def youtube_api_process(all_songs):
                                             "body": f"{song['count']}0만회 달성!",
                                             "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg"
                                         },
-                                        "fcm_options": {
-                                            "link": f"https://www.youtube.com/watch?v={song['video_id']}"
+                                        "webpush": {
+                                            "fcm_options": {
+                                                "link": f"https://www.youtube.com/watch?v={song['video_id']}"
+                                            }
                                         }
                                     }
                                 }

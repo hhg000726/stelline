@@ -2,6 +2,7 @@ from flask import request
 from stelline.database.db_connection import get_rds_connection
 from . import congratulation_bp
 from .congratulation import *
+import firebase_admin
 from firebase_admin import credentials, messaging # Firebase Admin SDK 
 
 # Firebase Admin SDK 초기화 (앱 시작 시 한 번만 수행)

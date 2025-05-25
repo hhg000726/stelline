@@ -17,6 +17,19 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
+conn = get_rds_connection()  # RDS 연결 설정
+try:
+    with conn.cursor() as cursor:
+        # 테이블이 존재하면 변경
+        sql = """
+        ALTER TABLE song_counts
+        DROP COLUMN channel;
+        """
+        cursor.execute(sql)
+        conn.commit()
+except Exception as e:
+    logging.error(f"FCM 토큰 테이블 변경 실패: {e}")
+
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

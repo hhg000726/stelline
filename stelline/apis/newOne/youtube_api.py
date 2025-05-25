@@ -113,7 +113,13 @@ def youtube_api_process(all_songs):
                                             "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg",
                                             "video_url": f"https://www.youtube.com/watch?v={song['video_id']}"
                                         },
+                                        "webpush": {
+                                            "headers": {
+                                                "TTL": "86400"  # 24시간 동안 재전송 시도
+                                            }
+                                        },
                                         "android": {
+                                            "ttl": "86400s",
                                             "priority": "HIGH",
                                             "notification": {
                                                 "channel_id": "high_importance_channel",

@@ -1,6 +1,6 @@
 // ⭐⭐⭐ [필수] 당신의 Firebase 프로젝트 구성으로 교체하세요! ⭐⭐⭐
 const firebaseConfig = {
-    apiKey: "AIzaSyDG7znUAyWQ9VAmOpQlmvESCZqv1yvgkAw",
+    apiKey: "AIzaSyDG7znUAyWQ9VAmOpQlmvESCZqv1yvgjAw",
     authDomain: "stelline-9d8ed.firebaseapp.com",
     projectId: "stelline-9d8ed",
     storageBucket: "stelline-9d8ed.firebasestorage.app",
@@ -21,6 +21,10 @@ const statusElement = document.getElementById('status');
 const enableButton = document.getElementById('enableNotificationsButton');
 const disableButton = document.getElementById('disableNotificationsButton');
 
+// 초기 상태에서 버튼 비활성화 (스크립트 로드 시 바로 적용)
+enableButton.disabled = true;
+disableButton.disabled = true;
+
 /**
  * 1. Service Worker를 등록합니다.
  * 웹 푸시 알림은 Service Worker 없이는 작동하지 않습니다.
@@ -31,7 +35,7 @@ function registerServiceWorker() {
             .then((registration) => {
                 console.log('Service Worker 등록 성공:', registration);
                 // Service Worker 등록 성공 후 UI 업데이트 (토큰 상태를 기반으로)
-                checkAndSetUIBasedOnToken(); // ⭐ 변경된 부분
+                // checkAndSetUIBasedOnToken()은 페이지 로드 시 호출되므로 여기서는 제거
             })
             .catch((error) => {
                 console.error('Service Worker 등록 실패:', error);
@@ -40,6 +44,7 @@ function registerServiceWorker() {
                 enableButton.disabled = true;
                 enableButton.textContent = '알림 지원 안됨';
                 disableButton.disabled = true;
+                checkAndSetUIBasedOnToken(); // 서비스 워커 등록 실패 시 UI 상태 재조정
             });
     } else {
         console.warn('이 브라우저는 Service Worker를 지원하지 않습니다.');
@@ -76,11 +81,11 @@ async function checkAndSetUIBasedOnToken() {
     try {
         currentToken = await messaging.getToken({ vapidKey: VAPID_KEY }); // Attempt to get FCM token
     } catch (err) {
-        // Handle error in getting token (e.g., Service Worker issues)
+        // Handle error in getting token (e.g., Service Worker issues or permission not yet granted)
         console.error('FCM 토큰 가져오는 중 오류 발생 (checkAndSetUIBasedOnToken):', err);
         statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}`;
         statusElement.className = 'error';
-        // If token retrieval fails, act like no token exists
+        // If token retrieval fails (e.g., no permission yet), allow user to enable
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
         enableButton.style.backgroundColor = '#007bff';
@@ -196,7 +201,8 @@ async function sendTokenToServer(token) {
         statusElement.textContent = `서버 전송 실패: ${error.message}`;
         statusElement.className = 'error';
     } finally {
-        checkAndSetUIBasedOnToken(); // 성공/실패 여부와 관계없이 최종 UI 상태 업데이트
+        // 토큰 전송 결과에 따라 UI를 업데이트
+        checkAndSetUIBasedOnToken();
     }
 }
 
@@ -253,7 +259,6 @@ async function unsubscribeNotifications() {
     }
 }
 
-
 // 3. 웹사이트가 열려 있을 때 (포그라운드) 메시지 수신 처리 (이 부분은 변경 없음)
 messaging.onMessage((payload) => {
     console.log('포그라운드 메시지 받음:', payload);
@@ -281,8 +286,7 @@ messaging.onMessage((payload) => {
 // ⭐ 페이지 로드 시 Service Worker 등록을 시도하고 UI를 업데이트합니다. ⭐
 window.addEventListener('load', () => {
     registerServiceWorker();
-    // 초기 로드 시에도 토큰 상태를 기반으로 UI를 업데이트
-    // checkAndSetUIBasedOnToken()은 registerServiceWorker() 성공 콜백에서 호출됩니다.
+    checkAndSetUIBasedOnToken(); // 페이지 로드 시에도 토큰 상태를 기반으로 UI를 업데이트
 });
 
 // 알림 허용 버튼 클릭 이벤트 리스너
@@ -290,12 +294,7 @@ enableButton.addEventListener('click', requestPermissionAndGetToken);
 // 알림 취소 버튼 클릭 이벤트 리스너
 disableButton.addEventListener('click', unsubscribeNotifications);
 
-// 초기 상태에서 버튼 비활성화
-enableButton.disabled = true;
-disableButton.disabled = true;
-
-
-// ⭐ iOS 사용자를 위한 추가 안내 (PWA 설치 유도) ⭐ (이 부분은 변경 없음)
+// ⭐ iOS 사용자를 위한 추가 안내 (PWA 설치 유도) ⭐
 if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
     if (!window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone) {
         statusElement.innerHTML += '<br><b><span style="color: #dc3545;">🚨 iOS 사용자는 Safari에서 "홈 화면에 추가"해야 알림을 받을 수 있습니다.</span></b>';

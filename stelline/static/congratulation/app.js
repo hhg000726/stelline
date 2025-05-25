@@ -130,9 +130,9 @@ async function checkAndSetUIBasedOnToken() {
 
 async function currentTokenIsValid(token) {
     if (!token) {
-        // 토큰이 null인 경우 유효하지 않음
         return false;
     }
+
     const serverUrl = "https://stelline.site/api/congratulation/check-token";
     try {
         const response = await fetch(serverUrl, {
@@ -144,7 +144,8 @@ async function currentTokenIsValid(token) {
         });
 
         if (response.ok) {
-            return true;
+            const data = await response.json();
+            return data.valid === true;
         } else {
             return false;
         }
@@ -152,8 +153,9 @@ async function currentTokenIsValid(token) {
         console.error('서버 확인 실패:', error);
         statusElement.textContent = `서버 확인 실패: ${error.message}`;
         statusElement.className = 'error';
-    } 
-    return false; // 기본적으로 유효하지 않음으로 간주
+    }
+
+    return false;
 }
 
 /**

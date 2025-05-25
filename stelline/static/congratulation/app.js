@@ -254,7 +254,7 @@ async function unsubscribeNotifications() {
 }
 
 
-// 3. 웹사이트가 열려 있을 때 (포그라운드) 메시지 수신 처리 (이 부분은 변경 없음)
+// 3. 웹사이트가 열려 있을 때 (포그라운드) 메시지 수신 처리 
 messaging.onMessage((payload) => {
     console.log('포그라운드 메시지 받음:', payload);
 

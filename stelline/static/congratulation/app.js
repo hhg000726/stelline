@@ -1,6 +1,6 @@
 // ⭐⭐⭐ [필수] 당신의 Firebase 프로젝트 구성으로 교체하세요! ⭐⭐⭐
 const firebaseConfig = {
-    apiKey: "AIzaSyDG7znUAyWQ9VAmOpQlmvESCZqv1yvgjAw",
+    apiKey: "AIzaSyDG7znUAyWQ9VAmOpQlmvESCZqv1yvgkAw",
     authDomain: "stelline-9d8ed.firebaseapp.com",
     projectId: "stelline-9d8ed",
     storageBucket: "stelline-9d8ed.firebasestorage.app",

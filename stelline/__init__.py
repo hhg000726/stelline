@@ -23,7 +23,7 @@ try:
         # 테이블이 존재하면 변경
         sql = """
         ALTER TABLE IF EXISTS song_counts
-        ADD COLUMN IF NOT EXISTS channel VARCHAR(255);
+        ADD COLUM channel VARCHAR(255);
         """
         cursor.execute(sql)
         conn.commit()

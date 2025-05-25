@@ -1,9 +1,22 @@
 from flask import request
-
-from stelline.database import db_connection
+from stelline.database.db_connection import get_rds_connection
 from . import congratulation_bp
 from .congratulation import *
+from firebase_admin import credentials, messaging # Firebase Admin SDK 
 
+# Firebase Admin SDK 초기화 (앱 시작 시 한 번만 수행)
+# 이 부분은 실제 앱에서는 Flask 앱 컨텍스트나 별도의 초기화 모듈에 있어야 합니다.
+try:
+    # 이미 초기화되었는지 확인 (다중 초기화 방지)
+    firebase_admin.get_app()
+except ValueError:
+    # 서비스 계정 키 파일 경로를 정확히 지정해주세요.
+    # 예: cred = credentials.Certificate('/path/to/your/serviceAccountKey.json')
+    # 개발 환경에서는 환경 변수 등으로 경로를 관리하는 것이 좋습니다.
+    # 또는 GAE, Cloud Run 등 Google Cloud 환경에서는 서비스 계정 키 없이도 자동 인증됩니다.
+    cred = credentials.Certificate('path/to/your/serviceAccountKey.json') 
+    firebase_admin.initialize_app(cred)
+    
 @congratulation_bp.route("/congratulations", methods=["GET"])
 def congratulation_api():
     return congratulations()
@@ -58,6 +71,54 @@ def unregister_token():
 
     conn = get_rds_connection()
     try:
+        # 1. Firebase에서 토큰 삭제 시도 (Admin SDK 사용)
+        try:
+            # delete_registration_tokens는 토픽 구독 해지용이며, 인스턴스 자체 삭제는 delete_instance_id 또는 send dry run
+            # 더 명확한 방법은 send()에 dry_run=True를 사용하여 invalid token 응답을 받고 DB에서 삭제하는 것입니다.
+            # 하지만 클라이언트가 deleteToken()을 이미 호출했다면, 서버에서 다시 호출하는 것은 중복일 수 있습니다.
+            # 가장 직접적인 방법은 Instance ID API를 사용하는 것이지만, Admin SDK는 메시징을 통해 토큰을 관리합니다.
+            # 일반적으로는 클라이언트의 deleteToken()을 신뢰하고, 서버에서는 DB만 업데이트하거나,
+            # 메시지 전송 실패 시 Firebase에서 토큰이 유효하지 않다고 알려줄 때 DB에서 삭제하는 방식이 선호됩니다.
+            #
+            # 만약 정말로 서버에서 Firebase 인스턴스 ID를 삭제하고 싶다면,
+            # Admin SDK의 messaging.send()를 통해 토큰이 invalid하다는 응답을 받은 후,
+            # 해당 토큰을 Admin SDK의 Instance ID API를 통해 삭제할 수 있습니다.
+            # 하지만 현재 `firebase-admin` 라이브러리의 `messaging` 모듈에 특정 토큰을
+            # 직접 삭제하는 Public API는 명시적으로 제공되지 않습니다.
+            # (주로 `send` 시점에 무효 토큰 감지 후 삭제 권고)
+            #
+            # 대안 1: 토픽 구독 해지 (아니라면 관련 없음)
+            # if 'your_topic_name' in firebase_admin.messaging.get_subscribed_topics(token):
+            #     response = messaging.unsubscribe_from_topic(token, 'your_topic_name')
+            #     logging.info(f"Unsubscribed token from topic: {response.success_count} success, {response.failure_count} fail")
+
+            # 대안 2: 유효성 검사 (드라이 런 전송) 후 DB에서만 삭제
+            # 이 방법은 토큰이 Firebase에서 더 이상 유효하지 않음을 확인하는 데 사용됩니다.
+            # 만약 `deleteToken()`이 클라이언트에서 실패하고, 서버에서만 삭제를 시도한다면 유용합니다.
+            
+            # dry_run으로 토큰의 유효성 검사
+            message = messaging.Message(token=token, data={'_': '_'}, dry_run=True)
+            response = messaging.send(message)
+            logging.info(f"Firebase dry_run send response for token '{token}': {response}")
+            # 이 응답을 기반으로 토큰이 유효하지 않으면 DB에서도 삭제합니다.
+            # 예: "messaging/registration-token-not-registered" 에러 코드 등
+            
+            # 이 시점에서 클라이언트가 이미 deleteToken()을 성공적으로 호출했다면,
+            # 서버에서 추가적으로 Firebase에 삭제 요청을 보낼 필요는 없습니다.
+            # Firebase 토큰 삭제는 클라이언트 측 `messaging.deleteToken()`이 권장됩니다.
+            # 서버는 클라이언트가 보낸 토큰이 더 이상 유효하지 않을 때 DB에서 삭제하는 역할을 하는 것이 일반적입니다.
+
+            # 만약 클라이언트에서 `deleteToken()` 호출을 생략하고 오직 서버에서만 삭제를 원한다면,
+            # Instance ID API를 직접 호출해야 합니다.
+            # 이는 `firebase-admin` SDK의 messaging 모듈 내에는 없으며,
+            # 구글 클라우드 IAM 인증을 거쳐 직접 `https://iid.googleapis.com/v1/web/iid/{token}` 에 DELETE 요청을 보내야 합니다.
+            # 이 방식은 더 복잡하며, 일반적으로 클라이언트 측 `deleteToken()`이 더 적절합니다.
+
+        except Exception as firebase_err:
+            logging.warning(f"Firebase에서 토큰 삭제 시도 중 경고 또는 오류 발생: {firebase_err}")
+            # 이 에러는 클라이언트가 이미 Firebase에서 토큰을 삭제했기 때문에 발생할 수 있습니다.
+            # 예를 들어, "Requested entity was not found" 같은 에러는 정상적인 상황일 수 있습니다.
+            # 따라서 이 에러가 치명적이지 않다면 다음 단계로 넘어갑니다.
         with conn.cursor() as cursor:
             # 토큰을 삭제하는 SQL 쿼리
             delete_sql = "DELETE FROM fcm_tokens WHERE token = %s"

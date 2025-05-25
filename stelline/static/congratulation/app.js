@@ -95,7 +95,7 @@ async function checkAndSetUIBasedOnToken() {
     if (currentToken) {
         // ⭐ If a token exists, the UI should reflect that notifications are active ⭐
         // This is the core of token-based UI control.
-        statusElement.textContent = `알림이 허용되었고, 토큰이 발급되었습니다. (토큰: ${currentToken.substring(0, 20)}...)`;
+        statusElement.textContent = '알림이 허용되었고, 토큰이 발급되었습니다.';
         statusElement.className = 'success';
         enableButton.disabled = true; // Disable enable button as notifications are already enabled
         enableButton.textContent = '알림 허용됨';

@@ -52,34 +52,35 @@ function registerServiceWorker() {
 }
 
 async function checkAndSetUIBasedOnToken() {
-    statusElement.className = 'info'; // 기본적으로 정보 색상으로 설정
+    statusElement.className = 'info';
 
-    // 브라우저 알림 권한 상태 확인 (기본적으로 필요)
-    const permission = Notification.permission;
+    const permission = Notification.permission; // Check browser permission first
 
     if (permission === 'denied') {
-        statusElement.textContent = '알림이 브라우저 설정에서 차단되었습니다. 수동으로 해제해주세요.';
+        // If permission is 'denied' at the browser level, nothing else matters for enabling notifications.
+        // The user *must* manually change browser settings.
+        statusElement.textContent = '알림이 브라우저 설정에서 차단되었습니다. 새로고침 하거나 수동으로 설정해주세요.';
         statusElement.className = 'error';
-        enableButton.disabled = true;
+        enableButton.disabled = true; // Disable enable button
         enableButton.textContent = '알림 차단됨';
         enableButton.style.backgroundColor = '#dc3545';
         enableButton.style.cursor = 'default';
-        disableButton.disabled = true;
+        disableButton.disabled = true; // Disable disable button
         disableButton.textContent = '알림 취소 불가';
         disableButton.style.backgroundColor = '#cccccc';
         disableButton.style.cursor = 'not-allowed';
-        return; // 'denied' 상태면 더 이상 토큰 확인 불필요
+        return; // Exit early
     }
 
-    // 'granted' 또는 'default' 상태일 때 토큰 존재 여부 확인 시도
     let currentToken = null;
     try {
-        currentToken = await messaging.getToken({ vapidKey: VAPID_KEY });
+        currentToken = await messaging.getToken({ vapidKey: VAPID_KEY }); // Attempt to get FCM token
     } catch (err) {
+        // Handle error in getting token (e.g., Service Worker issues)
         console.error('FCM 토큰 가져오는 중 오류 발생 (checkAndSetUIBasedOnToken):', err);
         statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}`;
         statusElement.className = 'error';
-        // 토큰 가져오기 실패 시, 'default' 상태처럼 버튼을 활성화
+        // If token retrieval fails, act like no token exists
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
         enableButton.style.backgroundColor = '#007bff';
@@ -92,40 +93,28 @@ async function checkAndSetUIBasedOnToken() {
     }
 
     if (currentToken) {
-        // 토큰이 존재하고, 브라우저 권한도 'granted'라면 (혹시 'default'인데 토큰이 발급된 경우 대비)
-        if (permission === 'granted') {
-            statusElement.textContent = `알림이 허용되었고, 토큰이 발급되었습니다. (토큰: ${currentToken.substring(0, 20)}...)`;
-            statusElement.className = 'success';
-            enableButton.disabled = true;
-            enableButton.textContent = '알림 허용됨';
-            enableButton.style.backgroundColor = '#28a745';
-            enableButton.style.cursor = 'default';
+        // ⭐ If a token exists, the UI should reflect that notifications are active ⭐
+        // This is the core of token-based UI control.
+        statusElement.textContent = `알림이 허용되었고, 토큰이 발급되었습니다. (토큰: ${currentToken.substring(0, 20)}...)`;
+        statusElement.className = 'success';
+        enableButton.disabled = true; // Disable enable button as notifications are already enabled
+        enableButton.textContent = '알림 허용됨';
+        enableButton.style.backgroundColor = '#28a745';
+        enableButton.style.cursor = 'default';
 
-            disableButton.disabled = false; // 토큰이 있다면 취소 가능
-            disableButton.textContent = '알림 취소하기';
-            disableButton.style.backgroundColor = '#6c757d';
-            disableButton.style.cursor = 'pointer';
-        } else { // permission이 'default'인데 토큰이 이미 존재하는 경우 (흔치 않음)
-            statusElement.textContent = '알림 권한이 필요합니다. 버튼을 클릭하세요.';
-            enableButton.disabled = false;
-            enableButton.textContent = '알림 허용하기';
-            enableButton.style.backgroundColor = '#007bff';
-            enableButton.style.cursor = 'pointer';
-
-            disableButton.disabled = true; // 권한이 default이므로 취소는 안됨
-            disableButton.textContent = '알림 취소하기';
-            disableButton.style.backgroundColor = '#cccccc';
-            disableButton.style.cursor = 'not-allowed';
-        }
+        disableButton.disabled = false; // Enable disable button to allow unsubscribing
+        disableButton.textContent = '알림 취소하기';
+        disableButton.style.backgroundColor = '#6c757d';
+        disableButton.style.cursor = 'pointer';
     } else {
-        // 토큰이 없는 경우 (FCM이 토큰을 발급해주지 않았거나 삭제된 경우)
+        // ⭐ If no token exists, the UI should prompt the user to enable notifications ⭐
         statusElement.textContent = '앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.';
-        enableButton.disabled = false;
+        enableButton.disabled = false; // Enable enable button
         enableButton.textContent = '알림 허용하기';
         enableButton.style.backgroundColor = '#007bff';
         enableButton.style.cursor = 'pointer';
 
-        disableButton.disabled = true;
+        disableButton.disabled = true; // Disable disable button as there's nothing to unsubscribe from
         disableButton.textContent = '알림 취소하기';
         disableButton.style.backgroundColor = '#cccccc';
         disableButton.style.cursor = 'not-allowed';

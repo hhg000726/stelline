@@ -80,7 +80,7 @@ async function checkAndSetUIBasedOnToken() {
     try {
         // Service Worker가 활성화되어 있는지 확인 (가장 중요)
         const registration = await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js');
-        if (!('serviceWorker' in navigator) || !registration || !registration.active) {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             console.warn('Service Worker가 활성화되지 않았거나 등록되지 않았습니다. 알림 기능을 사용할 수 없습니다.');
             statusElement.textContent = '알림을 사용하려면 Service Worker 등록이 필요합니다. 새로고침 해주세요.';
             statusElement.className = 'error';

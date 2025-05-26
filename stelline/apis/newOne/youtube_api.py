@@ -102,11 +102,6 @@ def youtube_api_process(all_songs):
                                 payload = {
                                     "message":{
                                         "token": token,
-                                        "notification": {
-                                            "title": song['title'],
-                                            "body": f"{song['count'] // 100000}0만회 달성!",
-                                            "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg"
-                                        },
                                         "data": {
                                             "title": song['title'],
                                             "body": f"{song['count'] // 100000}0만회 달성!",

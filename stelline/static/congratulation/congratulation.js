@@ -27,7 +27,7 @@ function renderTable(data, tableId) {
         
         const button = document.createElement("button");
         button.textContent = "이동";
-        button.onclick = () => handleButtonClick(song.query);
+        button.onclick = () => handleButtonClick(song.video_id);
         queryCell.appendChild(button);
         row.appendChild(queryCell);
 

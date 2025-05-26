@@ -65,8 +65,8 @@ def search_api():
         {"query": row["query"], "video_id": row["video_id"]}
         for row in recent
     ]
-    # 25개로 맞추기 위해 필요한 개수 계산
-    needed = 25 - len(search_targets)
+    # 75개로 맞추기 위해 필요한 개수 계산
+    needed = 75 - len(search_targets)
 
     # 중복 방지: converted에 이미 있는 video_id는 제외
     existing_ids = {item["video_id"] for item in search_targets}

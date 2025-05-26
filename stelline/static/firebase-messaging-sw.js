@@ -25,17 +25,21 @@ const messaging = firebase.messaging();
 /**
  * 백그라운드 메시지 수신 처리 (웹사이트가 닫혀 있거나 브라우저 백그라운드 상태일 때)
  */
+/**
+ * 백그라운드 메시지 수신 처리 (웹사이트가 닫혀 있거나 브라우저 백그라운드 상태일 때)
+ */
 messaging.onBackgroundMessage(function(payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
-    const notificationTitle = payload.notification?.title || "새 알림";
-    const notificationBody = payload.notification?.body || "내용 없음";
-    // FCM 데이터 페이로드에서 video_url 추출. 서버에서 보낼 때 "data" 필드에 포함되어야 합니다.
-    const videoUrl = payload.data?.video_url;
+    // payload.data에서 정보 추출
+    const notificationTitle = payload.data?.title || "새 알림"; // data 필드에서 제목 가져오기
+    const notificationBody = payload.data?.body || "내용 없음";   // data 필드에서 내용 가져오기
+    const videoUrl = payload.data?.video_url; // data 필드에서 video_url 추출
+    const imageUrl = payload.data?.image; // data 필드에서 이미지 URL 추출 (웹 푸시 icon/image용)
 
     const notificationOptions = {
         body: notificationBody,
-        icon: '/firebase-logo.png', // ⭐ 웹사이트에 표시될 아이콘 경로 (권장: 웹사이트 루트에 192x192 이상 PNG 파일)
+        icon: imageUrl || '/firebase-logo.png', // 이미지 URL이 있다면 icon으로 사용, 없으면 기본 아이콘
         data: { // 알림 클릭 시 전달될 사용자 정의 데이터
             video_url: videoUrl
         }
@@ -54,14 +58,8 @@ self.addEventListener('notificationclick', (event) => {
 
     const url = clickedNotification.data && clickedNotification.data.video_url;
     if (url) {
-        // 알림 클릭 시 새 탭/창에서 YouTube URL 열기
         event.waitUntil(
-            clients.openWindow(url)
-        );
-    } else {
-        // video_url이 없으면 웹사이트의 기본 페이지 열기
-        event.waitUntil(
-            clients.openWindow('/') // 웹사이트의 홈 페이지 또는 특정 페이지
+            clients.openWindow(url) // 알림 클릭 시 새 탭/창에서 YouTube URL 열기 (웹용)
         );
     }
 });

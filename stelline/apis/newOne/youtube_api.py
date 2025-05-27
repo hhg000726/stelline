@@ -81,6 +81,14 @@ def youtube_api_process(all_songs):
                 logging.info("YouTube 데이터 업데이트 완료!")
             access_token = get_access_token()
             conn = get_rds_connection()
+            with conn.cursor() as cursor:
+                sql = """
+                        DELETE FROM recent_data
+                        WHERE searched_time < %s
+                    """
+                cursor.execute(sql, (time.time() - 7 * 24 * 3600,))
+                conn.commit()
+            logging.info("최근 검색 데이터 정리 완료!")
             try:
                 for song in new_songs.get("songs_for_counts", []):
                     with conn.cursor() as cursor:

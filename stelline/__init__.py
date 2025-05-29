@@ -17,6 +17,21 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
+conn = get_rds_connection()
+with conn.cursor() as cursor:
+    sql = """
+    ALTER TABLE twits
+    ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP
+    """
+    cursor.execute(sql)
+    sql = """
+    UPDATE twits
+    SET expires_at = '2025-05-30 15:00:00'
+    WHERE title = 'Miiro X 아카네 리제 목숨 발매 기념 실트'
+    """
+    cursor.execute(sql)
+    conn.commit()
+
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

@@ -21,7 +21,7 @@ conn = get_rds_connection()
 with conn.cursor() as cursor:
     sql = """
     ALTER TABLE twits
-    ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP
+    ADD COLUMN expires_at TIMESTAMP
     """
     cursor.execute(sql)
     sql = """

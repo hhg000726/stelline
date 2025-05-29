@@ -20,14 +20,8 @@ if not logging.getLogger().handlers:
 conn = get_rds_connection()
 with conn.cursor() as cursor:
     sql = """
-    ALTER TABLE twits
+    ALTER TABLE events
     ADD COLUMN expires_at TIMESTAMP
-    """
-    cursor.execute(sql)
-    sql = """
-    UPDATE twits
-    SET expires_at = '2025-05-30 15:00:00'
-    WHERE title = 'Miiro X 아카네 리제 목숨 발매 기념 실트'
     """
     cursor.execute(sql)
     conn.commit()

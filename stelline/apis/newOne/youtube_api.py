@@ -83,6 +83,22 @@ def youtube_api_process(all_songs):
             conn = get_rds_connection()
             with conn.cursor() as cursor:
                 sql = """
+                        DELETE FROM twits
+                        WHERE expires_at < %s
+                    """
+                cursor.execute(sql, (datetime.now(),))
+                conn.commit()
+            logging.info("트윗 정리 완료!")
+            with conn.cursor() as cursor:
+                sql = """
+                        DELETE FROM events
+                        WHERE expires_at < %s
+                    """
+                cursor.execute(sql, (datetime.now(),))
+                conn.commit()
+            logging.info("트윗 정리 완료!")
+            with conn.cursor() as cursor:
+                sql = """
                         DELETE FROM recent_data
                         WHERE searched_time < %s
                     """

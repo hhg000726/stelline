@@ -17,15 +17,6 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
-conn = get_rds_connection()
-with conn.cursor() as cursor:
-    sql = """
-    ALTER TABLE events
-    ADD COLUMN expires_at TIMESTAMP
-    """
-    cursor.execute(sql)
-    conn.commit()
-
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

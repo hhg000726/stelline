@@ -44,34 +44,37 @@ function shuffleArray(array) {
 function populateTable(songs, recent) {
     shuffleArray(songs);
     shuffleArray(recent);
-    
-    renderTable(songs, "songTable");
-    renderTable(recent, "recentTable");
+
+    renderCards(songs, "songCards");
+    renderCards(recent, "recentCards");
 }
 
-function renderTable(data, tableId) {
-    const tableBody = document.getElementById(tableId);
-    tableBody.innerHTML = ""; // 기존 데이터 제거
-    
+function renderCards(data, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = ""; // 기존 제거
+
     data.forEach(song => {
-        const row = document.createElement("tr");
-        
-        const thumbnailCell = document.createElement("td");
+        const card = document.createElement("div");
+        card.className = "card";
+
         const img = document.createElement("img");
         img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
-        thumbnailCell.appendChild(img);
-        row.appendChild(thumbnailCell);
-        
-        const queryCell = document.createElement("td");
-        queryCell.textContent = song.query;
-        
+        card.appendChild(img);
+
+        const info = document.createElement("div");
+        info.className = "info";
+
+        const title = document.createElement("h3");
+        title.textContent = song.query;
+        info.appendChild(title);
+
         const button = document.createElement("button");
         button.textContent = "복사 & 이동";
         button.onclick = () => handleButtonClick(song.query);
-        queryCell.appendChild(button);
-        row.appendChild(queryCell);
-        
-        tableBody.appendChild(row);
+        info.appendChild(button);
+
+        card.appendChild(info);
+        container.appendChild(card);
     });
 }
 

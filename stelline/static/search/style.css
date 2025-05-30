@@ -170,15 +170,10 @@ ul {
   width: 100%;
   padding: 10px;
   font-size: 14px;
-  background-color: #4D8AF0;
   border: none;
   border-radius: 6px;
   color: white;
   cursor: pointer;
   margin-top: 10px;
   transition: background 0.2s ease;
-}
-
-.card .info button:hover {
-  background-color: #376ed6;
 }

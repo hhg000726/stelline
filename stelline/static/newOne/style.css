@@ -61,12 +61,12 @@ button {
   border: none;
   outline: none;
   color: white;
-  background: #6495ED;
+  background: #8AB8F8;
   transition: background 0.3s ease;
 }
 
 button:hover {
-  background: #4169E1;
+  background: #5F94D6;
 }
 
 .guess-btn {

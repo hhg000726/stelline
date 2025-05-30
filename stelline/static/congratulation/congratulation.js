@@ -10,48 +10,40 @@ async function fetchSongs() {
 }
 
 function renderTable(data, tableId) {
-    const tableBody = document.getElementById(tableId);
-    tableBody.innerHTML = ""; // 기존 데이터 제거
-    
-    data.forEach(song => {
-        const row = document.createElement("tr");
-        
-        const thumbnailCell = document.createElement("td");
-        const img = document.createElement("img");
-        img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
-        thumbnailCell.appendChild(img);
-        row.appendChild(thumbnailCell);
-        
-        const queryCell = document.createElement("td");
-        queryCell.textContent = Math.floor(song.count / 100000) + "0만 달성!";
-        
-        const button = document.createElement("button");
-        button.textContent = "이동";
-        button.onclick = () => handleButtonClick(song.video_id);
-        queryCell.appendChild(button);
-        row.appendChild(queryCell);
+  const tableBody = document.getElementById(tableId);
+  tableBody.innerHTML = "";
 
-        const timeCell = document.createElement("td");
-        const timeDifference = Date.now() - new Date(song.counted_time).getTime() + 9 * 60 * 60 * 1000;
-        const seconds = Math.floor(timeDifference / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
+  data.forEach(song => {
+    const card = document.createElement("div");
+    card.className = "card";
 
-        if (days > 0) {
-            timeCell.textContent = `${days}일 전`;
-        } else if (hours > 0) {
-            timeCell.textContent = `${hours}시간 전`;
-        } else if (minutes > 0) {
-            timeCell.textContent = `${minutes}분 전`;
-        } else {
-            timeCell.textContent = `${seconds}초 전`;
-        }
-        row.appendChild(timeCell);
-        
-        tableBody.appendChild(row);
-    });
+    const img = document.createElement("img");
+    img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
+    card.appendChild(img);
+
+    const info = document.createElement("div");
+    info.className = "info";
+
+    const title = document.createElement("h3");
+    title.textContent = `${Math.floor(song.count / 100000)}0만 달성!`;
+    info.appendChild(title);
+
+    const time = document.createElement("p");
+    const diff = Date.now() - new Date(song.counted_time).getTime() + 9 * 60 * 60 * 1000;
+    const hours = Math.floor(diff / 3600000);
+    time.textContent = `${hours > 0 ? hours + '시간 전' : '방금 전'}`;
+    info.appendChild(time);
+
+    const button = document.createElement("button");
+    button.textContent = "유튜브로 이동";
+    button.onclick = () => handleButtonClick(song.video_id);
+    info.appendChild(button);
+
+    card.appendChild(info);
+    tableBody.appendChild(card);
+  });
 }
+
 
 function handleButtonClick(video_id) {
     // 클립보드 복사 + 유튜브 이동

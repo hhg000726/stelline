@@ -96,7 +96,7 @@ def youtube_api_process(all_songs):
                     """
                 cursor.execute(sql, (datetime.now(),))
                 conn.commit()
-            logging.info("트윗 정리 완료!")
+            logging.info("벅스 정리 완료!")
             with conn.cursor() as cursor:
                 sql = """
                         DELETE FROM recent_data

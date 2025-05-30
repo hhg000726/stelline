@@ -12,7 +12,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 20px;
-  padding: 20px;
+  padding: 10px;
   max-width: 100%;
   box-sizing: border-box;
   overflow-x: auto;
@@ -81,7 +81,7 @@ button:hover {
 }
 
 table {
-  width: 90%;
+  width: 100%;
   max-width: 960px;
   margin: 0 auto;
   overflow: hidden;

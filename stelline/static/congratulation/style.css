@@ -10,7 +10,7 @@ body {
 
 #congratulationTable {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 20px;
   padding: 20px;
   max-width: 100%;
@@ -51,7 +51,7 @@ img {
 
 button {
   cursor: pointer;
-  width: 200px;
+  width: 150px;
   max-width: 500px;
   padding: 12px;
   font-size: 18px;

@@ -26,7 +26,7 @@ try:
     with conn.cursor() as cursor:
         # 데이터베이스 초기화 작업 (예: 테이블 생성 등)
         cursor.execute("""
-            ATLER TABLE song_infos (
+            ALTER TABLE song_infos (
                 ADD COLUMN risk int DEFAULT 0,
                 ADD COLUMN risk_count int DEFAULT 0
             )

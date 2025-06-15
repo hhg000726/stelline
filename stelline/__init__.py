@@ -26,7 +26,8 @@ try:
     with conn.cursor() as cursor:
         cursor.execute("""
             ALTER TABLE song_infos
-            DROP COLUMN risk
+            ADD COLUMN risk INT DEFAULT 0
+            DROP COLUMN risk_count
         """)
         conn.commit()
         cursor.execute("""

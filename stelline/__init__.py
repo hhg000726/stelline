@@ -24,27 +24,25 @@ conn = db_conn.get_rds_connection()
 
 try:
     with conn.cursor() as cursor:
-        # 데이터베이스 초기화 작업 (예: 테이블 생성 등)
         cursor.execute("""
             ALTER TABLE song_infos
-                ADD COLUMN risk int DEFAULT 0,
-                ADD COLUMN risk_count int DEFAULT 0
+            DROP COLUMN risk
         """)
         conn.commit()
         cursor.execute("""
             UPDATE song_infos
-            SET risk = 7
+            SET risk = 27
             WHERE (video_id IN (
-                    SELECT video_id FROM songs_data
+                    SELECT video_id FROM recent_data
                     )
             )
         """)
         conn.commit()
         cursor.execute("""
             UPDATE song_infos
-            SET risk = 6
+            SET risk = 28
             WHERE (video_id IN (
-                    SELECT video_id FROM recent_data
+                    SELECT video_id FROM songs_data
                     )
             )
         """)

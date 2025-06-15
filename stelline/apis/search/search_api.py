@@ -54,29 +54,42 @@ def load_recent_data():
         conn.close()
     return recent
 
+def update_risk(video_id, risk):
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                UPDATE song_infos
+                SET risk = %s
+                WHERE video_id = %s
+            """
+            cursor.execute(sql, (risk, video_id))
+            conn.commit()
+    except Exception as e:
+        logging.error(f"RDS risk 업데이트 실패: {e}")
+    finally:
+        conn.close()
 
 def search_api():
     song_infos = load_song_infos()
-    recent = load_recent_data()
     logging.info(f"검색 시작")
-    url = "https://www.googleapis.com/youtube/v3/search"
     not_searched = []
-    search_targets = [
-        {"query": row["query"], "video_id": row["video_id"]}
-        for row in recent
-    ]
-    # 25개로 맞추기 위해 필요한 개수 계산
-    needed = 25 - len(search_targets)
+    url = "https://www.googleapis.com/youtube/v3/search"
+    search_targets = []
 
-    # 중복 방지: converted에 이미 있는 video_id는 제외
-    existing_ids = {item["video_id"] for item in search_targets}
-    available = [info for info in song_infos if info["video_id"] not in existing_ids]
-
-    # 부족한 만큼 랜덤 추출
-    additional = random.sample(available, min(needed, len(available)))
-
-    # 추가
-    search_targets.extend(additional)
+    for risk_level in reversed(range(29)):
+        candidates = [info for info in song_infos if info.get("risk") == risk_level]
+        
+        # 아직 25개 미만이면 후보 추가
+        remaining = 25 - len(search_targets)
+        if remaining <= 0:
+            break
+        
+        if len(candidates) > remaining:
+            search_targets.extend(random.sample(candidates, remaining))
+            break
+        else:
+            search_targets.extend(candidates)
 
     for song_info in search_targets:
         query = song_info["query"]
@@ -96,6 +109,9 @@ def search_api():
             video_ids = [item["id"]["videoId"] for item in data["items"]]
             if video_id not in video_ids:
                 not_searched.append({"query": query, "video_id": video_id})
+                update_risk(video_id, 28)
+            else:
+                update_risk(video_id, max(song_info["risk"] - 1, 0))
         except requests.RequestException as e:
             logging.error(f"API 요청 실패: {e}")
             continue
@@ -126,14 +142,6 @@ def search_api_process():
                         VALUES (%s, %s, %s)
                         """
                         cursor.execute(sql, (video_id, query, searched_time))
-                    sql = """
-                        INSERT INTO recent_data (video_id, query, searched_time)
-                        SELECT video_id, query, searched_time
-                        FROM songs_data
-                        ON DUPLICATE KEY UPDATE
-                            searched_time = VALUES(searched_time)
-                    """
-                    cursor.execute(sql)
                     conn.commit()
 
                     logging.info("검색 데이터 업데이트 완료!")

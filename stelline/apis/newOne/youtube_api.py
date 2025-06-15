@@ -111,7 +111,7 @@ def youtube_api_process(all_songs):
                         sql = "SELECT * FROM song_counts WHERE video_id = %s"
                         cursor.execute(sql, (song["video_id"],))
                         existing_song = cursor.fetchone()
-                    if existing_song and existing_song["count"] // 100000 != song["count"] // 100000:
+                    if existing_song and existing_song["count"] // 100000 < song["count"] // 100000:
                         with conn.cursor() as cursor:
                             sql = "SELECT token FROM fcm_tokens"
                             cursor.execute(sql, )

@@ -142,8 +142,15 @@ def search_api_process():
                         VALUES (%s, %s, %s)
                         """
                         cursor.execute(sql, (video_id, query, searched_time))
+                    sql = """
+                        INSERT INTO recent_data (video_id, query, searched_time)
+                        SELECT video_id, query, searched_time
+                        FROM songs_data
+                        ON DUPLICATE KEY UPDATE
+                            searched_time = VALUES(searched_time)
+                    """
+                    cursor.execute(sql)
                     conn.commit()
-
                     logging.info("검색 데이터 업데이트 완료!")
             except Exception as e:
                 logging.error(f"RDS search 업데이트 실패: {e}")

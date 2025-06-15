@@ -17,41 +17,6 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
-import stelline.database.db_connection as db_conn
-
-# RDS 데이터베이스 연결 설정
-conn = db_conn.get_rds_connection()
-
-try:
-    with conn.cursor() as cursor:
-        cursor.execute("""
-            ALTER TABLE song_infos
-            ADD COLUMN risk INT DEFAULT 0,
-            DROP COLUMN risk_count
-        """)
-        conn.commit()
-        cursor.execute("""
-            UPDATE song_infos
-            SET risk = 27
-            WHERE (video_id IN (
-                    SELECT video_id FROM recent_data
-                    )
-            )
-        """)
-        conn.commit()
-        cursor.execute("""
-            UPDATE song_infos
-            SET risk = 28
-            WHERE (video_id IN (
-                    SELECT video_id FROM songs_data
-                    )
-            )
-        """)
-        conn.commit()
-        logging.info("데이터베이스 초기화 작업이 성공적으로 완료되었습니다.")
-except Exception as e:
-    logging.error(f"데이터베이스 초기화 중 오류 발생: {e}")
-
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

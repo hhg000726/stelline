@@ -1,7 +1,7 @@
 from flask import jsonify
 from stelline.database.db_connection import get_rds_connection
 
-def offlin_api():
+def offline_api():
     conn = get_rds_connection()
     with conn.cursor() as cursor:
         try:

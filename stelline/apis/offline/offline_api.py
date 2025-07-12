@@ -35,7 +35,7 @@ def offline_api():
                 name = event.get("name")
 
                 # 2. 위경도가 비어있다면 → Geocode 호출
-                if (lat is None or lng is None) and location_name:
+                if (lat < 1 or lng < 1) and location_name:
                     new_lat, new_lng = geocode_location(location_name, NCP_CLIENT_ID, NCP_CLIENT_SECRET)
                     if new_lat and new_lng:
                         update_sql = """

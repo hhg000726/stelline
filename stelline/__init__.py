@@ -17,7 +17,7 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
-from stelline.database import db_connection  # 데이터베이스 초기화
+from stelline.database.db_connection import get_rds_connection
 
 conn = get_rds_connection()
 

@@ -1,5 +1,18 @@
 const today = new Date();
 
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  const isUndecided = year >= 3000;
+
+  if (isUndecided) return "(미정)";
+
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+
+  return `${year}.${month}.${day}`;
+}
+
 function offlineRequest() {
   fetch("https://stelline.site/api/offline/offline_api", {
     method: "GET",
@@ -29,7 +42,7 @@ function offlineRequest() {
             <div style="padding:10px;">
               <strong>${event.name}</strong><br>
               장소: ${event.location_name}<br>
-              기간: ${event.start_date} ~ ${event.end_date}<br>
+              기간: ${formatDate(event.start_date)} ~ ${formatDate(event.end_date)}<br>
               <p>${event.description}</p>
             </div>
           `;

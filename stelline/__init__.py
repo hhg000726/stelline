@@ -28,7 +28,7 @@ from stelline.database.db_connection import get_rds_connection
 conn = get_rds_connection()
 with conn.cursor() as cursor:
     try:
-        cursor.execute("ALTER TABLE offline ADD COLUMN address VARCHAR(255)")
+        cursor.execute("DELETE FROM offline WHERE address IS NULL")
         conn.commit()
         logging.info("오프라인 테이블에 address 컬럼 추가 완료.")
     except Exception as e:

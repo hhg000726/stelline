@@ -32,6 +32,7 @@ def offline_api():
                 lat = event.get("latitude")
                 lng = event.get("longitude")
                 location_name = event.get("location_name")
+                name = event.get("name")
 
                 # 2. 위경도가 비어있다면 → Geocode 호출
                 if (lat is None or lng is None) and location_name:
@@ -40,9 +41,9 @@ def offline_api():
                         update_sql = """
                             UPDATE offline
                             SET latitude = %s, longitude = %s
-                            WHERE location_name = %s
+                            WHERE name = %s
                         """
-                        cursor.execute(update_sql, (new_lat, new_lng, location_name))
+                        cursor.execute(update_sql, (new_lat, new_lng, name))
                         event["latitude"] = new_lat
                         event["longitude"] = new_lng
 

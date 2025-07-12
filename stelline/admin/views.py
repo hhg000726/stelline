@@ -21,7 +21,7 @@ def admin_index():
     table_names = [
         "song_infos", "songs_data", "recent_data", "record_main",
         "record_search", "leaderboard", "targets", "events", "twits",
-        "song_counts", "fcm_tokens"
+        "song_counts", "fcm_tokens", "offline"
     ]
     data = {}
     columns = {}

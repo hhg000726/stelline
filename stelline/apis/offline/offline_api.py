@@ -12,7 +12,7 @@ def geocode_location(address, client_id, client_secret):
             "X-NCP-APIGW-API-KEY-ID": client_id,
             "X-NCP-APIGW-API-KEY": client_secret
         }
-        params = {"query": address}
+        params = {"query": address.strip()}
         res = requests.get(
             "https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode",
             headers=headers,

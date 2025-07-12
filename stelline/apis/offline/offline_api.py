@@ -9,12 +9,12 @@ from stelline.database.db_connection import get_rds_connection
 def geocode_location(address, client_id, client_secret):
     try:
         headers = {
-            "X-NCP-APIGW-API-KEY-ID": client_id,
-            "X-NCP-APIGW-API-KEY": client_secret
+            "x-ncp-apigw-api-key-id": client_id,
+            "x-ncp-apigw-api-key": client_secret
         }
         params = {"query": address.strip()}
         res = requests.get(
-            "https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode",
+            "https://maps.apigw.ntruss.com/map-geocode/v2/geocode",
             headers=headers,
             params=params,
             timeout=5  # ⏱️ 요청 제한 시간 설정 (옵션)

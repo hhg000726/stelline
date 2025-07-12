@@ -31,7 +31,8 @@ with conn.cursor() as cursor:
             "latitude DOUBLE, " \
             "longitude DOUBLE, " \
             "start_date DATE, " \
-            "end_date DATE"
+            "end_date DATE" \
+            ");"
             )
         logging.info("RDS 데이터베이스 연결 성공.")
     except Exception as e:

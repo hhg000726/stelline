@@ -22,6 +22,20 @@ app = Flask(__name__)
 app.secret_key = SECRET_KEY
 CORS(app)
 
+# RDS 연결 설정
+from stelline.database.db_connection import get_rds_connection
+
+conn = get_rds_connection()
+with conn.cursor() as cursor:
+    try:
+        cursor.execute("ALTER TABLE offline ADD COLUMN address VARCHAR(255)")
+        conn.commit()
+        logging.info("오프라인 테이블에 address 컬럼 추가 완료.")
+    except Exception as e:
+        logging.error(f"오프라인 테이블에 address 컬럼 추가 중 오류 발생: {e}")
+    finally:
+        conn.close()
+
 # Flask 기본 로거 활성화
 app.logger.setLevel(logging.DEBUG)
 app.logger.addHandler(logging.StreamHandler())

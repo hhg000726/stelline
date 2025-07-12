@@ -17,33 +17,6 @@ from stelline.auth import auth_bp
 if not logging.getLogger().handlers:
     logging.basicConfig(level=logging.DEBUG)
 
-from stelline.database.db_connection import get_rds_connection
-
-conn = get_rds_connection()
-
-with conn.cursor() as cursor:
-    try:
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS offline (
-                name VARCHAR(255),
-                location_name VARCHAR(255),
-                description VARCHAR(255),
-                latitude DOUBLE,
-                longitude DOUBLE,
-                start_date DATE,
-                end_date DATE
-            );
-            """
-            )
-        conn.commit()
-        logging.info("RDS 데이터베이스 연결 성공.")
-    except Exception as e:
-        logging.error(f"RDS 데이터베이스 연결 실패: {e}")
-        raise
-    finally:
-        conn.close()
-
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

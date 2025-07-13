@@ -96,6 +96,14 @@ def youtube_api_process(all_songs):
                     """
                 cursor.execute(sql, (datetime.now(),))
                 conn.commit()
+            logging.info("펀딩 정리 완료!")
+            with conn.cursor() as cursor:
+                sql = """
+                        DELETE FROM targets
+                        WHERE expires_at < %s
+                    """
+                cursor.execute(sql, (datetime.now(),))
+                conn.commit()
             logging.info("벅스 정리 완료!")
             with conn.cursor() as cursor:
                 sql = """

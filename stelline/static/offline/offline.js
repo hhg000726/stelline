@@ -1,6 +1,8 @@
 const today = new Date();
 let openInfoWindow = null;
-let allEvents = []; // 전체 이벤트 캐싱용
+let allEvents = [];
+let map = null;
+let markers = [];
 
 function formatDate(dateStr) {
   const date = new Date(dateStr);
@@ -16,18 +18,29 @@ function fetchEvents() {
   }).then(res => res.json());
 }
 
-function renderMap(events) {
-  const map = new naver.maps.Map('map', {
+function initMap() {
+  map = new naver.maps.Map('map', {
     center: new naver.maps.LatLng(36.5, 127.5),
     zoom: 7
   });
+}
+
+function clearMarkers() {
+  markers.forEach(m => m.setMap(null));
+  markers = [];
+  openInfoWindow?.close();
+  openInfoWindow = null;
+}
+
+function renderMarkers(events) {
+  clearMarkers();
 
   events.forEach(event => {
     const position = new naver.maps.LatLng(event.latitude, event.longitude);
 
     const marker = new naver.maps.Marker({
-      position: position,
-      map: map,
+      position,
+      map,
       title: event.name
     });
 
@@ -55,11 +68,13 @@ function renderMap(events) {
         infowindow.close();
         openInfoWindow = null;
       } else {
-        if (openInfoWindow) openInfoWindow.close();
+        openInfoWindow?.close();
         infowindow.open(map, marker);
         openInfoWindow = infowindow;
       }
     });
+
+    markers.push(marker);
   });
 }
 
@@ -74,7 +89,7 @@ function filterAndRender() {
     return true;
   });
 
-  renderMap(filtered);
+  renderMarkers(filtered);
 }
 
 function offlineRequest() {
@@ -90,6 +105,8 @@ function offlineRequest() {
 }
 
 window.onload = () => {
-  offlineRequest();
-  document.getElementById('showFutureEvents').addEventListener('change', filterAndRender);
+  initMap();           // ✅ 지도는 한 번만 초기화
+  offlineRequest();    // 데이터 가져와서 마커 렌더링
+  document.getElementById('showFutureEvents')
+          .addEventListener('change', filterAndRender);
 };

@@ -88,7 +88,7 @@
     {% for table_name, rows in data.items() %}
         <details>
             <summary>{{ table_name }}</summary>
-                <form method="POST" action="{{ url_for('admin.add_row', table_name=table_name) }}">
+                <form class="insert-form" method="POST" action="{{ url_for('admin.add_row', table_name=table_name) }}">
                     {% for key in columns[table_name] %}
                         <input name="{{ key }}" placeholder="{{ key }}">
                     {% endfor %}
@@ -126,5 +126,26 @@
             {% endif %}
         </details>
     {% endfor %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const detailsList = document.querySelectorAll("details");
+
+            detailsList.forEach((details) => {
+                const insertForm = details.querySelector("form.insert-form");
+                const inputs = insertForm.querySelectorAll("input[name]");
+                const rows = details.querySelectorAll("tbody tr");
+
+                rows.forEach((row) => {
+                    row.addEventListener("click", function () {
+                        const cells = row.querySelectorAll("td");
+                        for (let i = 0; i < inputs.length && i < cells.length - 1; i++) {
+                            inputs[i].value = cells[i].innerText.trim();
+                        }
+                    });
+                });
+            });
+        });
+    </script>
 </body>
 </html>

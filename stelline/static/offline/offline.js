@@ -11,6 +11,20 @@ function formatDate(dateStr) {
   return `${year}.${date.getMonth() + 1}.${date.getDate()}`;
 }
 
+function formatDateRange(startStr, endStr) {
+  const start = new Date(startStr);
+  const end = new Date(endStr);
+
+  if (start.getFullYear() >= 3000 && end.getFullYear() >= 3000) return "(미정)";
+
+  const startFormatted = formatDate(startStr);
+  const endFormatted = formatDate(endStr);
+
+  return startFormatted === endFormatted
+    ? startFormatted
+    : `${startFormatted} ~ ${endFormatted}`;
+}
+
 function fetchEvents() {
   return fetch("https://stelline.site/api/offline/offline_api", {
     method: "GET",
@@ -55,7 +69,7 @@ function renderMarkers(events) {
       <div style="padding:10px;">
         <strong>${event.name}</strong><br>
         장소: ${event.location_name}<br>
-        기간: ${formatDate(event.start_date)} ~ ${formatDate(event.end_date)}<br>
+        기간: ${formatDateRange(event.start_date, event.end_date)}<br>
         관련 링크<br>
         ${links}
       </div>
@@ -85,6 +99,7 @@ function filterAndRender() {
     const start = new Date(e.start_date);
     const end = new Date(e.end_date);
     if (end < today) return false;
+    if (e.always) return true;
     if (!showFuture && start > today) return false;
     return true;
   });

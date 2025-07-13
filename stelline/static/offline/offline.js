@@ -1,4 +1,5 @@
 const today = new Date();
+let openInfoWindow = null;
 
 function formatDate(dateStr) {
   const date = new Date(dateStr);

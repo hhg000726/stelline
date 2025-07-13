@@ -21,18 +21,6 @@ if not logging.getLogger().handlers:
 from stelline.database.db_connection import get_rds_connection
 conn = get_rds_connection()
 
-with conn.cursor() as cursor:
-    try:
-        cursor.execute("ALTER TABLE offline MODIFY COLUMN start_date DATETIME")
-        cursor.execute("ALTER TABLE offline MODIFY COLUMN end_date DATETIME")
-        cursor.execute("ALTER TABLE offline ADD COLUMN always BOOLEAN DEFAULT FALSE")
-        conn.commit()
-        logging.info("targets 테이블에 expires_at 컬럼 추가 완료.")
-    except Exception as e:
-        logging.error(f"targets 테이블에 expires_at 컬럼 추가 중 오류 발생: {e}") 
-    finally:
-        conn.close()
-
 # Flask 앱 생성
 app = Flask(__name__)
 app.secret_key = SECRET_KEY

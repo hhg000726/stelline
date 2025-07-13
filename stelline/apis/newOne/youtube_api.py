@@ -107,6 +107,14 @@ def youtube_api_process(all_songs):
             logging.info("벅스 정리 완료!")
             with conn.cursor() as cursor:
                 sql = """
+                        DELETE FROM offline
+                        WHERE end_date < %s
+                    """
+                cursor.execute(sql, (datetime.now(),))
+                conn.commit()
+            logging.info("오프라인 정리 완료!")
+            with conn.cursor() as cursor:
+                sql = """
                         DELETE FROM recent_data
                         WHERE searched_time < %s
                     """

@@ -8,7 +8,7 @@ function formatDate(dateStr) {
   const date = new Date(dateStr);
   const year = date.getUTCFullYear();
   if (year >= 3000) return "(미정)";
-  return `${year}.${date.getUTCMonth() + 1}.${date.d.getUTCDate()}`;
+  return `${year}.${date.getUTCMonth() + 1}.${date.getUTCDate()}`;
 }
 
 function formatDateRange(startStr, endStr) {

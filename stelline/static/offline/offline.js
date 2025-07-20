@@ -6,9 +6,9 @@ let markers = [];
 
 function formatDate(dateStr) {
   const date = new Date(dateStr);
-  const year = date.getFullYear();
+  const year = date.getUTCFullYear();
   if (year >= 3000) return "(미정)";
-  return `${year}.${date.getMonth() + 1}.${date.getDate()}`;
+  return `${year}.${date.getUTCMonth() + 1}.${date.d.getUTCDate()()}`;
 }
 
 function formatDateRange(startStr, endStr) {

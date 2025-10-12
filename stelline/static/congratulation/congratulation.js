@@ -1,6 +1,6 @@
 async function fetchSongs() {
     try {
-        const response = await fetch('https://stelline.site/api/congratulation/congratulations');
+        const response = await fetch('https://stelline.xyz/api/congratulation/congratulations');
         const data = await response.json();
         data.sort((a, b) => new Date(b.counted_time) - new Date(a.counted_time));
         renderTable(data, "congratulationTable");

@@ -133,7 +133,7 @@ async function currentTokenIsValid(token) {
         return false;
     }
 
-    const serverUrl = "https://stelline.site/api/congratulation/check-token";
+    const serverUrl = "https://stelline.xyz/api/congratulation/check-token";
     try {
         const response = await fetch(serverUrl, {
             method: 'POST',
@@ -209,7 +209,7 @@ function requestPermissionAndGetToken() {
  * 이 함수는 당신의 실제 백엔드 API와 연동되어야 합니다.
  */
 async function sendTokenToServer(token) {
-    const serverUrl = "https://stelline.site/api/congratulation/register";
+    const serverUrl = "https://stelline.xyz/api/congratulation/register";
     try {
         const response = await fetch(serverUrl, {
             method: 'POST',
@@ -258,7 +258,7 @@ async function unsubscribeNotifications() {
             statusElement.className = 'info';
 
             // 2. 서버에서 토큰 삭제 (필수)
-            const serverUrl = "https://stelline.site/api/congratulation/unregister";
+            const serverUrl = "https://stelline.xyz/api/congratulation/unregister";
             const response = await fetch(serverUrl, {
                 method: 'POST',
                 headers: {

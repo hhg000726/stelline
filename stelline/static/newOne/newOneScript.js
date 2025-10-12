@@ -2,7 +2,7 @@ let username = "";
 let currentGame = {};
 
 function startGame() {
-  fetch("https://stelline.site/api/newOne/start_game", {
+  fetch("https://stelline.xyz/api/newOne/start_game", {
     method: "GET",
     headers: { "Content-Type": "application/json" }
   })
@@ -36,7 +36,7 @@ function nextRound() {
 }
 
 function guess(choice) {
-  fetch("https://stelline.site/api/newOne/submit_choice", {
+  fetch("https://stelline.xyz/api/newOne/submit_choice", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username: username, choice: choice })
@@ -70,7 +70,7 @@ function guess(choice) {
 }
 
 function loadLeaderboard() {
-  fetch("https://stelline.site/api/newOne/leaderboard")
+  fetch("https://stelline.xyz/api/newOne/leaderboard")
     .then(response => response.json())
     .then(data => {
       let rows = data.map((entry, index) =>

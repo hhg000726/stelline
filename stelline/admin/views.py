@@ -19,6 +19,7 @@ def login_required(view):
 def admin_index():
     conn = get_rds_connection()
     table_names = [
+        "AbnormalCase",
         "song_infos", "songs_data", "recent_data", "record_main",
         "record_search", "leaderboard", "targets", "events", "twits",
         "song_counts", "fcm_tokens", "offline"

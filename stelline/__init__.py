@@ -29,16 +29,18 @@ CORS(app)
 # RDS 연결 설정
 from stelline.database.db_connection import get_rds_connection
 
-conn = get_rds_connection()
+# 테이블 생성
 with conn.cursor() as cursor:
     try:
-        cursor.execute("DELETE FROM offline WHERE address IS NULL")
+        # Originals 테이블 생성 (기존 비디오 목록)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS AbnormalCase LIKE song_infos
+        """)        
+        
         conn.commit()
-        logging.info("오프라인 테이블에 address 컬럼 추가 완료.")
+        logging.info("테이블 생성 완료.")
     except Exception as e:
-        logging.error(f"오프라인 테이블에 address 컬럼 추가 중 오류 발생: {e}")
-    finally:
-        conn.close()
+        logging.error(f"테이블 생성 중 오류 발생: {e}")
 
 # Flask 기본 로거 활성화
 app.logger.setLevel(logging.DEBUG)

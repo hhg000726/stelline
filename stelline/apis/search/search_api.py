@@ -1,7 +1,21 @@
-import logging, time, requests, random
+import json, logging, random, re, requests, time
 
 from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
+
+def load_abnormal_cases():
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = "SELECT * FROM AbnormalCase"
+            cursor.execute(sql)
+            result = cursor.fetchall()
+    except Exception as e:
+        logging.error(f"RDS AbnormalCase 불러오기 실패: {e}")
+        result = []
+    finally:
+        conn.close()
+    return result
 
 def load_song_infos():
     conn = get_rds_connection()
@@ -54,6 +68,22 @@ def load_recent_data():
         conn.close()
     return recent
 
+def update_abnormal_risk(video_id, risk):
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            sql = """
+                UPDATE AbnormalCase
+                SET risk = %s
+                WHERE video_id = %s
+            """
+            cursor.execute(sql, (risk, video_id))
+            conn.commit()
+    except Exception as e:
+        logging.error(f"RDS AbnormalCase risk 업데이트 실패: {e}")
+    finally:
+        conn.close()
+
 def update_risk(video_id, risk):
     conn = get_rds_connection()
     try:
@@ -69,6 +99,55 @@ def update_risk(video_id, risk):
         logging.error(f"RDS risk 업데이트 실패: {e}")
     finally:
         conn.close()
+
+def crawl_search_api():
+    abnormal_cases = load_abnormal_cases()
+    not_searched = []
+    baseUrl = "https://www.youtube.com/results"
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    for case in abnormal_cases:
+        time.sleep(random.uniform(3, 8))
+        query = case["query"]
+        params = {"search_query": query}
+        video_id = case["video_id"]
+        try:
+            r = requests.get(baseUrl, params=params, headers=headers, timeout=10)
+            r.raise_for_status()
+            html = r.text
+            match = re.search(r"ytInitialData\s*=\s*({.*?});", html, re.DOTALL)
+            if not match:
+                logging.error(f"크롤링 데이터 파싱 실패: {query}")
+                continue
+            try:
+                data = json.loads(match.group(1))
+            except json.JSONDecodeError:
+                logging.error(f"JSON 파싱 실패: {query}")
+                continue
+            video_ids = []
+            contents = data.get("contents", {}) \
+                .get("twoColumnSearchResultsRenderer", {}) \
+                .get("primaryContents", {}) \
+                .get("sectionListRenderer", {}) \
+                .get("contents", [])
+            for section in contents:
+                if len(video_ids) >= 3:
+                    break
+                items = section.get("itemSectionRenderer", {}).get("contents", [])
+                for item in items:
+                    video = item.get("videoRenderer")
+                    if video:
+                        video_ids.append(video["videoId"])
+            if video_id not in video_ids:
+                not_searched.append({"query": query, "video_id": video_id})
+                update_abnormal_risk(video_id, 28)
+            else:
+                update_abnormal_risk(video_id, max(case["risk"] - 1, 0))
+            
+        except requests.RequestException as e:
+            logging.error(f"크롤링 실패: {e}")
+    return {"all_songs": not_searched, "searched_time": time.time()}
 
 def search_api():
     song_infos = load_song_infos()
@@ -124,6 +203,8 @@ def search_api_process():
     while True:
         try:
             new_songs = search_api()
+            new_abnormal_songs = crawl_search_api()
+            new_songs["all_songs"].extend(new_abnormal_songs["all_songs"])
             all_songs = new_songs["all_songs"]
             searched_time = new_songs["searched_time"]
             conn = get_rds_connection()

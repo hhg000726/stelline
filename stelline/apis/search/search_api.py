@@ -198,7 +198,7 @@ def search_api():
     return {"all_songs": not_searched, "searched_time": time.time()}
 
 # 주기적으로 검색 데이터 가져오기
-def search_api_process():
+def search_api_process(by_admin=False):
     logging.info("주기적 검색 시작됨")
     while True:
         try:
@@ -242,3 +242,6 @@ def search_api_process():
             logging.error(f"검색 업데이트 오류: {e}")
         
         time.sleep(SEARCH_API_INTERVAL - time.time() % (SEARCH_API_INTERVAL))
+        
+        if by_admin:
+            break

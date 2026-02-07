@@ -1,6 +1,10 @@
 from . import search_bp
 from .search import *
 
+@search_bp.route("/force_search", methods=["GET"])
+def force_search_now_api():
+    return force_search_now()
+
 @search_bp.route("/not_searched", methods=["GET"])
 def get_not_searched_api():
     return get_not_searched()

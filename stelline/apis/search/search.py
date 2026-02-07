@@ -5,6 +5,16 @@ from .search_api import *
 from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 
+# 관리자 수동 실행 API
+def force_search_now():
+    logging.info("관리자 요청 즉시 검색")
+    threading.Thread(
+        target=search_api_process,
+        daemon=True,
+        args=(True,)
+    ).start()
+    return jsonify({"status": "ok"}), 200
+
 #최근 데이터 불러오기
 def processing():
     delay = max(5, SEARCH_API_INTERVAL - time.time() % (SEARCH_API_INTERVAL))

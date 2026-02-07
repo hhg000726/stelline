@@ -85,6 +85,10 @@
         <a href="{{ url_for('auth.logout') }}">로그아웃</a>
     </header>
 
+    <button id="forceSearchBtn" style="margin-bottom:10px; padding:8px 14px; font-size:14px; cursor:pointer;">
+        🔍 즉시 검색 실행
+    </button>
+
     {% for table_name, rows in data.items() %}
         <details>
             <summary>{{ table_name }}</summary>
@@ -128,7 +132,22 @@
     {% endfor %}
 
     <script>
+
         document.addEventListener("DOMContentLoaded", function () {
+            
+            document.getElementById("forceSearchBtn").addEventListener("click", function () {
+                if (!confirm("지금 즉시 검색을 실행할까요?")) return;
+
+                fetch("https://stelline.xyz/search/force_search")
+                    .then(res => res.json())
+                    .then(data => {
+                        alert("검색 시작됨!");
+                    })
+                    .catch(err => {
+                        alert("실행 실패");
+                        console.error(err);
+                    });
+            });
             const detailsList = document.querySelectorAll("details");
 
             detailsList.forEach((details) => {

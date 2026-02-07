@@ -134,11 +134,11 @@
     <script>
 
         document.addEventListener("DOMContentLoaded", function () {
-            
+
             document.getElementById("forceSearchBtn").addEventListener("click", function () {
                 if (!confirm("지금 즉시 검색을 실행할까요?")) return;
 
-                fetch("https://stelline.xyz/search/force_search")
+                fetch("https://stelline.xyz/api/search/force_search")
                     .then(res => res.json())
                     .then(data => {
                         alert("검색 시작됨!");

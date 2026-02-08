@@ -203,15 +203,15 @@ def search_api_process(by_admin=False):
     while True:
         try:
             new_songs = search_api()
+            if not new_songs["all_songs"]:
+                logging.info("새로운 검색 데이터 없음")
+                continue
             new_abnormal_songs = crawl_search_api()
             new_songs["all_songs"].extend(new_abnormal_songs["all_songs"])
             all_songs = new_songs["all_songs"]
             searched_time = new_songs["searched_time"]
             conn = get_rds_connection()
             try:
-                if not all_songs:
-                    logging.info("새로운 검색 데이터 없음")
-                    continue
                 with conn.cursor() as cursor:
                     sql = """
                         TRUNCATE TABLE songs_data;

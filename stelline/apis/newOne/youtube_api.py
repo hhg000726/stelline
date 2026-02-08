@@ -73,6 +73,7 @@ def get_songs():
 # 주기적으로 유튜브 데이터 가져오기
 def youtube_api_process(all_songs):
     while True:
+        logging.info("데이터 업데이트 시작")
         try:
             new_songs = get_songs()
             if new_songs.get("all_songs") and new_songs.get("all_songs") != all_songs:

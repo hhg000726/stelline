@@ -37,6 +37,10 @@ with conn.cursor() as cursor:
             CREATE TABLE IF NOT EXISTS AbnormalCase LIKE song_infos
         """)        
         
+        cursor.execute("""
+            ALTER TABLE songs_data DROP PRIMARY KEY
+        """)        
+        
         conn.commit()
         logging.info("테이블 생성 완료.")
     except Exception as e:

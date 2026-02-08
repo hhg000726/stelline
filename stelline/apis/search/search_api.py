@@ -201,6 +201,8 @@ def search_api():
 def search_api_process(by_admin=False):
     logging.info("주기적 검색 시작됨")
     while True:
+        if not by_admin:
+            time.sleep(SEARCH_API_INTERVAL - time.time() % (SEARCH_API_INTERVAL))
         try:
             new_songs = search_api()
             if not new_songs["all_songs"]:
@@ -243,8 +245,6 @@ def search_api_process(by_admin=False):
 
         except Exception as e:
             logging.error(f"검색 업데이트 오류: {e}")
-        
-        time.sleep(SEARCH_API_INTERVAL - time.time() % (SEARCH_API_INTERVAL))
-        
+                
         if by_admin:
             break

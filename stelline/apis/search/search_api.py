@@ -200,52 +200,61 @@ def search_api():
 # 주기적으로 검색 데이터 가져오기
 def search_api_process(by_admin=False):
     logging.info("주기적 검색 시작됨")
+
     while True:
         try:
             new_songs = search_api()
-            if not new_songs["all_songs"]:
+
+            if not new_songs.get("all_songs"):
                 logging.info("새로운 검색 데이터 없음")
-                time.sleep(SEARCH_API_INTERVAL - time.time() % (SEARCH_API_INTERVAL))
-                continue
-            new_abnormal_songs = crawl_search_api()
-            new_songs["all_songs"].extend(new_abnormal_songs["all_songs"])
-            all_songs = new_songs["all_songs"]
-            searched_time = new_songs["searched_time"]
-            conn = get_rds_connection()
-            try:
-                with conn.cursor() as cursor:
-                    sql = """
-                        TRUNCATE TABLE songs_data;
-                        """
-                    cursor.execute(sql)
-                    
-                    for item in all_songs:
-                        video_id = item.get("video_id", "")
-                        query = item.get("query", "")
-                        sql = """
-                        INSERT INTO songs_data (video_id, query, searched_time)
-                        VALUES (%s, %s, %s)
-                        """
-                        cursor.execute(sql, (video_id, query, searched_time))
-                    sql = """
-                        INSERT INTO recent_data (video_id, query, searched_time)
-                        SELECT video_id, query, searched_time
-                        FROM songs_data
-                        ON DUPLICATE KEY UPDATE
-                            searched_time = VALUES(searched_time)
-                    """
-                    cursor.execute(sql)
-                    conn.commit()
-                    logging.info("검색 데이터 업데이트 완료!")
-            except Exception as e:
-                logging.error(f"RDS search 업데이트 실패: {e}")
-            finally:
-                conn.close()
+            else:
+                abnormal_songs = crawl_search_api()
+                all_songs = new_songs["all_songs"] + abnormal_songs.get("all_songs", [])
+                save_to_db(all_songs, new_songs["searched_time"])
+                logging.info("검색 데이터 업데이트 완료!")
 
         except Exception as e:
             logging.error(f"검색 업데이트 오류: {e}")
-                
+
         if by_admin:
             break
+
+        sleep_until_next_interval()
         
-        time.sleep(SEARCH_API_INTERVAL - time.time() % (SEARCH_API_INTERVAL))
+def save_to_db(all_songs, searched_time):
+    conn = get_rds_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("TRUNCATE TABLE songs_data")
+
+            insert_sql = """
+                INSERT INTO songs_data (video_id, query, searched_time)
+                VALUES (%s, %s, %s)
+            """
+
+            for item in all_songs:
+                cursor.execute(insert_sql, (
+                    item.get("video_id", ""),
+                    item.get("query", ""),
+                    searched_time
+                ))
+
+            cursor.execute("""
+                INSERT INTO recent_data (video_id, query, searched_time)
+                SELECT video_id, query, searched_time
+                FROM songs_data
+                ON DUPLICATE KEY UPDATE
+                    searched_time = VALUES(searched_time)
+            """)
+
+        conn.commit()
+
+    except Exception as e:
+        logging.error(f"RDS search 업데이트 실패: {e}")
+
+    finally:
+        conn.close()
+
+
+def sleep_until_next_interval():
+    time.sleep(SEARCH_API_INTERVAL - time.time() % SEARCH_API_INTERVAL)

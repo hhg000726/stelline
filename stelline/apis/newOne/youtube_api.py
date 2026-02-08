@@ -78,49 +78,82 @@ def youtube_api_process(all_songs):
             if new_songs.get("all_songs") and new_songs.get("all_songs") != all_songs:
                 all_songs.clear()
                 all_songs["all_songs"] = new_songs.get("all_songs")
-                logging.info("YouTube 데이터 업데이트 완료!")
+            else:
+                logging.warning("YouTube Playlist API에서 새로운 곡 데이터를 가져오지 못함.")
+                
             access_token = get_access_token()
             conn = get_rds_connection()
+            
             with conn.cursor() as cursor:
-                sql = """
-                        DELETE FROM twits
-                        WHERE expires_at < %s
-                    """
+                sql = "SELECT * FROM twits WHERE expires_at < %s"
                 cursor.execute(sql, (datetime.now(),))
-                conn.commit()
-            logging.info("트윗 정리 완료!")
+                targets = cursor.fetchall()
+                if targets:
+                    sql = """
+                            DELETE FROM twits
+                            WHERE expires_at < %s
+                        """
+                    cursor.execute(sql, (datetime.now(),))
+                    conn.commit()
+                    for target in targets:
+                        logging.info(f"만료된 트윗 데이터 삭제: {target['title']}")
+                        
             with conn.cursor() as cursor:
-                sql = """
-                        DELETE FROM events
-                        WHERE expires_at < %s
-                    """
+                sql = "SELECT * FROM events WHERE expires_at < %s"
                 cursor.execute(sql, (datetime.now(),))
-                conn.commit()
-            logging.info("펀딩 정리 완료!")
+                events = cursor.fetchall()
+                if events:
+                    sql = """
+                            DELETE FROM events
+                            WHERE expires_at < %s
+                        """
+                    cursor.execute(sql, (datetime.now(),))
+                    conn.commit()
+                    for event in events:
+                        logging.info(f"만료된 펀딩 데이터 삭제: {event['title']}")
+                        
             with conn.cursor() as cursor:
-                sql = """
-                        DELETE FROM targets
-                        WHERE expires_at < %s
-                    """
+                sql = "SELECT * FROM targets WHERE expires_at < %s"
                 cursor.execute(sql, (datetime.now(),))
-                conn.commit()
-            logging.info("벅스 정리 완료!")
+                targets = cursor.fetchall()
+                if targets:
+                    sql = """
+                            DELETE FROM targets
+                            WHERE expires_at < %s
+                        """
+                    cursor.execute(sql, (datetime.now(),))
+                    conn.commit()
+                    for target in targets:
+                        logging.info(f"만료된 벅스 데이터 삭제: {target['title']}")
+                        
             with conn.cursor() as cursor:
-                sql = """
-                        DELETE FROM offline
-                        WHERE end_date < %s
-                    """
+                sql = "SELECT * FROM offline WHERE end_date < %s"
                 cursor.execute(sql, (datetime.now(),))
-                conn.commit()
-            logging.info("오프라인 정리 완료!")
+                offlines = cursor.fetchall()
+                if offlines:
+                    sql = """
+                            DELETE FROM offline
+                            WHERE end_date < %s
+                        """
+                    cursor.execute(sql, (datetime.now(),))
+                    conn.commit()
+                    for offline in offlines:
+                        logging.info(f"만료된 오프라인 데이터 삭제: {offline['title']}")
+                        
             with conn.cursor() as cursor:
-                sql = """
-                        DELETE FROM recent_data
-                        WHERE searched_time < %s
-                    """
+                sql = "SELECT * FROM recent_data WHERE searched_time < %s"
                 cursor.execute(sql, (time.time() - 7 * 24 * 3600,))
-                conn.commit()
-            logging.info("최근 검색 데이터 정리 완료!")
+                old_recents = cursor.fetchall()
+                if old_recents:
+                    sql = """
+                            DELETE FROM recent_data
+                            WHERE searched_time < %s
+                        """
+                    cursor.execute(sql, (time.time() - 7 * 24 * 3600,))
+                    conn.commit()
+                    for old_recent in old_recents:
+                        logging.info(f"오래된 검색 안됨 데이터 삭제: {old_recent['video_id']}")
+                    
             try:
                 for song in new_songs.get("songs_for_counts", []):
                     with conn.cursor() as cursor:
@@ -167,9 +200,7 @@ def youtube_api_process(all_songs):
                                     }
                                 }
                                 response = requests.post(url, headers=headers, json=payload)
-                                if response.status_code == 200:
-                                    logging.info(f"FCM 알림 발송 성공: {token}")
-                                else:
+                                if response.status_code != 200:
                                     logging.info(f"FCM 알림 실패 ({response.status_code}): {response.text}")
                                     if response.status_code == 404 and "UNREGISTERED" in response.text:
                                         sql = """
@@ -178,6 +209,8 @@ def youtube_api_process(all_songs):
                                         """
                                         cursor.execute(sql, (token,))
                                         logging.info(f"토큰 만료 혹은 등록 해제됨, 삭제 처리: {token}")
+                                    else:
+                                        logging.error(f"FCM 알림 발송 중 오류 발생: {response.text}")
                         with conn.cursor() as cursor:
                             sql = """
                                 UPDATE song_counts
@@ -195,12 +228,11 @@ def youtube_api_process(all_songs):
                             cursor.execute(sql, (song["title"], song["video_id"], song["count"], datetime(2000, 1, 1)))
                             conn.commit()
             except Exception as e:
-                logging.error(f"RDS song_counts 업데이트 오류: {e}")
+                logging.error(f"노래 카운트 업데이트 오류: {e}")
                 continue
             finally:
                 conn.close()
         except Exception as e:
-            logging.error(f"YouTube API 업데이트 오류: {e}")
+            logging.error(f"데이터 업데이트 오류: {e}")
         
         time.sleep(API_CHECK_INTERVAL)
-

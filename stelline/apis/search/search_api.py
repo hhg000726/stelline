@@ -4,8 +4,9 @@ from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 
 def load_abnormal_cases():
-    conn = get_rds_connection()
+    conn = None
     try:
+        conn = get_rds_connection()
         with conn.cursor() as cursor:
             sql = "SELECT * FROM AbnormalCase"
             cursor.execute(sql)
@@ -14,12 +15,14 @@ def load_abnormal_cases():
         logging.error(f"RDS AbnormalCase 불러오기 실패: {e}")
         result = []
     finally:
-        conn.close()
+        if conn:
+            conn.close()
     return result
 
 def load_song_infos():
-    conn = get_rds_connection()
+    conn = None
     try:
+        conn = get_rds_connection()
         with conn.cursor() as cursor:
             sql = "SELECT * FROM song_infos"
             cursor.execute(sql)
@@ -28,12 +31,14 @@ def load_song_infos():
         logging.error(f"RDS 곡 정보 불러오기 실패: {e}")
         result = []
     finally:
-        conn.close()
+        if conn:
+            conn.close()
     return result
 
 def load_songs_data():
-    conn = get_rds_connection()
+    conn = None
     try:
+        conn = get_rds_connection()
         with conn.cursor() as cursor:
             sql = "SELECT * FROM songs_data"
             cursor.execute(sql)
@@ -50,13 +55,15 @@ def load_songs_data():
         searched_time = 0
         logging.error(f"RDS songs 정보 불러오기 실패: {e}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
         
     return all_songs, searched_time
 
 def load_recent_data():
-    conn = get_rds_connection()
+    conn = None
     try:
+        conn = get_rds_connection()
         with conn.cursor() as cursor:
             sql = "SELECT * FROM recent_data"
             cursor.execute(sql)
@@ -65,12 +72,14 @@ def load_recent_data():
         recent = []
         logging.error(f"RDS recent 정보 불러오기 실패: {e}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
     return recent
 
 def update_abnormal_risk(video_id, risk):
-    conn = get_rds_connection()
+    conn = None
     try:
+        conn = get_rds_connection()
         with conn.cursor() as cursor:
             sql = """
                 UPDATE AbnormalCase
@@ -82,11 +91,13 @@ def update_abnormal_risk(video_id, risk):
     except Exception as e:
         logging.error(f"RDS AbnormalCase risk 업데이트 실패: {e}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 def update_risk(video_id, risk):
-    conn = get_rds_connection()
+    conn = None
     try:
+        conn = get_rds_connection()
         with conn.cursor() as cursor:
             sql = """
                 UPDATE song_infos
@@ -98,7 +109,8 @@ def update_risk(video_id, risk):
     except Exception as e:
         logging.error(f"RDS risk 업데이트 실패: {e}")
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 def crawl_search_api():
     abnormal_cases = load_abnormal_cases()
@@ -155,25 +167,64 @@ def search_api():
     not_searched = []
     url = "https://www.googleapis.com/youtube/v3/search"
     search_targets = []
-
-    for risk_level in reversed(range(29)):
-        candidates = [info for info in song_infos if info.get("risk") == risk_level]
-        
-        # 아직 25개 미만이면 후보 추가
-        remaining = 25 - len(search_targets)
-        if remaining <= 0:
+    risk_zero_songs = [info for info in song_infos if info.get("risk") == 0]
+    
+    for risk_level in reversed(range(1, 29)):
+        search_targets.extend([info for info in song_infos if info.get("risk") == risk_level])
+        if len(search_targets) >= 12:
+            search_targets = search_targets[:12]
             break
         
-        if len(candidates) > remaining:
-            search_targets.extend(random.sample(candidates, remaining))
-            break
+    remainingQuotes = 25
+    
+    while remainingQuotes > len(not_searched) + 1:
+        
+        song = None
+        
+        if search_targets:
+            song = search_targets.pop(0)
         else:
-            search_targets.extend(candidates)
-
-    for song_info in search_targets:
-        query = song_info["query"]
-        video_id = song_info["video_id"]
+            if not risk_zero_songs:
+                break
+            song = risk_zero_songs.pop(random.randrange(len(risk_zero_songs)))
         
+        if not song:
+            break
+        
+        if song:
+            song_info = song
+            query = song_info["query"]
+            video_id = song_info["video_id"]
+            
+            params = {
+                "part": "snippet",
+                "q": query,
+                "type": "video",
+                "maxResults": 3,
+                "key": SEARCH_API_KEY
+            }
+            try:
+                response = requests.get(url, params=params, timeout=10)
+                response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
+                data = response.json()
+                items = data.get("items", [])
+                video_ids = [item["id"]["videoId"] for item in items if "id" in item]
+                if video_id not in video_ids:
+                    not_searched.append({"query": query, "video_id": video_id, "risk": song_info["risk"]})
+            except requests.RequestException as e:
+                logging.error(f"API 요청 실패: {e}")
+            
+            remainingQuotes -= 1
+    
+    logging.info(f"[1차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
+
+    i = 0
+
+    while i < len(not_searched) and remainingQuotes > 0:
+        song = not_searched[i]
+        query = song["query"]
+        video_id = song["video_id"]
+
         params = {
             "part": "snippet",
             "q": query,
@@ -181,19 +232,28 @@ def search_api():
             "maxResults": 3,
             "key": SEARCH_API_KEY
         }
+        
         try:
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
             data = response.json()
-            video_ids = [item["id"]["videoId"] for item in data["items"]]
+            items = data.get("items", [])
+            video_ids = [item["id"]["videoId"] for item in items if "id" in item]
             if video_id not in video_ids:
-                not_searched.append({"query": query, "video_id": video_id})
+                i += 1
                 update_risk(video_id, 28)
             else:
-                update_risk(video_id, max(song_info["risk"] - 1, 0))
+                not_searched.pop(i)
+                update_risk(video_id, max(song["risk"] - 1, 0))
         except requests.RequestException as e:
+            i += 1
             logging.error(f"API 요청 실패: {e}")
-            continue
+            
+        remainingQuotes -= 1
+    
+    logging.info(f"[2차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
+    logging.info(f"[최종 결과] 총 실패곡={len(not_searched)}")
+
     
     return {"all_songs": not_searched, "searched_time": time.time()}
 
@@ -222,8 +282,9 @@ def search_api_process(by_admin=False):
         sleep_until_next_interval()
         
 def save_to_db(all_songs, searched_time):
-    conn = get_rds_connection()
+    conn = None
     try:
+        conn = get_rds_connection()
         with conn.cursor() as cursor:
             cursor.execute("TRUNCATE TABLE songs_data")
 
@@ -253,7 +314,8 @@ def save_to_db(all_songs, searched_time):
         logging.error(f"RDS search 업데이트 실패: {e}")
 
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 
 def sleep_until_next_interval():

@@ -112,8 +112,7 @@ def update_risk(video_id, risk):
         if conn:
             conn.close()
 
-def crawl_search_api():
-    abnormal_cases = load_abnormal_cases()
+def crawl_search_api(abnormal_cases):
     not_searched = []
     baseUrl = "https://www.youtube.com/results"
     headers = {
@@ -176,7 +175,9 @@ def search_api():
         if len(search_targets) >= 12:
             search_targets = search_targets[:12]
             break
-        
+    
+    logging.info(f"[1차 검사 시작] risk_zero_songs={len(risk_zero_songs)}, search_targets={len(search_targets)}")
+
     remainingQuotes = 25
     
     while remainingQuotes > len(not_searched) + 1:
@@ -256,9 +257,11 @@ def search_api():
         remainingQuotes -= 1
     
     logging.info(f"[2차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
+    
+    not_searched = crawl_search_api(not_searched)["all_songs"]
+    
     logging.info(f"[최종 결과] 총 실패곡={len(not_searched)}")
 
-    
     return {"all_songs": not_searched, "searched_time": time.time(), "isQuotaExceeded": isQuotaExceeded}
 
 # 주기적으로 검색 데이터 가져오기
@@ -272,7 +275,7 @@ def search_api_process(by_admin=False):
             if new_songs.get("isQuotaExceeded"):
                 logging.info("쿼터 초과")
             else:
-                abnormal_songs = crawl_search_api()
+                abnormal_songs = crawl_search_api(load_abnormal_cases())
                 all_songs = new_songs["all_songs"] + abnormal_songs.get("all_songs", [])
                 save_to_db(all_songs, new_songs["searched_time"])
                 logging.info("검색 데이터 업데이트 완료!")

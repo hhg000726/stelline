@@ -162,6 +162,8 @@ def crawl_search_api():
     return {"all_songs": not_searched, "searched_time": time.time()}
 
 def search_api():
+    isQuotaExceeded = False
+    
     song_infos = load_song_infos()
     logging.info(f"검색 시작")
     not_searched = []
@@ -212,6 +214,7 @@ def search_api():
                 if video_id not in video_ids:
                     not_searched.append({"query": query, "video_id": video_id, "risk": song_info["risk"]})
             except requests.RequestException as e:
+                isQuotaExceeded = True
                 logging.error(f"API 요청 실패: {e}")
             
             remainingQuotes -= 1
@@ -247,6 +250,7 @@ def search_api():
                 update_risk(video_id, max(song["risk"] - 1, 0))
         except requests.RequestException as e:
             i += 1
+            isQuotaExceeded = True
             logging.error(f"API 요청 실패: {e}")
             
         remainingQuotes -= 1
@@ -255,7 +259,7 @@ def search_api():
     logging.info(f"[최종 결과] 총 실패곡={len(not_searched)}")
 
     
-    return {"all_songs": not_searched, "searched_time": time.time()}
+    return {"all_songs": not_searched, "searched_time": time.time(), "isQuotaExceeded": isQuotaExceeded}
 
 # 주기적으로 검색 데이터 가져오기
 def search_api_process(by_admin=False):
@@ -265,8 +269,8 @@ def search_api_process(by_admin=False):
         try:
             new_songs = search_api()
 
-            if not new_songs.get("all_songs"):
-                logging.info("새로운 검색 데이터 없음")
+            if new_songs.get("isQuotaExceeded"):
+                logging.info("쿼터 초과")
             else:
                 abnormal_songs = crawl_search_api()
                 all_songs = new_songs["all_songs"] + abnormal_songs.get("all_songs", [])

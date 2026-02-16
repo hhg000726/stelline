@@ -82,7 +82,7 @@ def load_recent_data():
             conn.close()
     return recent
 
-def update_risk(video_id, risk):
+def update_risk(query, risk):
     conn = None
     try:
         conn = get_rds_connection()
@@ -90,9 +90,9 @@ def update_risk(video_id, risk):
             sql = """
                 UPDATE song_infos
                 SET risk = %s
-                WHERE video_id = %s
+                WHERE query = %s
             """
-            cursor.execute(sql, (risk, video_id))
+            cursor.execute(sql, (risk, query))
             conn.commit()
     except Exception as e:
         logging.error(f"RDS risk 업데이트 실패: {e}")
@@ -142,9 +142,9 @@ def crawl_search_api(songs):
                         video_ids.append(video["videoId"])
             if video_id not in video_ids:
                 not_searched.append({"query": query, "video_id": video_id})
-                update_risk(video_id, 28)
+                update_risk(query, 28)
             else:
-                update_risk(video_id, max(case["risk"] - 1, 0))
+                update_risk(query, max(case["risk"] - 1, 0))
             
         except requests.RequestException as e:
             logging.error(f"크롤링 실패: {e}")
@@ -245,10 +245,8 @@ def search_api(by_admin=False):
             video_ids = [item["id"]["videoId"] for item in items if "id" in item]
             if video_id not in video_ids:
                 i += 1
-                update_risk(video_id, 28)
             else:
                 not_searched.pop(i)
-                update_risk(video_id, max(song["risk"] - 1, 0))
         except requests.RequestException as e:
             i += 1
             isQuotaExceeded = True

@@ -40,6 +40,8 @@ def load_song_infos():
     return result
 
 def load_songs_data():
+    if lastSearchTime == 0:
+        load_last_search_time()
     global lastSearchTime
     conn = None
     try:

@@ -80,7 +80,7 @@ function renderCards(data, containerId) {
         container.appendChild(card);
     });
 
-    if (data.song.length === 0) {
+    if (data.length === 0) {
         const message = document.createElement("h1");
         message.textContent = "검색 안되는 노래가 없습니다.";
         container.appendChild(message);

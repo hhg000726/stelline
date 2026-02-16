@@ -213,7 +213,10 @@ def search_api(by_admin=False):
                 items = data.get("items", [])
                 video_ids = [item["id"]["videoId"] for item in items if "id" in item]
                 if video_id not in video_ids:
+                    update_risk(query, 28)
                     not_searched.append({"query": query, "video_id": video_id, "risk": song_info["risk"]})
+                else:
+                    update_risk(query, max(song_info["risk"] - 1, 0))
             except requests.RequestException as e:
                 isQuotaExceeded = True
                 logging.error(f"API 요청 실패: {e}")
@@ -244,8 +247,10 @@ def search_api(by_admin=False):
             items = data.get("items", [])
             video_ids = [item["id"]["videoId"] for item in items if "id" in item]
             if video_id not in video_ids:
+                update_risk(query, 28)
                 i += 1
             else:
+                update_risk(query, max(song["risk"] - 1, 0))
                 not_searched.pop(i)
         except requests.RequestException as e:
             i += 1

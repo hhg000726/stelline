@@ -34,10 +34,10 @@ with conn.cursor() as cursor:
     try:
         # Originals 테이블 생성 (기존 비디오 목록)
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS AbnormalCase LIKE song_infos
+            DROP TABLE AbnormalCase
         """)        
         conn.commit()
-        logging.info("테이블 생성 완료.")
+        logging.info("테이블 제거 완료.")
     except Exception as e:
         logging.error(f"테이블 생성 중 오류 발생: {e}")
 

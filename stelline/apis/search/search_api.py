@@ -5,22 +5,6 @@ from stelline.database.db_connection import get_rds_connection
 
 lastSearchTime = 0
 
-def load_abnormal_cases():
-    conn = None
-    try:
-        conn = get_rds_connection()
-        with conn.cursor() as cursor:
-            sql = "SELECT * FROM AbnormalCase"
-            cursor.execute(sql)
-            result = cursor.fetchall()
-    except Exception as e:
-        logging.error(f"RDS AbnormalCase 불러오기 실패: {e}")
-        result = []
-    finally:
-        if conn:
-            conn.close()
-    return result
-
 def load_song_infos():
     conn = None
     try:
@@ -79,24 +63,6 @@ def load_recent_data():
             conn.close()
     return recent
 
-def update_abnormal_risk(video_id, risk):
-    conn = None
-    try:
-        conn = get_rds_connection()
-        with conn.cursor() as cursor:
-            sql = """
-                UPDATE AbnormalCase
-                SET risk = %s
-                WHERE video_id = %s
-            """
-            cursor.execute(sql, (risk, video_id))
-            conn.commit()
-    except Exception as e:
-        logging.error(f"RDS AbnormalCase risk 업데이트 실패: {e}")
-    finally:
-        if conn:
-            conn.close()
-
 def update_risk(video_id, risk):
     conn = None
     try:
@@ -115,13 +81,13 @@ def update_risk(video_id, risk):
         if conn:
             conn.close()
 
-def crawl_search_api(abnormal_cases):
+def crawl_search_api(songs):
     not_searched = []
     baseUrl = "https://www.youtube.com/results"
     headers = {
         "User-Agent": "Mozilla/5.0"
     }
-    for case in abnormal_cases:
+    for case in songs:
         time.sleep(random.uniform(3, 8))
         query = case["query"]
         params = {"search_query": query}
@@ -157,12 +123,14 @@ def crawl_search_api(abnormal_cases):
                         video_ids.append(video["videoId"])
             if video_id not in video_ids:
                 not_searched.append({"query": query, "video_id": video_id})
-                update_abnormal_risk(video_id, 28)
+                update_risk(video_id, 28)
             else:
-                update_abnormal_risk(video_id, max(case["risk"] - 1, 0))
+                update_risk(video_id, max(case["risk"] - 1, 0))
             
         except requests.RequestException as e:
             logging.error(f"크롤링 실패: {e}")
+            return {"all_songs": songs, "searched_time": time.time()}
+        
     return {"all_songs": not_searched, "searched_time": time.time()}
 
 def search_api():
@@ -282,8 +250,7 @@ def search_api_process(by_admin=False):
                 logging.info("쿼터 초과")
             else:
                 lastSearchTime = new_songs["searched_time"]
-                abnormal_songs = crawl_search_api(load_abnormal_cases())
-                all_songs = new_songs["all_songs"] + abnormal_songs.get("all_songs", [])
+                all_songs = new_songs["all_songs"]
                 save_to_db(all_songs, new_songs["searched_time"])
                 logging.info("검색 데이터 업데이트 완료!")
 

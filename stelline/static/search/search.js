@@ -5,7 +5,7 @@ async function fetchSongs() {
         if (data.searched_time === 0) {
             document.getElementById("last-updated").innerText = "마지막 검색 시도 시간: 없음"
         }
-        if (typeof(data.searched_time) === "string") {
+        else if (typeof(data.searched_time) === "string") {
             document.getElementById("last-updated").innerText = data.searched_time
         }
         else {

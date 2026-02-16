@@ -15,6 +15,7 @@ def load_last_search_time():
         with open(LAST_SEARCH_FILE, "r") as f:
             return float(f.read().strip())
     except:
+        logging.error("마지막 검색 시간 불러오기 실패")
         return 0
 
 def save_last_search_time(t):
@@ -40,8 +41,6 @@ def load_song_infos():
     return result
 
 def load_songs_data():
-    if lastSearchTime == 0:
-        load_last_search_time()
     global lastSearchTime
     conn = None
     try:

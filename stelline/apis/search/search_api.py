@@ -238,7 +238,7 @@ def search_api(by_admin=False):
             "q": query,
             "type": "video",
             "maxResults": 3,
-            "key": SEARCH_API_KEY
+            "key": selectedKey
         }
         
         try:

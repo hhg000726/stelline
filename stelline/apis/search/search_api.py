@@ -3,7 +3,20 @@ import json, logging, random, re, requests, time
 from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 
-lastSearchTime = 0
+LAST_SEARCH_FILE = "last_search_time.txt"
+
+def load_last_search_time():
+    try:
+        with open(LAST_SEARCH_FILE, "r") as f:
+            return float(f.read().strip())
+    except:
+        return 0
+
+def save_last_search_time(t):
+    with open(LAST_SEARCH_FILE, "w") as f:
+        f.write(str(t))
+        
+lastSearchTime = load_last_search_time()
 
 def load_song_infos():
     conn = None
@@ -250,6 +263,7 @@ def search_api_process(by_admin=False):
                 logging.info("쿼터 초과")
             else:
                 lastSearchTime = new_songs["searched_time"]
+                save_last_search_time(lastSearchTime)
                 all_songs = new_songs["all_songs"]
                 save_to_db(all_songs, new_songs["searched_time"])
                 logging.info("검색 데이터 업데이트 완료!")

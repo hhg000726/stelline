@@ -168,15 +168,17 @@ def search_api(by_admin=False):
             search_targets = search_targets[:12]
             break
     
-    logging.info(f"[1차 검사 시작] risk_zero_songs={len(risk_zero_songs)}, search_targets={len(search_targets)}")
-
     remainingQuotes = 25
     
     if by_admin:
+        logging.info("관리자 즉시 검색 실행")
         selectedKey = TEMP_API_KEY
     else:
+        logging.info("자동 즉시 검색 실행")
         selectedKey = SEARCH_API_KEY
         
+    logging.info(f"[1차 검사 시작] risk_zero_songs={len(risk_zero_songs)}, search_targets={len(search_targets)}")
+
     while remainingQuotes > len(not_searched) + 1:
         
         song = None
@@ -205,7 +207,6 @@ def search_api(by_admin=False):
             }
             
             try:
-                                    
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
                 data = response.json()
@@ -218,11 +219,6 @@ def search_api(by_admin=False):
                 logging.error(f"API 요청 실패: {e}")
             
             remainingQuotes -= 1
-            
-            if by_admin:
-                sleepSecond = random.uniform(3, 8)
-                logging.info(f"관리자 요청 즉시 검색, remaining Quotes: {remainingQuotes}, {sleepSecond}초 대기 ")
-                time.sleep(sleepSecond)
     
     logging.info(f"[1차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
 

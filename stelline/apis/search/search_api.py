@@ -152,7 +152,7 @@ def crawl_search_api(songs):
         
     return {"all_songs": not_searched, "searched_time": time.time()}
 
-def search_api():
+def search_api(by_admin=False):
     isQuotaExceeded = False
     
     song_infos = load_song_infos()
@@ -172,6 +172,11 @@ def search_api():
 
     remainingQuotes = 25
     
+    if by_admin:
+        selectedKey = TEMP_API_KEY
+    else:
+        selectedKey = SEARCH_API_KEY
+        
     while remainingQuotes > len(not_searched) + 1:
         
         song = None
@@ -196,9 +201,11 @@ def search_api():
                 "q": query,
                 "type": "video",
                 "maxResults": 3,
-                "key": SEARCH_API_KEY
+                "key": selectedKey
             }
+            
             try:
+                                    
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
                 data = response.json()
@@ -211,6 +218,11 @@ def search_api():
                 logging.error(f"API 요청 실패: {e}")
             
             remainingQuotes -= 1
+            
+            if by_admin:
+                sleepSecond = random.uniform(3, 8)
+                logging.info(f"관리자 요청 즉시 검색, remaining Quotes: {remainingQuotes}, {sleepSecond}초 대기 ")
+                time.sleep(sleepSecond)
     
     logging.info(f"[1차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
 
@@ -263,7 +275,7 @@ def search_api_process(by_admin=False):
 
     while True:
         try:
-            new_songs = search_api()
+            new_songs = search_api(by_admin)
 
             if new_songs.get("isQuotaExceeded"):
                 logging.info("쿼터 초과")

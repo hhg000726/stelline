@@ -2,6 +2,9 @@ async function fetchSongs() {
     try {
         const response = await fetch('https://stelline.xyz/api/search/not_searched');
         const data = await response.json();
+        if (data.searched_time === 0) {
+            document.getElementById("last-updated").innerText = "마지막 검색 시도 시간: 없음"
+        }
         if (typeof(data.searched_time) === "string") {
             document.getElementById("last-updated").innerText = data.searched_time
         }
@@ -76,6 +79,12 @@ function renderCards(data, containerId) {
         card.appendChild(info);
         container.appendChild(card);
     });
+
+    if (data.song.length === 0) {
+        const message = document.createElement("h1");
+        message.textContent = "검색 안되는 노래가 없습니다.";
+        container.appendChild(message);
+    }
 }
 
 function handleButtonClick(query) {

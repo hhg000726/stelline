@@ -3,6 +3,8 @@ import json, logging, random, re, requests, time
 from stelline.config import *
 from stelline.database.db_connection import get_rds_connection
 
+lastSearchTime = 0
+
 def load_abnormal_cases():
     conn = None
     try:
@@ -36,6 +38,7 @@ def load_song_infos():
     return result
 
 def load_songs_data():
+    global lastSearchTime
     conn = None
     try:
         conn = get_rds_connection()
@@ -49,7 +52,7 @@ def load_songs_data():
                     "query": row.get("query"),
                     "video_id": row.get("video_id")
                 })
-            searched_time = rows[0]["searched_time"] if rows else 0
+            searched_time = lastSearchTime
     except Exception as e:
         all_songs = []
         searched_time = 0
@@ -269,6 +272,7 @@ def search_api():
 # 주기적으로 검색 데이터 가져오기
 def search_api_process(by_admin=False):
     logging.info("주기적 검색 시작됨")
+    global lastSearchTime
 
     while True:
         try:
@@ -277,6 +281,7 @@ def search_api_process(by_admin=False):
             if new_songs.get("isQuotaExceeded"):
                 logging.info("쿼터 초과")
             else:
+                lastSearchTime = new_songs["searched_time"]
                 abnormal_songs = crawl_search_api(load_abnormal_cases())
                 all_songs = new_songs["all_songs"] + abnormal_songs.get("all_songs", [])
                 save_to_db(all_songs, new_songs["searched_time"])

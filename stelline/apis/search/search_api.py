@@ -147,6 +147,8 @@ def crawl_search_api(abnormal_cases):
                     break
                 items = section.get("itemSectionRenderer", {}).get("contents", [])
                 for item in items:
+                    if len(video_ids) >= 3:
+                        break
                     video = item.get("videoRenderer")
                     if video:
                         video_ids.append(video["videoId"])

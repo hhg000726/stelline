@@ -7,6 +7,11 @@ LAST_SEARCH_FILE = "last_search_time.txt"
 
 def load_last_search_time():
     try:
+        if not os.path.exists(LAST_SEARCH_FILE):
+            with open(LAST_SEARCH_FILE, "w") as f:
+                f.write("0")
+            return 0
+
         with open(LAST_SEARCH_FILE, "r") as f:
             return float(f.read().strip())
     except:

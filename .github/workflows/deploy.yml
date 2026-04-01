@@ -1,9 +1,9 @@
-name: Deploy to EC2
+name: Deploy to Oracle Cloud
 
 on:
   push:
     branches:
-      - main  # 🔹 main 브랜치에 push될 때 실행
+      - main
 
 jobs:
   deploy:
@@ -18,11 +18,13 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
+        # 오라클 서버의 호스트 키를 알려진 호스트에 추가
         ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Deploy to EC2
+    - name: Execute Remote Deployment Script
       env:
-        EC2_HOST: ${{ secrets.EC2_HOST }}
-        EC2_USER: ${{ secrets.EC2_USER }}
+        HOST: ${{ secrets.EC2_HOST }}
+        USER: ${{ secrets.EC2_USER }}
       run: |
-        ssh $EC2_USER@$EC2_HOST 'bash ~/deploy.sh'
+        # SSH를 통해 서버의 deploy.sh 실행
+        ssh $USER@$HOST 'bash ~/deploy.sh'

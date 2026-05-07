@@ -8,6 +8,6 @@ def get_rds_connection():
        user=RDS_USER,
        password=RDS_PASSWORD,
        database=RDS_DB,
-       charset="utf8",
+       charset="utf8mb4",
        cursorclass=pymysql.cursors.DictCursor,
    )

@@ -32,14 +32,23 @@ from stelline.database.db_connection import get_rds_connection
 # 테이블 생성
 with conn.cursor() as cursor:
     try:
-        # Originals 테이블 생성 (기존 비디오 목록)
-        cursor.execute("""
-            DROP TABLE AbnormalCase
-        """)        
+        logging.info("song_counts 테이블 캐릭터셋 변경 시작...")
+        
+        # 컬럼 속성 변경 (이모지 지원을 위해 utf8mb4 적용)
+        sql = """
+            ALTER TABLE song_counts 
+            MODIFY title VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+        """
+        cursor.execute(sql)
+        
+        # (중요) DB에 반영
         conn.commit()
-        logging.info("테이블 제거 완료.")
+        logging.info("song_counts 테이블 캐릭터셋 변경 완료.")
+        
     except Exception as e:
-        logging.error(f"테이블 생성 중 오류 발생: {e}")
+        # 에러 발생 시 롤백
+        conn.rollback()
+        logging.error(f"테이블 수정 중 오류 발생: {e}")
 
 # Flask 기본 로거 활성화
 app.logger.setLevel(logging.DEBUG)

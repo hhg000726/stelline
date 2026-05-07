@@ -29,7 +29,10 @@ def get_songs():
                 response.raise_for_status()
             except requests.exceptions.RequestException as e:
                 logging.error(f"YouTube API 요청 실패: {e}")
-                return []
+                return {
+                    "all_songs": [],
+                    "songs_for_counts": []
+                }
             
             data = response.json()
             for item in data.get("items", []):
@@ -68,7 +71,10 @@ def get_songs():
         return {"all_songs": songs, "songs_for_counts": songs_for_counts}
     except Exception as e:
         logging.error(f"YouTube API에서 곡을 가져오는 중 오류 발생: {e}")
-        return []
+        return {
+            "all_songs": [],
+            "songs_for_counts": []
+        }
     
 # 주기적으로 유튜브 데이터 가져오기
 def youtube_api_process(all_songs):
@@ -230,7 +236,7 @@ def youtube_api_process(all_songs):
                             conn.commit()
             except Exception as e:
                 logging.error(f"노래 카운트 업데이트 오류: {e}")
-                continue
+                pass
             finally:
                 conn.close()
         except Exception as e:

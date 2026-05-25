@@ -179,9 +179,7 @@ def search_api(by_admin=False):
         
     logging.info(f"[1차 검사 시작] risk_zero_songs={len(risk_zero_songs)}, search_targets={len(search_targets)}")
     
-    retryCount = 10
-    
-    while remainingQuotes > len(not_searched) + 1 and retryCount > 0:
+    while remainingQuotes > len(not_searched) + 1:
         
         song = None
         
@@ -196,7 +194,7 @@ def search_api(by_admin=False):
             break
         
         if song:
-            time.sleep(2)
+            time.sleep(4)
             
             song_info = song
             query = song_info["query"]
@@ -227,7 +225,6 @@ def search_api(by_admin=False):
             except requests.RequestException as e:
                 isQuotaExceeded = True
                 logging.error(f"API 요청 실패: {e}")
-                retryCount -= 1
                 time.sleep(10)
     
     logging.info(f"[1차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
@@ -235,6 +232,7 @@ def search_api(by_admin=False):
     i = 0
 
     while i < len(not_searched) and remainingQuotes > 0:
+        time.sleep(4)
         song = not_searched[i]
         query = song["query"]
         video_id = song["video_id"]
@@ -248,6 +246,7 @@ def search_api(by_admin=False):
         }
         
         try:
+            logging.info(f"API 요청 시도 query={query}, video_id={video_id}, emainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
             data = response.json()
@@ -259,12 +258,12 @@ def search_api(by_admin=False):
             else:
                 update_risk(query, max(song["risk"] - 1, 0))
                 not_searched.pop(i)
+            remainingQuotes -= 1
         except requests.RequestException as e:
             i += 1
             isQuotaExceeded = True
             logging.error(f"API 요청 실패: {e}")
             
-        remainingQuotes -= 1
     
     logging.info(f"[2차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
     

@@ -194,7 +194,8 @@ def search_api(by_admin=False):
             break
         
         if song:
-            time.sleep(4)
+            sleep_time = random.uniform(8, 20)
+            time.sleep(sleep_time)
             
             song_info = song
             query = song_info["query"]
@@ -225,14 +226,15 @@ def search_api(by_admin=False):
             except requests.RequestException as e:
                 isQuotaExceeded = True
                 logging.error(f"API 요청 실패: {e}")
-                time.sleep(10)
+                break
     
     logging.info(f"[1차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
 
     i = 0
 
     while i < len(not_searched) and remainingQuotes > 0:
-        time.sleep(4)
+        sleep_time = random.uniform(8, 20)
+        time.sleep(sleep_time)
         song = not_searched[i]
         query = song["query"]
         video_id = song["video_id"]
@@ -263,6 +265,7 @@ def search_api(by_admin=False):
             i += 1
             isQuotaExceeded = True
             logging.error(f"API 요청 실패: {e}")
+            break
             
     
     logging.info(f"[2차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")

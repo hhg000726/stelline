@@ -196,7 +196,7 @@ def search_api(by_admin=False):
             break
         
         if song:
-            time.sleep(0.5)
+            time.sleep(2)
             
             song_info = song
             query = song_info["query"]
@@ -211,6 +211,7 @@ def search_api(by_admin=False):
             }
             
             try:
+                logging.info(f"API 요청 시도 query={query}, video_id={video_id}, emainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()  # HTTP 에러 체크 (4xx, 5xx)
                 data = response.json()

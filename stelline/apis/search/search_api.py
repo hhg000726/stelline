@@ -178,8 +178,10 @@ def search_api(by_admin=False):
         selectedKey = SEARCH_API_KEY
         
     logging.info(f"[1차 검사 시작] risk_zero_songs={len(risk_zero_songs)}, search_targets={len(search_targets)}")
-
-    while remainingQuotes > len(not_searched) + 1:
+    
+    retryCount = 10
+    
+    while remainingQuotes > len(not_searched) + 1 and retryCount > 0:
         
         song = None
         
@@ -194,6 +196,8 @@ def search_api(by_admin=False):
             break
         
         if song:
+            time.sleep(0.5)
+            
             song_info = song
             query = song_info["query"]
             video_id = song_info["video_id"]
@@ -217,11 +221,13 @@ def search_api(by_admin=False):
                     not_searched.append({"query": query, "video_id": video_id, "risk": song_info["risk"]})
                 else:
                     update_risk(query, max(song_info["risk"] - 1, 0))
+                remainingQuotes -= 1
+                
             except requests.RequestException as e:
                 isQuotaExceeded = True
                 logging.error(f"API 요청 실패: {e}")
-            
-            remainingQuotes -= 1
+                retryCount -= 1
+                time.sleep(10)
     
     logging.info(f"[1차 검사 종료] remainingQuotes={remainingQuotes}, not_searched={len(not_searched)}")
 

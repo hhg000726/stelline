@@ -194,8 +194,7 @@ def search_api(by_admin=False):
             break
         
         if song:
-            sleep_time = random.uniform(8, 20)
-            time.sleep(sleep_time)
+            time.sleep(20)
             
             song_info = song
             query = song_info["query"]
@@ -233,8 +232,7 @@ def search_api(by_admin=False):
     i = 0
 
     while i < len(not_searched) and remainingQuotes > 0:
-        sleep_time = random.uniform(8, 20)
-        time.sleep(sleep_time)
+        time.sleep(20)
         song = not_searched[i]
         query = song["query"]
         video_id = song["video_id"]

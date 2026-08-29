@@ -1,5 +1,29 @@
 """MySQL 스키마의 코드 기준(source of truth)."""
 
+
+def migrate_song_infos_primary_key(cursor):
+    cursor.execute("DELETE FROM song_infos WHERE query IS NULL")
+    cursor.execute("DELETE s1 FROM song_infos s1 INNER JOIN song_infos s2 ON s1.query = s2.query AND s1.video_id > s2.video_id")
+    cursor.execute(
+        """SELECT COUNT(*) AS primary_key_count
+           FROM information_schema.TABLE_CONSTRAINTS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'song_infos'
+            AND CONSTRAINT_TYPE = 'PRIMARY KEY'"""
+    )
+    if cursor.fetchone()["primary_key_count"]:
+        cursor.execute("ALTER TABLE song_infos DROP PRIMARY KEY")
+    cursor.execute("ALTER TABLE song_infos MODIFY query VARCHAR(512) NOT NULL")
+    cursor.execute(
+        """SELECT COUNT(*) AS primary_key_count
+           FROM information_schema.KEY_COLUMN_USAGE
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'song_infos'
+            AND CONSTRAINT_NAME = 'PRIMARY'"""
+    )
+    if not cursor.fetchone()["primary_key_count"]:
+        cursor.execute("ALTER TABLE song_infos ADD PRIMARY KEY (query)")
+
 MIGRATIONS = [
     ("001_initial_schema", [
         """CREATE TABLE IF NOT EXISTS song_infos (video_id VARCHAR(32) NOT NULL, query VARCHAR(512) PRIMARY KEY, risk INT NOT NULL DEFAULT 0) CHARACTER SET utf8mb4""",
@@ -17,11 +41,7 @@ MIGRATIONS = [
         """CREATE TABLE IF NOT EXISTS offline (name VARCHAR(255) PRIMARY KEY, location_name VARCHAR(255) NULL, description TEXT NULL, latitude DOUBLE NOT NULL DEFAULT 0, longitude DOUBLE NOT NULL DEFAULT 0, start_date DATETIME NULL, end_date DATETIME NULL, address TEXT NULL, always BOOLEAN NOT NULL DEFAULT FALSE) CHARACTER SET utf8mb4""",
     ]),
     ("002_change_song_infos_pk", [
-        "DELETE FROM song_infos WHERE query IS NULL",
-        "DELETE s1 FROM song_infos s1 INNER JOIN song_infos s2 ON s1.query = s2.query AND s1.video_id > s2.video_id",
-        "ALTER TABLE song_infos DROP PRIMARY KEY",
-        "ALTER TABLE song_infos MODIFY query VARCHAR(512) NOT NULL",
-        "ALTER TABLE song_infos ADD PRIMARY KEY (query)",
+        migrate_song_infos_primary_key,
     ]),
     ("003_song_reports", [
         """CREATE TABLE IF NOT EXISTS song_reports (id BIGINT AUTO_INCREMENT PRIMARY KEY, content TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) CHARACTER SET utf8mb4""",

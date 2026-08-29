@@ -14,7 +14,10 @@ def apply_migrations():
                 if cursor.fetchone():
                     continue
                 for statement in statements:
-                    cursor.execute(statement)
+                    if callable(statement):
+                        statement(cursor)
+                    else:
+                        cursor.execute(statement)
                 cursor.execute("INSERT INTO schema_migrations (version) VALUES (%s)", (version,))
             connection.commit()
     except Exception:

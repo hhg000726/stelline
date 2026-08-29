@@ -1,6 +1,6 @@
 async function fetchSongs() {
     try {
-        const response = await fetch('https://stelline.xyz/api/search/not_searched');
+        const response = await Stelline.api('search/not_searched');
         const data = await response.json();
         if (data.searched_time === 0) {
             document.getElementById("last-updated").innerText = "마지막 검색 시도 시간: 없음"
@@ -22,7 +22,7 @@ async function fetchQueries() {
         // HTML 요소 가져오기
         const listElement = document.getElementById("query-list");
 
-        const response = await fetch('https://stelline.xyz/api/search/songs');
+        const response = await Stelline.api('search/songs');
         const songs = await response.json();
 
         // JSON 데이터를 순회하면서 query 값만 추가
@@ -72,9 +72,15 @@ function renderCards(data, containerId) {
         info.appendChild(title);
 
         const button = document.createElement("button");
-        button.textContent = "복사 & 이동";
+        button.type = "button";
+        button.className = "btn-primary";
+        button.innerHTML = '<svg data-feather="play" width="16" height="16"></svg> 복사 & 이동';
         button.onclick = () => handleButtonClick(song.query);
         info.appendChild(button);
+
+        if (window.feather) {
+            feather.replace();
+        }
 
         card.appendChild(info);
         container.appendChild(card);
@@ -89,7 +95,7 @@ function renderCards(data, containerId) {
 
 function handleButtonClick(query) {
     // API 요청
-    fetch("https://stelline.xyz/api/search/record", {
+    Stelline.api("search/record", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
     }).catch(error => console.error("API 요청 중 오류 발생:", error));

@@ -26,7 +26,7 @@ function formatDateRange(startStr, endStr) {
 }
 
 function fetchEvents() {
-  return fetch("https://stelline.xyz/api/offline/offline_api", {
+  return Stelline.api("offline/offline_api", {
     method: "GET",
     headers: { "Content-Type": "application/json" }
   }).then(res => res.json());

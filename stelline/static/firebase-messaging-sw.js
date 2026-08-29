@@ -39,7 +39,7 @@ messaging.onBackgroundMessage(function(payload) {
 
     const notificationOptions = {
         body: notificationBody,
-        icon: imageUrl || '/firebase-logo.png', // 이미지 URL이 있다면 icon으로 사용, 없으면 기본 아이콘
+        icon: imageUrl,
         data: { // 알림 클릭 시 전달될 사용자 정의 데이터
             video_url: videoUrl
         }

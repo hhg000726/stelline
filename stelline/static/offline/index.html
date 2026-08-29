@@ -5,29 +5,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>진행 중인 오프라인 이벤트</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/assets/site.css">
+  <link rel="stylesheet" href="/offline/style.css">
   <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=f7tppyljgr"></script>
 </head>
 
 <body>
-  <div id="main-btn">
-    <button onclick="location.href='..'">메인으로</button>
-  </div>
+  <main class="site-container">
+    <nav class="page-nav">
+      <button onclick="Stelline.goBack()" class="btn-secondary">← 메인으로</button>
+    </nav>
 
-  <h1>진행 중인 오프라인 이벤트</h1>
+    <section class="page-shell">
+      <div class="page-header">
+        <div class="page-kicker">offline event</div>
+        <h1 class="page-title">진행 중인 오프라인 이벤트</h1>
+        <p class="page-subtitle">근처 행사와 일정 정보를 한눈에 확인해 보세요.</p>
+      </div>
+    </section>
 
-  <label>
-    <input type="checkbox" id="showFutureEvents" />
-    아직 시작되지 않은 이벤트도 보기
-  </label>
-  
-  <div id="map" style="width: 100%; height: 500px; margin: 20px 0;"></div>
+    <section class="section-panel">
+      <label class="toggle-row">
+        <input type="checkbox" id="showFutureEvents" />
+        아직 시작되지 않은 이벤트도 보기
+      </label>
+      <div id="map" class="map-shell"></div>
+    </section>
 
-  <p>이 사이트는 개인이 운영하는 비영리 사이트입니다.<br>이 사이트는 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
-  <p>문의: pastel525600@gmail.com</p>
+    <footer>
+      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다.<br>이 사이트는 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
+      <p>문의: pastel525600@gmail.com</p>
+    </footer>
 
-  <script src="offline.js"></script>
-
+    <script src="/assets/site.js"></script>
+    <script src="/offline/offline.js"></script>
+  </main>
 </body>
 
 </html>

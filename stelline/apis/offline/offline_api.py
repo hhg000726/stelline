@@ -3,7 +3,7 @@ import requests
 from flask import jsonify
 
 from stelline.config import NCP_CLIENT_ID, NCP_CLIENT_SECRET
-from stelline.database.db_connection import get_rds_connection
+from stelline.database.connection import get_connection
 
 # 주소 → 위경도 변환
 def geocode_location(address, client_id, client_secret):
@@ -43,7 +43,7 @@ def geocode_location(address, client_id, client_secret):
 
 def offline_api():
 
-    conn = get_rds_connection()
+    conn = get_connection()
     try:
         with conn.cursor() as cursor:
             # 1. 모든 이벤트 조회

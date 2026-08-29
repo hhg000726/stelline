@@ -1,5 +1,5 @@
 from . import offline_bp
-from .offline_api import *
+from .offline_api import offline_api
 
 @offline_bp.route("/offline_api", methods=["GET"])
 def offline():

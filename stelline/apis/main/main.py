@@ -1,11 +1,10 @@
 from flask import jsonify
 import logging
 
-from stelline.config import *
-from stelline.database.db_connection import get_rds_connection
+from stelline.database.connection import get_connection
 
 def record_main():
-    conn = get_rds_connection()
+    conn = get_connection()
     try:
         with conn.cursor() as cursor:
             sql = "UPDATE record_main SET copy_count = copy_count + 1"
@@ -19,7 +18,7 @@ def record_main():
     return '', 204
 
 def get_events():
-    conn = get_rds_connection()
+    conn = get_connection()
     try:
         with conn.cursor() as cursor:
             sql = "SELECT * FROM events"
@@ -34,7 +33,7 @@ def get_events():
     return jsonify(result)
 
 def get_twits():
-    conn = get_rds_connection()
+    conn = get_connection()
     try:
         with conn.cursor() as cursor:
             sql = "SELECT * FROM twits"

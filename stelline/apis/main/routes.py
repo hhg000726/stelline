@@ -1,5 +1,5 @@
 from . import main_bp
-from .main import *
+from .main import get_events, get_twits, record_main
 
 @main_bp.route("/record", methods=["GET"])
 def record_main_api():

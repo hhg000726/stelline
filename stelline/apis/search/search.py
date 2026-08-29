@@ -1,9 +1,9 @@
 from flask import jsonify
 import threading, time, logging
 
-from .search_api import *
-from stelline.config import *
-from stelline.database.db_connection import get_rds_connection
+from .search_api import load_recent_data, load_song_infos, load_songs_data, search_api_process
+from stelline.config import SEARCH_API_INTERVAL
+from stelline.database.connection import get_connection
 
 # 관리자 수동 실행 API
 def force_search_now():
@@ -31,7 +31,8 @@ def delayed_search_start(delay):
     logging.info(f"{delay}초 후 API 검색 시작")
     search_api_process()
 
-processing()
+def start_search_scheduler():
+    processing()
 
 # 내 api
 def get_not_searched():
@@ -47,7 +48,7 @@ def get_song_infos():
     return jsonify(load_song_infos())
 
 def record_search():
-    conn = get_rds_connection()
+    conn = get_connection()
     try:
         with conn.cursor() as cursor:
             sql = "UPDATE record_search SET copy_count = copy_count + 1"

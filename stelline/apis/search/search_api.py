@@ -1,7 +1,7 @@
-import json, logging, random, re, requests, time
+import json, logging, random, re, requests, time, os
 
-from stelline.config import *
-from stelline.database.db_connection import get_rds_connection
+from stelline.config import SEARCH_API_INTERVAL, SEARCH_API_KEY, TEMP_API_KEY
+from stelline.database.connection import get_connection
 
 LAST_SEARCH_FILE = "last_search_time.txt"
 
@@ -27,7 +27,7 @@ lastSearchTime = load_last_search_time()
 def load_song_infos():
     conn = None
     try:
-        conn = get_rds_connection()
+        conn = get_connection()
         with conn.cursor() as cursor:
             sql = "SELECT * FROM song_infos"
             cursor.execute(sql)
@@ -44,7 +44,7 @@ def load_songs_data():
     global lastSearchTime
     conn = None
     try:
-        conn = get_rds_connection()
+        conn = get_connection()
         with conn.cursor() as cursor:
             sql = "SELECT * FROM songs_data"
             cursor.execute(sql)
@@ -69,7 +69,7 @@ def load_songs_data():
 def load_recent_data():
     conn = None
     try:
-        conn = get_rds_connection()
+        conn = get_connection()
         with conn.cursor() as cursor:
             sql = "SELECT * FROM recent_data"
             cursor.execute(sql)
@@ -85,7 +85,7 @@ def load_recent_data():
 def update_risk(query, risk):
     conn = None
     try:
-        conn = get_rds_connection()
+        conn = get_connection()
         with conn.cursor() as cursor:
             sql = """
                 UPDATE song_infos
@@ -175,7 +175,10 @@ def search_api(by_admin=False):
         selectedKey = TEMP_API_KEY
     else:
         logging.info("자동 즉시 검색 실행")
-        selectedKey = SEARCH_API_KEY
+        if not SEARCH_API_KEY:
+            logging.error("자동 검색용 YouTube API 키가 설정되지 않았습니다.")
+            return {"all_songs": [], "searched_time": time.time(), "isQuotaExceeded": True}
+        selectedKey = random.choice(SEARCH_API_KEY)
         
     logging.info(f"[1차 검사 시작] risk_zero_songs={len(risk_zero_songs)}, search_targets={len(search_targets)}")
     
@@ -303,7 +306,7 @@ def search_api_process(by_admin=False):
 def save_to_db(all_songs, searched_time):
     conn = None
     try:
-        conn = get_rds_connection()
+        conn = get_connection()
         with conn.cursor() as cursor:
             cursor.execute("TRUNCATE TABLE songs_data")
 

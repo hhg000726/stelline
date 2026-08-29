@@ -9,7 +9,7 @@ function toggleContent(id, button) {
 
 function copyText(id) {
   let text = document.getElementById(id).innerText;
-  fetch("https://stelline.xyz/api/main/record", {
+  Stelline.api("main/record", {
       method: "GET",
       headers: { "Content-Type": "application/json" }
   }).catch(error => console.error("API 요청 중 오류 발생:", error));
@@ -22,7 +22,7 @@ function copyText(id) {
 
 async function fetchBugs() {
   try {
-      const response = await fetch('https://stelline.xyz/api/bugs/rank');
+      const response = await Stelline.api('bugs/rank');
       const recentData = await response.json();
       const bugsDiv = document.getElementById("bugs");
 
@@ -64,7 +64,7 @@ async function fetchEvents() {
   const container = document.getElementById("button-container");
 
   try {
-    const res = await fetch("https://stelline.xyz/api/main/events", {
+    const res = await Stelline.api("main/events", {
       method: "GET",
       headers: { "Content-Type": "application/json" }
     });
@@ -84,7 +84,7 @@ async function fetchEvents() {
 
 async function fetchTwits() {
   try {
-    const res = await fetch("https://stelline.xyz/api/main/twits");
+    const res = await Stelline.api("main/twits");
     const data = await res.json();
 
     const container = document.getElementById("twitContainer");

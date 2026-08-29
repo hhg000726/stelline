@@ -1,22 +1,24 @@
-from flask import request
-from stelline.database.db_connection import get_rds_connection
-from . import congratulation_bp
-from .congratulation import *
+import logging
+
+from flask import jsonify, request
 import firebase_admin
-from firebase_admin import credentials, messaging # Firebase Admin SDK 
+from firebase_admin import credentials
+
+from stelline.config import SERVICE_ACCOUNT_FILE
+from stelline.database.connection import get_connection
+from . import congratulation_bp
+from .congratulation import congratulations
 
 # Firebase Admin SDK 초기화 (앱 시작 시 한 번만 수행)
-# 이 부분은 실제 앱에서는 Flask 앱 컨텍스트나 별도의 초기화 모듈에 있어야 합니다.
-try:
-    # 이미 초기화되었는지 확인 (다중 초기화 방지)
-    firebase_admin.get_app()
-except ValueError:
-    # 서비스 계정 키 파일 경로를 정확히 지정해주세요.
-    # 예: cred = credentials.Certificate('/path/to/your/serviceAccountKey.json')
-    # 개발 환경에서는 환경 변수 등으로 경로를 관리하는 것이 좋습니다.
-    # 또는 GAE, Cloud Run 등 Google Cloud 환경에서는 서비스 계정 키 없이도 자동 인증됩니다.
-    cred = credentials.Certificate(SERVICE_ACCOUNT_FILE) 
-    firebase_admin.initialize_app(cred)
+# 개발 환경에서는 service-account 파일이 없을 수 있으므로, 그 경우에는
+# FCM 기능만 비활성화하고 앱은 계속 시작되도록 처리한다.
+if SERVICE_ACCOUNT_FILE:
+    try:
+        firebase_admin.get_app()
+    except ValueError:
+        firebase_admin.initialize_app(credentials.Certificate(SERVICE_ACCOUNT_FILE))
+else:
+    logging.warning("Firebase 서비스 계정이 없어 FCM 초기화를 건너뜁니다.")
     
 @congratulation_bp.route("/congratulations", methods=["GET"])
 def congratulation_api():
@@ -24,13 +26,13 @@ def congratulation_api():
 
 @congratulation_bp.route("/register", methods=["POST"])
 def register_token():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     token = data.get("token")
 
     if not token:
         return jsonify({"error": "Token is missing"}), 400
 
-    conn = get_rds_connection()
+    conn = get_connection()
     try:
         with conn.cursor() as cursor:
             # 이미 있는지 확인
@@ -62,7 +64,7 @@ def unregister_token():
     Firebase에서 토큰 삭제는 클라이언트 측에서 이루어지며,
     서버는 자체 DB에서 해당 토큰을 제거합니다.
     """
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     token = data.get("token")
     # 'platform' 필드는 클라이언트에서 전송하지만, 현재 DB 스키마에 없으므로 사용하지 않습니다.
     # platform = data.get("platform")
@@ -74,7 +76,7 @@ def unregister_token():
 
     conn = None # 연결 초기화
     try:
-        conn = get_rds_connection()
+        conn = get_connection()
         with conn.cursor() as cursor:
             # 1. DB에서 토큰 삭제
             delete_sql = "DELETE FROM fcm_tokens WHERE token = %s"
@@ -108,13 +110,13 @@ def unregister_token():
 
 @congratulation_bp.route("/check-token", methods=["POST"])
 def check_token():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     token = data.get("token")
 
     if not token:
         return jsonify({"error": "Token is missing"}), 400
 
-    conn = get_rds_connection()
+    conn = get_connection()
     try:
         with conn.cursor() as cursor:
             check_sql = "SELECT token FROM fcm_tokens WHERE token = %s"

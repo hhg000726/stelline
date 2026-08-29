@@ -1,170 +1,44 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>관리자 페이지</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #EDF6FF;
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
-
-        header {
-            padding: 15px 0 5px 0;
-        }
-
-        a {
-            display: inline-block;
-            margin-top: 5px;
-            color: #5F94D6;
-            font-weight: bold;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        details {
-            margin: 5px auto;
-            max-width: 580px;
-            border: 3px double #333;
-            border-radius: 8px;
-            padding: 5px;
-            background-color: #D6E9FE;
-            text-align: center;
-        }
-
-        summary {
-            font-weight: bold;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 5px;
-            font-size: 14px;
-            word-break: break-word;
-        }
-
-        th, td {
-            border: 1px solid #aaa;
-            padding: 4px;
-            text-align: center;
-            overflow-wrap: anywhere;
-        }
-
-        th {
-            background-color: #EDF6FF;
-        }
-
-        input {
-            margin: 2px;
-            padding: 4px;
-            border-radius: 4px;
-            border: 1px solid #aaa;
-            font-size: 12px;
-            width: 100px;
-        }
-
-        form {
-            margin-top: 5px;
-        }
-    </style>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stelline 관리자</title>
+  <style>
+    :root { font-family: Arial, sans-serif; color: #1d2a3a; background: #edf6ff; } body { margin: 0 auto; padding: 24px; max-width: 1200px; }
+    header, .actions { display: flex; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 24px; } h1, h2, h3 { margin-top: 0; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); } section, details { background: white; border: 1px solid #d5e1f2; border-radius: 10px; padding: 18px; box-shadow: 0 1px 4px #9cb5d333; }
+    .hint { color: #596779; font-size: .9rem; } .fields { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); } label { display: grid; gap: 4px; font-size: .9rem; font-weight: bold; }
+    input { min-width: 0; border: 1px solid #b9c7d8; border-radius: 5px; padding: 8px; } button, .button { border: 0; border-radius: 5px; background: #2f70c6; color: white; cursor: pointer; padding: 9px 13px; text-decoration: none; font-size: .9rem; }
+    button.danger { background: #b23a48; } .flash { border-radius: 6px; padding: 10px; margin: 10px 0; background: #dff4e8; } .flash.error { background: #ffe5e7; }
+    details { margin-top: 14px; overflow-x: auto; } summary { cursor: pointer; font-weight: bold; } table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .85rem; }
+    th, td { padding: 7px; border: 1px solid #d5e1f2; text-align: left; vertical-align: top; word-break: break-word; } th { background: #f1f6fc; } form.inline { display: inline; } .readonly { opacity: .82; }
+    @media (max-width: 600px) { body { padding: 14px; } header { align-items: flex-start; flex-direction: column; } .fields { grid-template-columns: 1fr; } }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>관리자 페이지</h1>
-        <a href="{{ url_for('auth.logout') }}">로그아웃</a>
-    </header>
-
-    <button id="forceSearchBtn" style="margin-bottom:10px; padding:8px 14px; font-size:14px; cursor:pointer;">
-        🔍 즉시 검색 실행
-    </button>
-
-    {% for table_name, rows in data.items() %}
-        <details>
-            <summary>{{ table_name }}</summary>
-                <form class="insert-form" method="POST" action="{{ url_for('admin.add_row', table_name=table_name) }}">
-                    {% for key in columns[table_name] %}
-                        <input name="{{ key }}" placeholder="{{ key }}">
-                    {% endfor %}
-                    <button type="submit">추가</button>
-                </form>
-            {% if rows %}
-                <table>
-                    <thead>
-                        <tr>
-                            {% for key in rows[0].keys() %}
-                                <th>{{ key }}</th>
-                            {% endfor %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for row in rows %}
-                            <tr>
-                                {% for value in row.values() %}
-                                    <td>{{ value }}</td>
-                                {% endfor %}
-                                <td>
-                                    <form method="POST" action="{{ url_for('admin.delete_row', table_name=table_name) }}">
-                                        {% for key, value in row.items() %}
-                                            <input type="hidden" name="{{ key }}" value="{{ value }}">
-                                        {% endfor %}
-                                        <button type="submit">삭제</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>데이터가 없습니다.</p>
-            {% endif %}
-        </details>
-    {% endfor %}
-
-    <script>
-
-        document.addEventListener("DOMContentLoaded", function () {
-
-            document.getElementById("forceSearchBtn").addEventListener("click", function () {
-                if (!confirm("지금 즉시 검색을 실행할까요?")) return;
-
-                fetch("https://stelline.xyz/api/search/force_search")
-                    .then(res => res.json())
-                    .then(data => {
-                        alert("검색 시작됨!");
-                    })
-                    .catch(err => {
-                        alert("실행 실패");
-                        console.error(err);
-                    });
-            });
-            const detailsList = document.querySelectorAll("details");
-
-            detailsList.forEach((details) => {
-                const insertForm = details.querySelector("form.insert-form");
-                const inputs = insertForm.querySelectorAll("input[name]");
-                const rows = details.querySelectorAll("tbody tr");
-
-                rows.forEach((row) => {
-                    row.addEventListener("click", function () {
-                        const cells = row.querySelectorAll("td");
-                        for (let i = 0; i < inputs.length && i < cells.length - 1; i++) {
-                            inputs[i].value = cells[i].innerText.trim();
-                        }
-                    });
-                });
-            });
-        });
-    </script>
+  <header><div><h1>콘텐츠 관리자</h1><p class="hint">새 데이터는 아래 전용 양식에서 관리합니다. 통계 데이터는 읽기 전용입니다.</p></div><a class="button" href="{{ url_for('auth.logout') }}">로그아웃</a></header>
+  {% for category, message in get_flashed_messages(with_categories=true) %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
+  <div class="actions">
+    <strong>운영 데이터</strong>
+    <div style="display:flex; gap:12px; align-items:center;">
+      {% if development_mode %}
+      <form method="post" action="{{ url_for('admin.import_snapshot_from_admin_html') }}" onsubmit="return confirm('개발 DB를 관리자 HTML 스냅샷으로 다시 적재할까요?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit">개발 DB 재시드</button>
+      </form>
+      {% endif %}
+      <button id="forceSearchBtn" type="button">검색 점검 즉시 실행</button>
+    </div>
+  </div>
+  <main class="grid">
+    {% for table_name, form in forms.items() %}
+    <section>
+      <h2>{{ form.title }}</h2><p class="hint">{{ form.description }}</p>
+      <form method="post" action="{{ url_for('admin.add_row', table_name=table_name) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="fields">{% for input in form.inputs %}<label>{{ input.name }}<input name="{{ input.name }}" type="{{ input.type }}" {% if input.type == 'number' %}step="any"{% endif %}></label>{% endfor %}</div><p><button type="submit">추가</button></p></form>
+      <details><summary>등록된 항목 {{ data.get(table_name, [])|length }}개 보기</summary>{% set rows = data.get(table_name, []) %}{% if rows %}<table><thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}<th>관리</th></tr></thead><tbody>{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}<td><form class="inline" method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="row_token" value="{{ serialize_row(row) }}"><button class="danger" type="submit">삭제</button></form></td></tr>{% endfor %}</tbody></table>{% else %}<p class="hint">등록된 항목이 없습니다.</p>{% endif %}</details>
+    </section>{% endfor %}
+  </main>
+  <details class="readonly"><summary>읽기 전용 운영 통계</summary>{% for table_name, rows in data.items() if table_name not in forms %}<h3>{{ table_name }} ({{ rows|length }})</h3>{% if rows %}<table><thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr></thead><tbody>{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>{% endif %}{% endfor %}</details>
+  <script>document.getElementById('forceSearchBtn').addEventListener('click', async () => { if (!confirm('지금 검색 점검을 시작할까요?')) return; try { const response = await fetch('/api/search/force_search'); if (!response.ok) throw new Error(); alert('검색 점검을 시작했습니다.'); } catch { alert('실행하지 못했습니다.'); } });</script>
 </body>
 </html>

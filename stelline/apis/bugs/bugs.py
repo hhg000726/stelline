@@ -6,6 +6,7 @@ from .bugs_api import bugs_api_process
 recent_data = {}
 
 def rank():
-    return jsonify(recent_data)
+    return jsonify(recent_data.copy())
 
-threading.Thread(target = bugs_api_process, daemon=True, args = (recent_data, )).start()
+def start_rank_refresh():
+    threading.Thread(target=bugs_api_process, daemon=True, args=(recent_data,)).start()

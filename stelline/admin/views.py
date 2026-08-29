@@ -74,13 +74,21 @@ def load_table(connection, table_name):
 @login_required
 def admin_index():
     data, connection = {}, None
+    missing_tables = []
     try:
         connection = get_connection()
         for table_name in (*CONTENT_TABLES, *READ_ONLY_TABLES):
-            data[table_name] = load_table(connection, table_name)
+            try:
+                data[table_name] = load_table(connection, table_name)
+            except Exception:
+                logging.exception("관리자 테이블 로드 실패: %s", table_name)
+                missing_tables.append(table_name)
     except Exception:
-        logging.exception("관리자 데이터를 불러오지 못했습니다.")
-        flash("일부 데이터를 불러오지 못했습니다. DB 연결과 테이블 구성을 확인하세요.", "error")
+        logging.exception("관리자 DB 연결 실패")
+        flash("DB 연결을 확인할 수 없습니다. 데이터베이스 상태와 접근 계정을 확인하세요.", "error")
+    else:
+        if missing_tables:
+            flash("일부 테이블을 불러오지 못했습니다. DB 연결과 테이블 구성을 확인하세요.", "error")
     finally:
         if connection:
             connection.close()

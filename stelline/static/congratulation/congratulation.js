@@ -52,7 +52,7 @@ function renderTable(data, tableId) {
     reached.textContent = ``;
 
     const time = document.createElement("span");
-    const diff = Date.now() - new Date(song.counted_time).getTime() + 9 * 60 * 60 * 1000;
+    const diff = Date.now() - new Date(song.counted_time).getTime();
     const hours = Math.floor(diff / 3600000);
     time.textContent = hours > 0 ? `${hours}시간 전` : "방금 전";
 

@@ -1,3 +1,57 @@
+let allQueries = [];
+let queryFilterBound = false;
+
+function attachReportForm() {
+    const toggle = document.getElementById("report-toggle");
+    const panel = document.getElementById("report-panel");
+    const form = document.getElementById("report-form");
+    const content = document.getElementById("report-content");
+    const status = document.getElementById("report-status");
+    const captchaContainer = document.getElementById("report-captcha");
+    let captchaWidget;
+    if (!toggle || !panel || !form) return;
+
+    toggle.addEventListener("click", () => {
+        panel.hidden = !panel.hidden;
+        toggle.textContent = panel.hidden ? "검색어 추가 제안" : "제안 입력 닫기";
+        if (!panel.hidden) {
+            content.focus();
+            if (captchaContainer && window.turnstile && captchaWidget === undefined) {
+                captchaWidget = window.turnstile.render(captchaContainer, {
+                    sitekey: "0x4AAAAAAEgvGwCT4Q867aaL"
+                });
+            }
+        }
+    });
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const value = content.value.trim();
+        if (!value) return;
+        const captchaToken = window.turnstile?.getResponse(captchaWidget);
+        if (!captchaToken) {
+            status.textContent = "캡차 인증을 완료하세요.";
+            return;
+        }
+        status.textContent = "보내는 중...";
+        try {
+            const response = await Stelline.api("search/reports", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ content: value, captcha_token: captchaToken })
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "제안을 보내지 못했습니다.");
+            form.reset();
+            status.textContent = result.message;
+            window.turnstile?.reset(captchaWidget);
+        } catch (error) {
+            status.textContent = error.message;
+            window.turnstile?.reset(captchaWidget);
+        }
+    });
+}
+
 async function fetchSongs() {
     try {
         const response = await Stelline.api('search/not_searched');
@@ -17,23 +71,76 @@ async function fetchSongs() {
     }
 }
 
+function renderQueryList(filterText = "") {
+    const listElement = document.getElementById("query-list");
+    const countElement = document.getElementById("query-count");
+    const normalizedFilter = filterText.trim().toLowerCase();
+
+    const filteredQueries = allQueries.filter(item => {
+        const query = String(item.query || "");
+        return query.toLowerCase().includes(normalizedFilter);
+    });
+
+    listElement.innerHTML = "";
+
+    if (filteredQueries.length === 0) {
+        const emptyState = document.createElement("li");
+        emptyState.className = "query-empty";
+        emptyState.textContent = filterText.trim()
+            ? "검색어를 찾을 수 없습니다."
+            : "표시할 검색어가 없습니다.";
+        listElement.appendChild(emptyState);
+        countElement.textContent = "0개";
+        return;
+    }
+
+    filteredQueries.forEach(item => {
+        const li = document.createElement("li");
+        li.className = "query-item";
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "query-chip";
+        button.textContent = item.query;
+        button.title = item.query;
+        button.onclick = () => handleButtonClick(item.query);
+
+        li.appendChild(button);
+        listElement.appendChild(li);
+    });
+
+    countElement.textContent = `${filteredQueries.length}개`;
+}
+
+function attachQueryFilter() {
+    if (queryFilterBound) {
+        return;
+    }
+
+    const input = document.getElementById("query-search");
+    if (!input) {
+        return;
+    }
+
+    input.addEventListener("input", (event) => {
+        renderQueryList(event.target.value || "");
+    });
+
+    queryFilterBound = true;
+}
+
 async function fetchQueries() {
     try {
-        // HTML 요소 가져오기
-        const listElement = document.getElementById("query-list");
-
         const response = await Stelline.api('search/songs');
         const songs = await response.json();
-
-        // JSON 데이터를 순회하면서 query 값만 추가
-        songs.forEach(item => {
-            const li = document.createElement("li");
-            li.textContent = item.query;
-            listElement.appendChild(li);
-        });
+        allQueries = Array.isArray(songs) ? songs : [];
+        renderQueryList();
     } catch (error) {
         console.error("JSON을 불러오는 중 오류 발생:", error);
-        document.getElementById("json-time").textContent = "시간을 불러올 수 없습니다.";
+        const countElement = document.getElementById("query-count");
+        if (countElement) {
+            countElement.textContent = "불가";
+        }
     }
 }
 
@@ -107,4 +214,6 @@ function handleButtonClick(query) {
 }
 
 document.addEventListener("DOMContentLoaded", fetchSongs);
+document.addEventListener("DOMContentLoaded", attachReportForm);
 fetchQueries();
+attachQueryFilter();

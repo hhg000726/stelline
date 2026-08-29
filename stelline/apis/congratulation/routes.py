@@ -7,7 +7,7 @@ from firebase_admin import credentials
 from stelline.config import SERVICE_ACCOUNT_FILE
 from stelline.database.connection import get_connection
 from . import congratulation_bp
-from .congratulation import congratulations
+from .congratulation import congratulations, submit_view_report
 
 # Firebase Admin SDK 초기화 (앱 시작 시 한 번만 수행)
 # 개발 환경에서는 service-account 파일이 없을 수 있으므로, 그 경우에는
@@ -23,6 +23,10 @@ else:
 @congratulation_bp.route("/congratulations", methods=["GET"])
 def congratulation_api():
     return congratulations()
+
+@congratulation_bp.route("/reports", methods=["POST"])
+def submit_view_report_api():
+    return submit_view_report()
 
 @congratulation_bp.route("/register", methods=["POST"])
 def register_token():

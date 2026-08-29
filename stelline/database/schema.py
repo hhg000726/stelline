@@ -23,4 +23,10 @@ MIGRATIONS = [
         "ALTER TABLE song_infos MODIFY query VARCHAR(512) NOT NULL",
         "ALTER TABLE song_infos ADD PRIMARY KEY (query)",
     ]),
+    ("003_song_reports", [
+        """CREATE TABLE IF NOT EXISTS song_reports (id BIGINT AUTO_INCREMENT PRIMARY KEY, content TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) CHARACTER SET utf8mb4""",
+    ]),
+    ("004_view_reports", [
+        """CREATE TABLE IF NOT EXISTS view_reports (id BIGINT AUTO_INCREMENT PRIMARY KEY, content TEXT NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) CHARACTER SET utf8mb4""",
+    ]),
 ]

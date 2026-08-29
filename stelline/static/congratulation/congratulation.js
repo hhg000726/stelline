@@ -9,6 +9,57 @@ async function fetchSongs() {
     }
 }
 
+function attachReportForm() {
+  const toggle = document.getElementById("report-toggle");
+  const panel = document.getElementById("report-panel");
+  const form = document.getElementById("report-form");
+  const content = document.getElementById("report-content");
+  const status = document.getElementById("report-status");
+  const captchaContainer = document.getElementById("report-captcha");
+  let captchaWidget;
+  if (!toggle || !panel || !form) return;
+
+  toggle.addEventListener("click", () => {
+    panel.hidden = !panel.hidden;
+    toggle.textContent = panel.hidden ? "누락된 노래 제보" : "제보 입력 닫기";
+    if (!panel.hidden) {
+      content.focus();
+      if (captchaContainer && window.turnstile && captchaWidget === undefined) {
+        captchaWidget = window.turnstile.render(captchaContainer, {
+          sitekey: "0x4AAAAAAEgvGwCT4Q867aaL"
+        });
+      }
+    }
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const value = content.value.trim();
+    if (!value) return;
+    const captchaToken = window.turnstile?.getResponse(captchaWidget);
+    if (!captchaToken) {
+      status.textContent = "캡차 인증을 완료하세요.";
+      return;
+    }
+    status.textContent = "보내는 중...";
+    try {
+      const response = await Stelline.api("congratulation/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: value, captcha_token: captchaToken })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "제보를 보내지 못했습니다.");
+      form.reset();
+      status.textContent = result.message;
+      window.turnstile?.reset(captchaWidget);
+    } catch (error) {
+      status.textContent = error.message;
+      window.turnstile?.reset(captchaWidget);
+    }
+  });
+}
+
 function renderTable(data, tableId) {
   const container = document.getElementById(tableId);
   const resultsCount = document.getElementById('resultsCount');
@@ -94,3 +145,4 @@ function handleButtonClick(video_id) {
 }
 
 document.addEventListener("DOMContentLoaded", fetchSongs);
+document.addEventListener("DOMContentLoaded", attachReportForm);

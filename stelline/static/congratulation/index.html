@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>조회수 축하</title>
   <link rel="stylesheet" href="/assets/site.css">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
@@ -43,6 +44,65 @@
     .congrats-hero {
       padding: 30px 28px 24px;
       margin-bottom: 20px;
+    }
+
+    .hero-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .report-toggle {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .report-panel {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .report-panel h2 {
+      margin: 0 0 6px;
+      font-size: 1.15rem;
+      color: #1e293b;
+    }
+
+    .report-panel p {
+      margin: 0 0 14px;
+      color: #475569;
+      line-height: 1.7;
+    }
+
+    .report-panel form {
+      display: grid;
+      gap: 8px;
+    }
+
+    .report-panel label {
+      color: #1e293b;
+      font-weight: 700;
+    }
+
+    .report-panel textarea {
+      width: 100%;
+      box-sizing: border-box;
+      resize: vertical;
+      padding: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.86);
+      color: #1e293b;
+      font: inherit;
+    }
+
+    .report-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
 
     .eyebrow {
@@ -259,6 +319,14 @@
         padding: 22px 18px 18px;
       }
 
+      .hero-heading {
+        flex-direction: column;
+      }
+
+      .report-toggle {
+        align-self: stretch;
+      }
+
       .congrats-hero h1,
       .congrats-hero p,
       .notification-panel h2,
@@ -289,9 +357,27 @@
     </nav>
 
     <section class="congrats-hero">
-      <div class="eyebrow">live milestone</div>
-      <h1>조회수 축하</h1>
-      <p id="status">앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.</p>
+      <div class="hero-heading">
+        <div>
+          <div class="eyebrow">live milestone</div>
+          <h1>조회수 축하</h1>
+          <p id="status">앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.</p>
+        </div>
+        <button id="report-toggle" class="btn-primary report-toggle" type="button">누락된 노래 제보</button>
+      </div>
+      <div id="report-panel" class="report-panel" hidden>
+        <h2>조회수 알림에서 누락된 노래를 알려주세요</h2>
+        <p>조회수 알림 목록에 없는 노래를 제보하거나, 추가했으면 하는 내용을 남겨주세요.</p>
+        <form id="report-form">
+          <label for="report-content">제보 내용</label>
+          <textarea id="report-content" maxlength="2000" rows="4" placeholder="노래 제목, 영상 링크 또는 추가 의견을 입력하세요" required></textarea>
+          <div id="report-captcha" class="cf-turnstile"></div>
+          <div class="report-actions">
+            <span id="report-status" role="status"></span>
+            <button class="btn-primary" type="submit">제보 보내기</button>
+          </div>
+        </form>
+      </div>
     </section>
 
     <section class="notification-panel">

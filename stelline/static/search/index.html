@@ -7,6 +7,7 @@
   <title>검색 안되는 노래</title>
   <link rel="stylesheet" href="/assets/site.css">
   <link rel="stylesheet" href="/search/style.css">
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
@@ -22,10 +23,26 @@
 
     <section class="page-shell">
       <div class="page-header">
-        <div class="page-kicker">search tips</div>
-        <h1 class="page-title">검색 안되는 노래</h1>
-        <p class="page-subtitle">(시크릿 모드 기준 3개 이내)</p>
-        <p id="last-updated" class="meta-text"></p>
+        <div class="page-heading">
+          <div class="page-kicker">search tips</div>
+          <h1 class="page-title">검색 안되는 노래</h1>
+          <p class="page-subtitle">(시크릿 모드 기준 3개 이내)</p>
+          <p id="last-updated" class="meta-text"></p>
+        </div>
+        <button id="report-toggle" class="btn-primary report-toggle" type="button">검색어 추가 제안</button>
+      </div>
+      <div id="report-panel" class="report-panel" hidden>
+        <h2>목록에 없는 검색어 추가를 제안해주세요</h2>
+        <p>페이지 하단 검색어 목록에 없는 검색어를 제안하거나, 추가했으면 하는 내용을 남겨주세요.</p>
+        <form id="report-form">
+          <label for="report-content">제안 내용</label>
+          <textarea id="report-content" maxlength="2000" rows="4" placeholder="노래 제목, 검색어 또는 추가 의견을 입력하세요" required></textarea>
+          <div id="report-captcha" class="cf-turnstile"></div>
+          <div class="report-actions">
+            <span id="report-status" class="meta-text" role="status"></span>
+            <button class="btn-primary" type="submit">제안 보내기</button>
+          </div>
+        </form>
       </div>
     </section>
 
@@ -126,7 +143,18 @@
     <section class="section-panel">
       <div class="section-header">
         <h2>검색어 리스트</h2>
+        <span id="query-count" class="results-count">0개</span>
       </div>
+
+      <div class="query-filter-wrap">
+        <label class="query-search" for="query-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10.5 3a7.5 7.5 0 0 1 5.88 12.8l4.42 4.42 1.41-1.41-4.42-4.42A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
+          </svg>
+          <input id="query-search" type="text" placeholder="검색어를 입력하세요" autocomplete="off">
+        </label>
+      </div>
+
       <p class="list-note">최근에 검색이 안된 노래들 + 랜덤으로 25곡을 채워 6시간마다 검색하고 있습니다.</p>
       <ul id="query-list" class="info-list"></ul>
     </section>

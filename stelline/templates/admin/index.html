@@ -34,11 +34,77 @@
     {% for table_name, form in forms.items() %}
     <section>
       <h2>{{ form.title }}</h2><p class="hint">{{ form.description }}</p>
-      <form method="post" action="{{ url_for('admin.add_row', table_name=table_name) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="fields">{% for input in form.inputs %}<label>{{ input.name }}<input name="{{ input.name }}" type="{{ input.type }}" {% if input.type == 'number' %}step="any"{% endif %}></label>{% endfor %}</div><p><button type="submit">추가</button></p></form>
-      <details><summary>등록된 항목 {{ data.get(table_name, [])|length }}개 보기</summary>{% set rows = data.get(table_name, []) %}{% if rows %}<table><thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}<th>관리</th></tr></thead><tbody>{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}<td><form class="inline" method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="row_token" value="{{ serialize_row(row) }}"><button class="danger" type="submit">삭제</button></form></td></tr>{% endfor %}</tbody></table>{% else %}<p class="hint">등록된 항목이 없습니다.</p>{% endif %}</details>
+      <form data-admin-form method="post" action="{{ url_for('admin.add_row', table_name=table_name) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="fields">{% for input in form.inputs %}<label>{{ input.name }}<input name="{{ input.name }}" type="{{ input.type }}" {% if input.type == 'number' %}step="any"{% endif %}></label>{% endfor %}</div><p><button type="submit">추가</button></p></form>
+      <details><summary>등록된 항목 {{ data.get(table_name, [])|length }}개 보기</summary>{% set rows = data.get(table_name, []) %}{% if rows %}<table><thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}<th>관리</th></tr></thead><tbody>{% for row in rows %}<tr data-row='{{ row | tojson | safe }}'>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}<td><form class="inline" method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="row_token" value="{{ serialize_row(row) }}"><button class="danger" type="submit">삭제</button></form></td></tr>{% endfor %}</tbody></table>{% else %}<p class="hint">등록된 항목이 없습니다.</p>{% endif %}</details>
     </section>{% endfor %}
   </main>
   <details class="readonly"><summary>읽기 전용 운영 통계</summary>{% for table_name, rows in data.items() if table_name not in forms %}<h3>{{ table_name }} ({{ rows|length }})</h3>{% if rows %}<table><thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr></thead><tbody>{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>{% endif %}{% endfor %}</details>
-  <script>document.getElementById('forceSearchBtn').addEventListener('click', async () => { if (!confirm('지금 검색 점검을 시작할까요?')) return; try { const response = await fetch('/api/search/force_search'); if (!response.ok) throw new Error(); alert('검색 점검을 시작했습니다.'); } catch { alert('실행하지 못했습니다.'); } });</script>
+  <script>
+    function normalizeDateTimeInput(value) {
+      if (value === null || value === undefined) return '';
+
+      const raw = String(value).trim();
+      if (!raw) return '';
+
+      const isoMatch = raw.match(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/);
+      if (isoMatch) {
+        return raw.replace(' ', 'T').replace(/(\.\d+)$/, '').slice(0, 16);
+      }
+
+      const withoutZone = raw.replace(/Z$/i, '').replace(/\+\d{2}:?\d{2}$/, '');
+      const withT = withoutZone.replace(' ', 'T');
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(withT)) {
+        return withT.replace(/:\d{2}$/, '').replace(/\.\d+$/, '').slice(0, 16);
+      }
+
+      const parsed = new Date(raw);
+      if (!Number.isNaN(parsed.getTime())) {
+        const year = parsed.getFullYear();
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.getDate()).padStart(2, '0');
+        const hours = String(parsed.getHours()).padStart(2, '0');
+        const minutes = String(parsed.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      return raw;
+    }
+
+    document.querySelectorAll('tr[data-row]').forEach((row) => {
+      const deleteButton = row.querySelector('.danger');
+      if (deleteButton) {
+        deleteButton.addEventListener('click', (event) => event.stopPropagation());
+      }
+      row.addEventListener('click', () => {
+        const section = row.closest('section');
+        const form = section ? section.querySelector('form[data-admin-form]') : null;
+        if (!form) return;
+
+        let rowData = {};
+        try {
+          rowData = JSON.parse(row.dataset.row || '{}');
+        } catch (error) {
+          return;
+        }
+
+        form.querySelectorAll('input[name]').forEach((input) => {
+          const value = rowData[input.name];
+          if (value === undefined || value === null) {
+            input.value = '';
+            return;
+          }
+
+          if (input.type === 'datetime-local') {
+            input.value = normalizeDateTimeInput(value);
+            return;
+          }
+
+          input.value = String(value);
+        });
+      });
+    });
+
+    document.getElementById('forceSearchBtn').addEventListener('click', async () => { if (!confirm('지금 검색 점검을 시작할까요?')) return; try { const response = await fetch('/api/search/force_search'); if (!response.ok) throw new Error(); alert('검색 점검을 시작했습니다.'); } catch { alert('실행하지 못했습니다.'); } });
+  </script>
 </body>
 </html>

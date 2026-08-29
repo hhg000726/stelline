@@ -1,9 +1,10 @@
-from flask import jsonify
+from flask import jsonify, request
 import threading, time, logging
 
 from .search_api import load_recent_data, load_song_infos, load_songs_data, search_api_process
 from stelline.config import SEARCH_API_INTERVAL
 from stelline.database.connection import get_connection
+from stelline.apis.turnstile import verify_turnstile
 
 # 관리자 수동 실행 API
 def force_search_now():
@@ -60,3 +61,29 @@ def record_search():
         conn.close()
 
     return '', 204
+
+
+def submit_song_report():
+    payload = request.get_json(silent=True) or {}
+    if not verify_turnstile(payload.get("captcha_token")):
+        return jsonify({"error": "캡차 인증에 실패했습니다. 다시 시도하세요."}), 400
+    raw_content = payload.get("content", "")
+    content = raw_content.strip() if isinstance(raw_content, str) else ""
+    if not content:
+        return jsonify({"error": "제보 내용을 입력하세요."}), 400
+    if len(content) > 2000:
+        return jsonify({"error": "제보 내용은 2000자 이내로 입력하세요."}), 400
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("INSERT INTO song_reports (content) VALUES (%s)", (content,))
+        conn.commit()
+    except Exception as error:
+        conn.rollback()
+        logging.error("노래 제보 저장 실패: %s", error)
+        return jsonify({"error": "제보를 저장하지 못했습니다."}), 500
+    finally:
+        conn.close()
+
+    return jsonify({"message": "제보가 접수되었습니다."}), 201

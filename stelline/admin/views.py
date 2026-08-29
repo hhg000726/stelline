@@ -21,6 +21,8 @@ CONTENT_TABLES = {
     "targets": {"title": "Bugs 순위 대상", "description": "Bugs 즐겨찾기 페이지 번호를 입력하면 순위를 주기적으로 표시합니다.", "fields": ("name", "title", "url_number", "expires_at")},
     "offline": {"title": "오프라인 이벤트", "description": "주소를 입력하면 빈 지도 좌표가 자동으로 보완됩니다. 링크는 쉼표로 구분하세요.", "fields": ("name", "location_name", "address", "description", "start_date", "end_date", "latitude", "longitude", "always")},
     "song_infos": {"title": "검색 점검 곡", "description": "YouTube 검색 노출을 확인할 곡입니다. risk는 비워 두거나 0으로 입력하세요.", "fields": ("query", "video_id", "risk")},
+    "song_reports": {"title": "누락 노래 제보", "description": "사용자가 검색 목록에 없다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
+    "view_reports": {"title": "조회수 알림 누락 제보", "description": "사용자가 조회수 알림에서 누락되었다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
 }
 READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "song_counts", "fcm_tokens")
 
@@ -157,7 +159,8 @@ def delete_row(table_name):
         row = row_serializer().loads(request.form["row_token"])
     except (KeyError, BadSignature):
         abort(400, "삭제 요청이 만료되었거나 잘못되었습니다.")
-    allowed_columns = set(CONTENT_TABLES[table_name]["fields"])
+    definition = CONTENT_TABLES[table_name]
+    allowed_columns = set(definition.get("key_fields", definition["fields"]))
     conditions = [(key, value) for key, value in row.items() if key in allowed_columns]
     if not conditions:
         abort(400)

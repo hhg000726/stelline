@@ -21,6 +21,7 @@ TEMP_API_KEY = os.getenv("TEMP_API_KEY")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 SECRET_KEY = os.getenv("SECRET_KEY")
+TURNSTILE_SECRET_KEY = os.getenv("TURNSTILE_SECRET_KEY")
 ADMIN_HTML_SNAPSHOT_PATH = os.getenv("ADMIN_HTML_SNAPSHOT_PATH", "")
 
 # 이름은 기존 코드와 호환되지만 development에서는 Docker의 별도 DB를 가리킨다.

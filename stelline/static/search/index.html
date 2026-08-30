@@ -4,25 +4,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>검색 안되는 노래</title>
+  <title>검색 안되는 노래 · Stelline</title>
+  <meta name="description" content="유튜브 검색에서 잘 노출되지 않는 스텔라이브 곡 목록과 검색 정상화 방법을 안내합니다.">
+  <meta name="theme-color" content="#3b82f6">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="/favicon.ico" sizes="32x32">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Stelline">
+  <meta property="og:locale" content="ko_KR">
+  <meta property="og:title" content="검색 안되는 노래 · Stelline">
+  <meta property="og:description" content="유튜브 검색에서 잘 노출되지 않는 스텔라이브 곡 목록과 검색 정상화 방법을 안내합니다.">
+  <meta property="og:image" content="/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/assets/site.css">
   <link rel="stylesheet" href="/search/style.css">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/feather-icons"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body>
   <main class="site-container">
     <nav class="page-nav">
-      <button onclick="Stelline.goBack()" class="btn-secondary">← 메인으로</button>
+      <a href="../" class="btn-secondary">← 메인으로</a>
     </nav>
 
     <section class="page-shell">
-      <div class="page-header">
+      <div class="hero-heading">
         <div class="page-heading">
           <div class="page-kicker">search tips</div>
           <h1 class="page-title">검색 안되는 노래</h1>
@@ -50,9 +60,7 @@
       <div class="section-header">
         <h2>현재 차단된 검색어</h2>
       </div>
-      <table>
-        <tbody id="songCards"></tbody>
-      </table>
+      <div id="songCards" class="card-grid"><p class="empty-state">불러오는 중…</p></div>
     </section>
 
     <section class="section-panel">
@@ -72,9 +80,7 @@
       <div class="section-header">
         <h2>7일 이내에 막혔던 곡들</h2>
       </div>
-      <table>
-        <tbody id="recentCards"></tbody>
-      </table>
+      <div id="recentCards" class="card-grid"><p class="empty-state">불러오는 중…</p></div>
     </section>
 
     <section class="section-panel">
@@ -151,7 +157,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M10.5 3a7.5 7.5 0 0 1 5.88 12.8l4.42 4.42 1.41-1.41-4.42-4.42A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
           </svg>
-          <input id="query-search" type="text" placeholder="검색어를 입력하세요" autocomplete="off">
+          <input id="query-search" type="search" placeholder="검색어를 입력하세요" aria-label="검색어 목록 필터" autocomplete="off">
         </label>
       </div>
 
@@ -166,7 +172,6 @@
 
     <script src="/assets/site.js"></script>
     <script src="/search/search.js"></script>
-    <script>if(window.feather) feather.replace();</script>
   </main>
 </body>
 

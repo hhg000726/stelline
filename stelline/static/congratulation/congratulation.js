@@ -6,6 +6,10 @@ async function fetchSongs() {
         renderTable(data, "congratulationTable");
     } catch (error) {
         console.error('Error fetching songs:', error);
+        const container = document.getElementById("congratulationTable");
+        if (container) {
+            container.innerHTML = '<p class="empty-state is-error">기록을 불러오지 못했습니다.</p>';
+        }
     }
 }
 
@@ -73,6 +77,14 @@ function renderTable(data, tableId) {
     resultsCount.textContent = `${data.length}개 기록`;
   }
 
+  if (data.length === 0) {
+    const note = document.createElement("p");
+    note.className = "empty-state";
+    note.textContent = "최근 24시간 이내 달성 기록이 아직 없습니다.";
+    container.appendChild(note);
+    return;
+  }
+
   data.forEach((song, index) => {
     const card = document.createElement("article");
     card.className = "card";
@@ -125,7 +137,7 @@ function renderTable(data, tableId) {
     const button = document.createElement("button");
     button.className = "btn-primary";
     button.type = "button";
-    button.innerHTML = '<svg data-feather="play" width="16" height="16"></svg> 유튜브로 이동';
+    button.innerHTML = Stelline.icon("play") + " 유튜브로 이동";
     button.onclick = () => handleButtonClick(song.video_id);
 
     cta.appendChild(button);
@@ -134,10 +146,6 @@ function renderTable(data, tableId) {
     card.appendChild(info);
     container.appendChild(card);
   });
-
-  if (window.feather) {
-    feather.replace();
-  }
 }
 
 function handleButtonClick(video_id) {

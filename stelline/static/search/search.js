@@ -68,6 +68,12 @@ async function fetchSongs() {
         populateTable(data.all_songs, data.recent);
     } catch (error) {
         console.error('Error fetching songs:', error);
+        ["songCards", "recentCards"].forEach(id => {
+            const container = document.getElementById(id);
+            if (container) {
+                container.innerHTML = '<p class="empty-state is-error">목록을 불러오지 못했습니다.</p>';
+            }
+        });
     }
 }
 
@@ -181,20 +187,17 @@ function renderCards(data, containerId) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "btn-primary";
-        button.innerHTML = '<svg data-feather="play" width="16" height="16"></svg> 복사 & 이동';
+        button.innerHTML = Stelline.icon("play") + " 복사 & 이동";
         button.onclick = () => handleButtonClick(song.query);
         info.appendChild(button);
-
-        if (window.feather) {
-            feather.replace();
-        }
 
         card.appendChild(info);
         container.appendChild(card);
     });
 
     if (data.length === 0) {
-        const message = document.createElement("h1");
+        const message = document.createElement("p");
+        message.className = "empty-state";
         message.textContent = "검색 안되는 노래가 없습니다.";
         container.appendChild(message);
     }

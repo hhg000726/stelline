@@ -4,9 +4,10 @@
 
 - `stelline/static/`: 공개 화면의 HTML·기능별 JavaScript·공통 `assets/` 디자인/API 도우미입니다. 공개 화면은 모두 이 방식으로 제공됩니다.
 - `stelline/templates/`: 로그인 및 관리자처럼 서버 세션과 보호된 데이터를 즉시 렌더링해야 하는 화면입니다.
-- `stelline/apis/`: 기능별 HTTP API입니다. 각 `routes.py`는 라우트만, 나머지 모듈은 기능 로직을 담당합니다.
+- `stelline/apis/`: 기능별 HTTP API입니다. 각 기능 폴더는 `routes.py`(라우트 등록), `service.py`(요청 처리 로직), 필요 시 `tasks.py`(백그라운드 작업)로 구성됩니다. `reports.py`·`turnstile.py`는 기능 간 공용 헬퍼입니다.
 - `stelline/database/`: 연결 생성, 코드 기준 스키마, 마이그레이션입니다.
 - `stelline/background_tasks/`: 운영에서만 시작되는 YouTube·검색·Bugs 동기화 작업입니다.
+- `tests/`: pytest 스위트. 단위/화면 테스트는 DB 없이, `*_integration.py`는 실제 MySQL로 실행됩니다. 자세한 내용은 `README_DEV.md` 참고.
 
 ## 환경 분리
 

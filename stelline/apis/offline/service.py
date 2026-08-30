@@ -1,9 +1,10 @@
 import logging
+
 import requests
 from flask import jsonify
 
 from stelline.config import NCP_CLIENT_ID, NCP_CLIENT_SECRET
-from stelline.database.connection import get_connection
+from stelline.database.connection import database_cursor
 
 # 주소 → 위경도 변환
 def geocode_location(address, client_id, client_secret):
@@ -13,6 +14,7 @@ def geocode_location(address, client_id, client_secret):
             "x-ncp-apigw-api-key": client_secret
         }
         params = {"query": address.strip()}
+        logging.info("Geocode 요청 시작: address=%s", address)
         res = requests.get(
             "https://maps.apigw.ntruss.com/map-geocode/v2/geocode",
             headers=headers,
@@ -27,26 +29,25 @@ def geocode_location(address, client_id, client_secret):
         if addresses:
             lat = float(addresses[0]["y"])
             lng = float(addresses[0]["x"])
+            logging.info("Geocode 변환 성공: address=%s, lat=%s, lng=%s", address, lat, lng)
             return lat, lng
-        else:
-            logging.warning(f"[Geocode] 주소 결과 없음: {address}")
-            return None, None
+        logging.warning("[Geocode] 주소 결과 없음: %s", address)
+        return None, None
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"[Geocode] 요청 실패: {address} - {str(e)}")
+        logging.error("[Geocode] 요청 실패: %s - %s", address, str(e))
     except (ValueError, KeyError, TypeError) as e:
-        logging.error(f"[Geocode] 응답 파싱 실패: {address} - {str(e)}")
+        logging.error("[Geocode] 응답 파싱 실패: %s - %s", address, str(e))
     except Exception as e:
-        logging.error(f"[Geocode] 알 수 없는 에러: {address} - {str(e)}")
-    
+        logging.error("[Geocode] 알 수 없는 에러: %s - %s", address, str(e))
+
     return None, None
 
-def offline_api():
 
-    conn = get_connection()
+def fetch_offline_events():
+    logging.info("오프라인 행사 데이터 조회 및 좌표 보완 요청")
     try:
-        with conn.cursor() as cursor:
-            # 1. 모든 이벤트 조회
+        with database_cursor() as cursor:
             cursor.execute("SELECT * FROM offline")
             data = cursor.fetchall()
 
@@ -56,23 +57,18 @@ def offline_api():
                 address = event.get("address")
                 name = event.get("name")
 
-                # 2. 위경도가 비어있다면 → Geocode 호출
-                if (lat < 1 or lng < 1) and address:
+                if (lat is None or lat < 1 or lng is None or lng < 1) and address:
                     new_lat, new_lng = geocode_location(address, NCP_CLIENT_ID, NCP_CLIENT_SECRET)
                     if new_lat and new_lng:
-                        update_sql = """
-                            UPDATE offline
-                            SET latitude = %s, longitude = %s
-                            WHERE name = %s
-                        """
-                        cursor.execute(update_sql, (new_lat, new_lng, name))
+                        cursor.execute(
+                            "UPDATE offline SET latitude = %s, longitude = %s WHERE name = %s",
+                            (new_lat, new_lng, name),
+                        )
                         event["latitude"] = new_lat
                         event["longitude"] = new_lng
 
-            conn.commit()  # ✅ UPDATE 반영
-
-            return jsonify(data), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        conn.close()
+        logging.info("오프라인 행사 데이터 조회 및 좌표 보완 완료: count=%s", len(data))
+        return jsonify(data), 200
+    except Exception as exc:
+        logging.exception("오프라인 행사 데이터 처리 실패")
+        return jsonify({"error": str(exc)}), 500

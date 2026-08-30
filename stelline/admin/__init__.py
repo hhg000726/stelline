@@ -1,3 +1,1 @@
-# stelline/admin/__init__.py
-
-from .views import admin_bp
+from .routes import admin_bp

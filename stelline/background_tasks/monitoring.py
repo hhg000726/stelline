@@ -10,7 +10,7 @@ from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 
 from stelline.config import API_CHECK_INTERVAL, API_KEY, MAX_RESULTS, PLAYLIST_ID, PROJECT_ID, SERVICE_ACCOUNT_FILE
-from stelline.database.connection import get_connection
+from stelline.database.connection import database_cursor
 
 SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 
@@ -111,23 +111,15 @@ def update_song_counts(cursor, songs, access_token):
 
 def monitoring_process():
     while True:
-        connection = None
         try:
             songs = get_playlist_videos()
             access_token = get_access_token()
-            connection = get_connection()
-            with connection.cursor() as cursor:
+            with database_cursor() as cursor:
                 remove_expired_data(cursor)
                 update_song_counts(cursor, songs, access_token)
-            connection.commit()
             logging.info("YouTube 조회수 및 만료 데이터 동기화 완료")
         except Exception:
             logging.exception("조회수 감시 작업 실패")
-            if connection:
-                connection.rollback()
-        finally:
-            if connection:
-                connection.close()
         time.sleep(API_CHECK_INTERVAL)
 
 

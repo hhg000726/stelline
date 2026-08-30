@@ -1,5 +1,6 @@
 """데이터베이스 연결을 만드는 단일 진입점."""
 
+import logging
 from contextlib import contextmanager
 
 import pymysql
@@ -8,6 +9,13 @@ from stelline.config import RDS_DB, RDS_HOST, RDS_PASSWORD, RDS_PORT, RDS_USER
 
 
 def get_connection():
+    logging.info(
+        "DB 연결 시도: host=%s, port=%s, database=%s, user=%s",
+        RDS_HOST,
+        RDS_PORT,
+        RDS_DB,
+        RDS_USER,
+    )
     return pymysql.connect(
         host=RDS_HOST,
         port=RDS_PORT,
@@ -28,6 +36,7 @@ def database_cursor():
             yield cursor
         connection.commit()
     except Exception:
+        logging.exception("database_cursor 작업 실패")
         connection.rollback()
         raise
     finally:

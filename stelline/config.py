@@ -1,5 +1,6 @@
 """환경별 설정. 개발 환경은 .env.development, 운영은 .env를 사용한다."""
 
+import logging
 import os
 from pathlib import Path
 
@@ -46,3 +47,11 @@ NCP_CLIENT_ID = os.getenv("NCP_CLIENT_ID")
 NCP_CLIENT_SECRET = os.getenv("NCP_CLIENT_SECRET")
 SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")
 PROJECT_ID = os.getenv("PROJECT_ID")
+
+logging.getLogger(__name__).info(
+    "환경 설정 로드 완료: APP_ENV=%s, DEBUG_MODE=%s, START_BACKGROUND_TASKS=%s, AUTO_CREATE_SCHEMA=%s",
+    APP_ENV,
+    DEBUG_MODE,
+    START_BACKGROUND_TASKS,
+    AUTO_CREATE_SCHEMA,
+)

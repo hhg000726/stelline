@@ -57,10 +57,23 @@
         button:hover {
             background: #5F94D6;
         }
+
+        .flash {
+            margin: 20px auto 0;
+            color: #C0392B;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h1>관리자 로그인</h1>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <p class="flash">{{ message }}</p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
     <form method="POST">
         <input name="username" placeholder="아이디">
         <input name="password" type="password" placeholder="비밀번호">

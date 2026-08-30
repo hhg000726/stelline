@@ -99,33 +99,43 @@ def _schema():
 
 
 def _reset_tables():
+    """모든 테이블을 초기 상태로 되돌린다.
+
+    - TRUNCATE 대신 DELETE: 거의 빈 테이블에서 훨씬 빠르고, DDL 암묵적 커밋이
+      없어 다른 커넥션의 메타데이터 락과 충돌하지 않는다.
+    - lock_wait_timeout 을 짧게 잡아 혹시 걸리면 무한 대기 대신 즉시 실패한다.
+    """
     conn = get_connection()
+    conn.autocommit(True)
     try:
         with conn.cursor() as cursor:
-            for table in CONTENT_AND_STATE_TABLES:
-                cursor.execute(f"TRUNCATE TABLE `{table}`")
-            for table in SEED_TABLES:
-                cursor.execute(f"TRUNCATE TABLE `{table}`")
+            cursor.execute("SET SESSION lock_wait_timeout = 15")
+            cursor.execute("SET SESSION innodb_lock_wait_timeout = 15")
+            for table in (*CONTENT_AND_STATE_TABLES, *SEED_TABLES):
+                cursor.execute(f"DELETE FROM `{table}`")
             cursor.execute("INSERT INTO record_main (copy_count) VALUES (0)")
             cursor.execute(
                 "INSERT INTO record_search (total_plays, total_play_time, copy_count) VALUES (0, 0, 0)"
             )
-        conn.commit()
     finally:
         conn.close()
 
 
 @pytest.fixture
 def clean_db(_schema):
-    """각 통합 테스트 전에 모든 테이블을 초기 상태로 되돌린다."""
+    """각 통합 테스트 *전에* 모든 테이블을 초기 상태로 되돌린다.
+
+    테스트가 끝나면 `db` 커넥션이 닫히며 미완료 트랜잭션이 롤백되므로,
+    다음 테스트의 사전 초기화만으로 격리가 보장된다(사후 초기화 불필요).
+    """
     _reset_tables()
     yield
-    _reset_tables()
 
 
 @pytest.fixture
 def db(_schema):
     conn = get_connection()
+    conn.autocommit(True)  # bare SELECT가 트랜잭션/MDL을 붙들지 않도록
     try:
         yield conn
     finally:

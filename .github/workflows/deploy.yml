@@ -1,17 +1,71 @@
-name: Deploy to Oracle Cloud
+name: CI / Deploy
 
 on:
   push:
     branches:
       - main
+  pull_request:
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stelline_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      REQUIRE_DB: "1"
+      APP_ENV: development
+      START_BACKGROUND_TASKS: "false"
+      AUTO_CREATE_SCHEMA: "false"
+      SECRET_KEY: ci-secret-key
+      SERVICE_ACCOUNT_FILE: ""
+      TURNSTILE_SECRET_KEY: ""
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: test-admin-password
+      RDS_HOST: 127.0.0.1
+      RDS_PORT: "3306"
+      RDS_USER: root
+      RDS_PASSWORD: root
+      RDS_DB: stelline_test
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      # MySQL 서비스 컨테이너는 아래 services.mysql.options 의 health-check 가
+      # 통과한 뒤에야 이 스텝들이 시작되므로 별도 대기 스텝은 두지 않는다.
+      - name: Run tests
+        run: pytest -v --cov=stelline --cov-report=term-missing
+
   deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up SSH Key
       run: |

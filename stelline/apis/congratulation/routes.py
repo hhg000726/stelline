@@ -5,9 +5,9 @@ import firebase_admin
 from firebase_admin import credentials
 
 from stelline.config import SERVICE_ACCOUNT_FILE
-from stelline.database.connection import get_connection
+from stelline.database.connection import database_cursor
 from . import congratulation_bp
-from .congratulation import congratulations, submit_view_report
+from .service import fetch_recent_congratulations, submit_view_report
 
 # Firebase Admin SDK 초기화 (앱 시작 시 한 번만 수행)
 # 개발 환경에서는 service-account 파일이 없을 수 있으므로, 그 경우에는
@@ -22,7 +22,7 @@ else:
     
 @congratulation_bp.route("/congratulations", methods=["GET"])
 def congratulation_api():
-    return congratulations()
+    return fetch_recent_congratulations()
 
 @congratulation_bp.route("/reports", methods=["POST"])
 def submit_view_report_api():
@@ -32,34 +32,24 @@ def submit_view_report_api():
 def register_token():
     data = request.get_json(silent=True) or {}
     token = data.get("token")
+    logging.info("FCM 토큰 등록 요청 수신: token_present=%s", bool(token))
 
     if not token:
+        logging.warning("FCM 토큰 등록 요청이 토큰 없이 도착했습니다.")
         return jsonify({"error": "Token is missing"}), 400
 
-    conn = get_connection()
     try:
-        with conn.cursor() as cursor:
-            # 이미 있는지 확인
-            check_sql = "SELECT token FROM fcm_tokens WHERE token = %s"
-            cursor.execute(check_sql, (token,))
-            existing = cursor.fetchone()
-
-            if not existing:
-                insert_sql = "INSERT INTO fcm_tokens (token) VALUES (%s)"
-                cursor.execute(insert_sql, (token,))
-                conn.commit()
-                logging.info("New token registered.")
+        with database_cursor() as cursor:
+            cursor.execute("SELECT token FROM fcm_tokens WHERE token = %s", (token,))
+            if cursor.fetchone():
+                logging.info("Token already exists: token_length=%s", len(token))
             else:
-                logging.info("Token already exists.")
-
+                cursor.execute("INSERT INTO fcm_tokens (token) VALUES (%s)", (token,))
+                logging.info("New token registered: token_length=%s", len(token))
         return jsonify({"message": "Token registered"}), 200
-
-    except Exception as e:
-        logging.error(f"FCM 토큰 등록 실패: {e}")
+    except Exception:
+        logging.exception("FCM 토큰 등록 실패")
         return jsonify({"error": "DB insert failed"}), 500
-
-    finally:
-        conn.close()
 
 @congratulation_bp.route("/unregister", methods=["POST"])
 def unregister_token():
@@ -70,6 +60,7 @@ def unregister_token():
     """
     data = request.get_json(silent=True) or {}
     token = data.get("token")
+    logging.info("FCM 토큰 삭제 요청 수신: token_present=%s", bool(token))
     # 'platform' 필드는 클라이언트에서 전송하지만, 현재 DB 스키마에 없으므로 사용하지 않습니다.
     # platform = data.get("platform")
 
@@ -78,63 +69,36 @@ def unregister_token():
         logging.warning("Unregister request received without token.")
         return jsonify({"error": "Token is missing"}), 400
 
-    conn = None # 연결 초기화
     try:
-        conn = get_connection()
-        with conn.cursor() as cursor:
-            # 1. DB에서 토큰 삭제
-            delete_sql = "DELETE FROM fcm_tokens WHERE token = %s"
-            cursor.execute(delete_sql, (token,))
-            
+        with database_cursor() as cursor:
+            cursor.execute("DELETE FROM fcm_tokens WHERE token = %s", (token,))
             rows_affected = cursor.rowcount
-            conn.commit() # 변경사항 커밋
 
-            if rows_affected > 0:
-                logging.info(f"Token '{token}' successfully removed from DB.")
-                # 클라이언트가 이미 Firebase에서 토큰을 삭제했을 가능성이 높으므로
-                # 서버는 DB에서 성공적으로 제거되었음을 알립니다.
-                return jsonify({"message": "Token unregistered successfully"}), 200
-            else:
-                # 삭제할 토큰이 DB에 없는 경우
-                logging.warning(f"Attempted to unregister non-existent token in DB: '{token}'.")
-                # 토큰이 이미 없으므로 성공으로 간주하거나, 상태코드 200을 반환합니다.
-                # 이는 프론트엔드에서 토큰 삭제 요청이 성공적으로 처리되었음을 의미합니다.
-                return jsonify({"message": "Token not found in DB or already unregistered"}), 200
-
-    except Exception as e:
-        # 데이터베이스 작업 중 오류 발생 시 500 Internal Server Error 응답
-        logging.error(f"FCM 토큰 DB 삭제 실패: {e}", exc_info=True)
-        if conn:
-            conn.rollback() # 오류 발생 시 롤백
+        if rows_affected > 0:
+            logging.info("Token successfully removed from DB.")
+            return jsonify({"message": "Token unregistered successfully"}), 200
+        logging.warning("Attempted to unregister non-existent token in DB.")
+        return jsonify({"message": "Token not found in DB or already unregistered"}), 200
+    except Exception:
+        logging.exception("FCM 토큰 DB 삭제 실패")
         return jsonify({"error": "Failed to unregister token in DB"}), 500
-
-    finally:
-        if conn:
-            conn.close()
 
 @congratulation_bp.route("/check-token", methods=["POST"])
 def check_token():
     data = request.get_json(silent=True) or {}
     token = data.get("token")
+    logging.info("FCM 토큰 확인 요청 수신: token_present=%s", bool(token))
 
     if not token:
+        logging.warning("FCM 토큰 확인 요청이 토큰 없이 도착했습니다.")
         return jsonify({"error": "Token is missing"}), 400
 
-    conn = get_connection()
     try:
-        with conn.cursor() as cursor:
-            check_sql = "SELECT token FROM fcm_tokens WHERE token = %s"
-            cursor.execute(check_sql, (token,))
-            result = cursor.fetchone()
-
-            if result:
-                return jsonify({"valid": True}), 200
-            else:
-                return jsonify({"valid": False}), 200
-
-    except Exception as e:
-        logging.error(f"FCM 토큰 확인 실패: {e}")
+        with database_cursor() as cursor:
+            cursor.execute("SELECT token FROM fcm_tokens WHERE token = %s", (token,))
+            is_valid = cursor.fetchone() is not None
+        logging.info("FCM 토큰 확인 성공: token_present=%s", is_valid)
+        return jsonify({"valid": is_valid}), 200
+    except Exception:
+        logging.exception("FCM 토큰 확인 실패")
         return jsonify({"error": "DB check failed"}), 500
-
-    finally:
-        conn.close()

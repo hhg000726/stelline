@@ -9,7 +9,7 @@ from flask_cors import CORS
 from stelline.admin import admin_bp
 from stelline.apis import api_bp
 from stelline.auth import auth_bp
-from stelline.background_tasks.runner import start_background_tasks
+from stelline.background_tasks import start_background_tasks
 from stelline.config import AUTO_CREATE_SCHEMA, SECRET_KEY, START_BACKGROUND_TASKS
 from stelline.database.migrate import apply_migrations
 from stelline.logging_config import setup_logging

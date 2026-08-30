@@ -1,6 +1,7 @@
 from . import bugs_bp
-from .bugs import rank
+from .service import fetch_rank_data
+
 
 @bugs_bp.route("/rank", methods=["GET"])
 def rank_api():
-    return rank()
+    return fetch_rank_data()

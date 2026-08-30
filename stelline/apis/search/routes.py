@@ -1,5 +1,5 @@
 from . import search_bp
-from .search import force_search_now, get_not_searched, get_song_infos, record_search, submit_song_report
+from .service import force_search_now, get_not_searched, get_song_infos, record_search, submit_song_report
 
 @search_bp.route("/force_search", methods=["GET"])
 def force_search_now_api():

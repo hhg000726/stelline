@@ -23,8 +23,8 @@ class AdminPageAutoFillTest(unittest.TestCase):
             'expires_at': '2026-12-31 12:34:00',
         }
 
-        with patch('stelline.admin.views.get_connection') as mock_get_connection, \
-             patch('stelline.admin.views.load_table', return_value=[fake_row]):
+        with patch('stelline.admin.routes.get_connection') as mock_get_connection, \
+             patch('stelline.admin.routes.load_table', return_value=[fake_row]):
             mock_connection = unittest.mock.Mock()
             mock_connection.close.return_value = None
             mock_get_connection.return_value = mock_connection

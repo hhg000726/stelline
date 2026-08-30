@@ -53,15 +53,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Wait for MySQL
-        run: |
-          for i in $(seq 1 30); do
-            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then
-              echo "MySQL is up"; break
-            fi
-            echo "waiting for mysql... ($i)"; sleep 2
-          done
-
+      # MySQL 서비스 컨테이너는 아래 services.mysql.options 의 health-check 가
+      # 통과한 뒤에야 이 스텝들이 시작되므로 별도 대기 스텝은 두지 않는다.
       - name: Run tests
         run: pytest -v --cov=stelline --cov-report=term-missing
 

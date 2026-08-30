@@ -44,6 +44,9 @@
 }
 
 * { box-sizing: border-box; }
+
+/* hidden 속성으로 여닫는 요소가 display 지정에 밀리지 않게 한다. */
+[hidden] { display: none !important; }
 html, body { height: 100%; }
 body {
   margin: 0;

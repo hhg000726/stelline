@@ -41,8 +41,11 @@ CONTENT_AND_STATE_TABLES = (
     "offline",
     "song_reports",
     "view_reports",
+    "karaoke_songs",
+    "karaoke_members",
+    "karaoke_reports",
 )
-SEED_TABLES = ("record_main", "record_search")
+SEED_TABLES = ("record_main", "record_search", "record_karaoke", "main_buttons")
 
 
 def _mysql_reachable():
@@ -116,6 +119,13 @@ def _reset_tables():
             cursor.execute("INSERT INTO record_main (copy_count) VALUES (0)")
             cursor.execute(
                 "INSERT INTO record_search (total_plays, total_play_time, copy_count) VALUES (0, 0, 0)"
+            )
+            cursor.execute("INSERT INTO record_karaoke (copy_count) VALUES (0)")
+            cursor.executemany(
+                "INSERT INTO main_buttons (button_key, label, visible, display_order) VALUES (%s, %s, %s, %s)",
+                [("search", "검색 안되는 노래 보기", 1, 1),
+                 ("karaoke", "노래방 번호 찾기", 1, 2),
+                 ("congratulation", "조회수 축하 알림", 1, 3)],
             )
     finally:
         conn.close()

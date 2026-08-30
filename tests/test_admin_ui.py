@@ -40,7 +40,7 @@ class AdminPageAutoFillTest(unittest.TestCase):
         self.assertIn('data-row=', html)
         self.assertIn('테스트 이벤트', html)
         self.assertIn('normalizeDateTimeInput', html)
-        self.assertIn("input.type === 'datetime-local'", html)
+        self.assertIn("field.type === 'datetime-local'", html)
 
 
 if __name__ == '__main__':

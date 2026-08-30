@@ -6,6 +6,7 @@ EXPECTED_RULES = {
     "/search",
     "/congratulation",
     "/offline",
+    "/karaoke",
     # 인증
     "/auth/login",
     "/auth/logout",
@@ -13,11 +14,14 @@ EXPECTED_RULES = {
     "/admin/",
     "/admin/data/<table_name>",
     "/admin/data/<table_name>/delete",
+    "/admin/data/<table_name>/update",
+    "/admin/karaoke/import",
     "/admin/dev/import-snapshot",
     # main API
     "/api/main/record",
     "/api/main/events",
     "/api/main/twits",
+    "/api/main/buttons",
     # search API
     "/api/search/force_search",
     "/api/search/not_searched",
@@ -34,6 +38,10 @@ EXPECTED_RULES = {
     "/api/congratulation/check-token",
     # offline API
     "/api/offline/offline_api",
+    # karaoke API
+    "/api/karaoke/songs",
+    "/api/karaoke/reports",
+    "/api/karaoke/record_copy",
 }
 
 

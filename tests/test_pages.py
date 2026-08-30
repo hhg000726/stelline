@@ -5,7 +5,7 @@ import pytest
 
 @pytest.mark.parametrize(
     "path",
-    ["/", "/search", "/search/", "/congratulation", "/congratulation/", "/offline", "/offline/"],
+    ["/", "/search", "/search/", "/congratulation", "/congratulation/", "/offline", "/offline/", "/karaoke", "/karaoke/"],
 )
 def test_public_pages_render(client, path):
     resp = client.get(path)

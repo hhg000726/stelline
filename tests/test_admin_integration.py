@@ -93,3 +93,42 @@ def test_admin_endpoints_require_login(client, clean_db):
         resp = getattr(client, method)(path, follow_redirects=False)
         assert resp.status_code == 302
         assert "/auth/login" in resp.headers["Location"]
+
+
+def test_admin_update_row_edits_existing_content(admin_client, db, clean_db):
+    """수정 기능은 노래방 전용이 아니라 모든 콘텐츠 테이블에서 동작한다."""
+    with db.cursor() as cursor:
+        cursor.execute("INSERT INTO events (title, link) VALUES (%s, %s)", ("수정 전 이벤트", "https://example.com/old"))
+        cursor.execute("SELECT * FROM events WHERE title = '수정 전 이벤트'")
+        row = cursor.fetchone()
+    db.commit()
+
+    from stelline.admin.routes import serialize_row
+
+    resp = admin_client.post(
+        "/admin/data/events/update",
+        data={
+            "csrf_token": admin_client.csrf,
+            "row_token": serialize_row(row),
+            "title": "수정 후 이벤트",
+            "link": "https://example.com/new",
+            "expires_at": "",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert _scalar(db, "SELECT COUNT(*) FROM events") == 1
+    assert _scalar(db, "SELECT link FROM events WHERE title = '수정 후 이벤트'") == "https://example.com/new"
+
+
+def test_admin_update_row_reports_missing_target(admin_client, db, clean_db):
+    from stelline.admin.routes import serialize_row
+
+    token = serialize_row({"title": "없는 이벤트", "link": "x", "expires_at": None})
+    resp = admin_client.post(
+        "/admin/data/events/update",
+        data={"csrf_token": admin_client.csrf, "row_token": token, "title": "새 제목", "link": "y"},
+        follow_redirects=True,
+    )
+    assert "수정할 항목을 찾지 못했습니다" in resp.get_data(as_text=True)
+    assert _scalar(db, "SELECT COUNT(*) FROM events") == 0

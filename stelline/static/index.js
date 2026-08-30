@@ -214,6 +214,57 @@ async function fetchTwits() {
   }
 }
 
+const BUTTON_CACHE_KEY = "stelline.main.buttons";
+
+function applyButtonConfig(buttons) {
+  const container = document.querySelector(".hero-actions");
+  if (!container || !Array.isArray(buttons) || !buttons.length) return;
+
+  const nodes = new Map();
+  container.querySelectorAll("[data-button-key]").forEach(node => nodes.set(node.dataset.buttonKey, node));
+
+  buttons
+    .slice()
+    .sort((a, b) => (a.order || 0) - (b.order || 0))
+    .forEach(config => {
+      // DB에 없는 버튼은 손대지 않는다. 화면에 새 버튼을 먼저 넣어도 사라지지 않는다.
+      const node = nodes.get(config.key);
+      if (!node) return;
+      node.hidden = !config.visible;
+      const labelNode = node.querySelector("[data-button-label]");
+      if (labelNode && config.label) labelNode.textContent = config.label;
+      container.appendChild(node);
+    });
+}
+
+async function fetchMainButtons() {
+  // 지난번 설정을 먼저 반영해, 숨긴 버튼이 잠깐 보였다 사라지지 않게 한다.
+  try {
+    const cached = window.localStorage.getItem(BUTTON_CACHE_KEY);
+    if (cached) applyButtonConfig(JSON.parse(cached));
+  } catch (error) {
+    /* 저장소를 못 쓰는 환경에서는 그냥 넘어간다. */
+  }
+
+  try {
+    const res = await Stelline.api("main/buttons");
+    const buttons = toArray(await res.json());
+    applyButtonConfig(buttons);
+    // 조회 실패 시 빈 목록이 오는데, 이걸 저장하면 다음 방문에서 숨긴 버튼이 잠깐 보인다.
+    if (buttons.length) {
+      try {
+        window.localStorage.setItem(BUTTON_CACHE_KEY, JSON.stringify(buttons));
+      } catch (error) {
+        /* 저장 실패는 무시한다. */
+      }
+    }
+  } catch (error) {
+    // 설정을 못 받아오면 HTML에 적힌 기본 상태(전부 표시)를 그대로 둔다.
+    console.error("메인 버튼 설정 로드 실패:", error);
+  }
+}
+
+fetchMainButtons();
 fetchTwits();
 fetchEvents();
 fetchBugs();

@@ -42,6 +42,13 @@ def congratulation_page():
 @app.route("/offline/")
 def offline_page():
     return send_from_directory(str(Path(app.static_folder) / "offline"), "index.html")
+
+
+@app.route("/karaoke")
+@app.route("/karaoke/")
+def karaoke_page():
+    return send_from_directory(str(Path(app.static_folder) / "karaoke"), "index.html")
+
 app.register_blueprint(api_bp, url_prefix="/api")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(auth_bp, url_prefix="/auth")

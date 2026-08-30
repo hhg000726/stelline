@@ -10,6 +10,7 @@ from itsdangerous import BadSignature, URLSafeSerializer
 from stelline.config import ADMIN_HTML_SNAPSHOT_PATH, APP_ENV, SECRET_KEY
 from stelline.database.connection import get_connection
 from stelline.database.import_admin_html import import_snapshot, parse_snapshot
+from stelline.database.karaoke_seed import SeedError, import_seed_file, import_text
 from stelline.database.migrate import apply_migrations
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -23,8 +24,37 @@ CONTENT_TABLES = {
     "song_infos": {"title": "검색 점검 곡", "description": "YouTube 검색 노출을 확인할 곡입니다. risk는 비워 두거나 0으로 입력하세요.", "fields": ("query", "video_id", "risk")},
     "song_reports": {"title": "누락 노래 제보", "description": "사용자가 검색 목록에 없다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
     "view_reports": {"title": "조회수 알림 누락 제보", "description": "사용자가 조회수 알림에서 누락되었다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
+    "karaoke_songs": {
+        "title": "노래방 번호",
+        "description": "노래방 번호 페이지에 표시할 곡입니다. 번호가 없으면 비워 두고, 멤버는 쉼표로 구분하세요. 순서는 작을수록 위(최신)에 옵니다.",
+        "fields": ("title", "artist", "tj", "ky", "section", "category", "members", "release_date", "title_alt", "note", "sort_order"),
+        "labels": {
+            "title": "곡명", "artist": "가수(표시용)", "tj": "TJ 번호", "ky": "금영 번호",
+            "section": "구분", "category": "종류", "members": "참여 멤버(쉼표 구분)", "release_date": "발매일",
+            "title_alt": "검색용 다른 표기", "note": "비고", "sort_order": "정렬 순서",
+        },
+        "key_fields": ("id",),
+        "bulk_import": True,
+        "searchable": True,
+    },
+    "karaoke_members": {"title": "노래방 멤버 목록", "description": "노래방 페이지 멤버 필터의 순서와 유닛 묶음입니다. 졸업일을 넣으면 필터에서 졸업으로 묶이고, 유닛을 옮긴 멤버는 이전 유닛에 적어 두세요.", "fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"), "labels": {"name": "멤버 이름", "unit": "현재 소속 유닛", "former_units": "이전 유닛(쉼표 구분)", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "표시 순서"}},
+    "karaoke_reports": {"title": "노래방 번호 제보", "description": "사용자가 남긴 노래방 번호 추가·정정 제보입니다.", "fields": ("content",), "key_fields": ("id",)},
+    "main_buttons": {
+        "title": "메인 화면 버튼",
+        "description": "메인 화면 상단 버튼을 감추거나 다시 보이게 합니다. 표시 순서는 작을수록 왼쪽에 옵니다. 버튼 키는 화면에 심어 둔 값이라 바꾸지 마세요.",
+        "fields": ("button_key", "label", "visible", "display_order"),
+        "labels": {"button_key": "버튼 키(수정 금지)", "label": "버튼 이름", "visible": "표시 여부", "display_order": "표시 순서"},
+        "key_fields": ("button_key",),
+    },
 }
-READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "song_counts", "fcm_tokens")
+READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "record_karaoke", "song_counts", "fcm_tokens")
+
+# 값이 정해져 있는 열은 직접 입력 대신 선택 목록으로 보여준다.
+FIELD_CHOICES = {
+    "section": (("group", "단체"), ("unit", "유닛"), ("collab", "콜라보"), ("gift", "기프트"), ("solo", "개인")),
+    "category": (("original", "오리지널"), ("cover", "커버")),
+    "visible": (("1", "표시"), ("0", "숨김")),
+}
 
 
 def login_required(view):
@@ -52,14 +82,24 @@ def row_serializer():
 
 
 def serialize_row(row):
-    """DB의 datetime 등을 JSON으로 안전하게 서명해 삭제 폼에 전달한다."""
+    """DB의 datetime 등을 JSON으로 안전하게 서명해 수정·삭제 폼에 전달한다."""
     return row_serializer().dumps({key: str(value) if value is not None else None for key, value in row.items()})
+
+
+def load_row_token(token):
+    """서명된 행 토큰을 되돌린다. 위조·만료된 토큰은 400으로 막는다."""
+    try:
+        return row_serializer().loads(token)
+    except (TypeError, BadSignature):
+        abort(400, "요청이 만료되었거나 잘못되었습니다. 페이지를 새로고침한 뒤 다시 시도하세요.")
 
 
 def input_type(field):
     if field in {"expires_at", "start_date", "end_date"}:
         return "datetime-local"
-    if field in {"url_number", "risk", "latitude", "longitude"}:
+    if field in {"release_date", "debut_date", "graduated_at"}:
+        return "date"
+    if field in {"url_number", "risk", "latitude", "longitude", "sort_order", "display_order"}:
         return "number"
     return "text"
 
@@ -68,6 +108,26 @@ def load_table(connection, table_name):
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT * FROM `{table_name}`")
         return cursor.fetchall()
+
+
+def nullable_columns(connection, table_name):
+    """비워 두면 NULL로 저장해도 되는 열 이름을 모은다.
+
+    NOT NULL 열은 빈 칸으로 지울 수 없으므로 수정 시 기존 값을 유지한다.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT COLUMN_NAME, IS_NULLABLE FROM information_schema.COLUMNS"
+            " WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+            (table_name,),
+        )
+        return {row["COLUMN_NAME"] for row in cursor.fetchall() if row["IS_NULLABLE"] == "YES"}
+
+
+def row_conditions(definition, row):
+    """수정·삭제 대상 행을 특정하는 WHERE 조건을 만든다."""
+    allowed_columns = set(definition.get("key_fields", definition["fields"]))
+    return [(key, value) for key, value in row.items() if key in allowed_columns]
 
 
 @admin_bp.route("/")
@@ -92,7 +152,22 @@ def admin_index():
     finally:
         if connection:
             connection.close()
-    forms = {name: {**definition, "inputs": [{"name": field, "type": input_type(field)} for field in definition["fields"]]} for name, definition in CONTENT_TABLES.items()}
+    forms = {
+        name: {
+            **definition,
+            "inputs": [
+                {
+                    "name": field,
+                    # 표시 이름을 따로 정하지 않은 테이블은 기존처럼 열 이름을 그대로 보여준다.
+                    "label": definition.get("labels", {}).get(field, field),
+                    "type": input_type(field),
+                    "choices": FIELD_CHOICES.get(field),
+                }
+                for field in definition["fields"]
+            ],
+        }
+        for name, definition in CONTENT_TABLES.items()
+    }
     return render_template(
         "admin/index.html",
         data=data,
@@ -132,18 +207,21 @@ def add_row(table_name):
     definition = CONTENT_TABLES.get(table_name)
     if definition is None:
         abort(404)
-    fields = definition["fields"]
-    values = [request.form.get(field, "").strip() or None for field in fields]
-    if not any(value is not None for value in values):
+    # 빈 칸은 INSERT 대상에서 빼서 열의 기본값이 그대로 쓰이게 한다.
+    entries = [(field, value) for field in definition["fields"] if (value := request.form.get(field, "").strip())]
+    if not entries:
         flash("저장할 내용을 입력하세요.", "error")
         return redirect(url_for("admin.admin_index"))
 
     connection = None
     try:
         connection = get_connection()
-        columns = ", ".join(f"`{field}`" for field in fields)
+        columns = ", ".join(f"`{field}`" for field, _ in entries)
         with connection.cursor() as cursor:
-            cursor.execute(f"INSERT INTO `{table_name}` ({columns}) VALUES ({', '.join(['%s'] * len(fields))})", values)
+            cursor.execute(
+                f"INSERT INTO `{table_name}` ({columns}) VALUES ({', '.join(['%s'] * len(entries))})",
+                [value for _, value in entries],
+            )
         connection.commit()
         flash(f"{definition['title']} 항목을 추가했습니다.", "success")
     except Exception:
@@ -157,19 +235,73 @@ def add_row(table_name):
     return redirect(url_for("admin.admin_index"))
 
 
+@admin_bp.route("/data/<table_name>/update", methods=["POST"])
+@login_required
+def update_row(table_name):
+    """표에서 고른 행을 같은 양식으로 수정한다.
+
+    대상 행은 서명된 `row_token`으로만 지정할 수 있어 임의의 행을 건드릴 수 없다.
+    """
+    require_csrf()
+    definition = CONTENT_TABLES.get(table_name)
+    if definition is None:
+        abort(404)
+    row = load_row_token(request.form.get("row_token", ""))
+    conditions = row_conditions(definition, row)
+    if not conditions:
+        abort(400, "수정할 행을 특정할 수 없습니다.")
+
+    connection = None
+    try:
+        connection = get_connection()
+        nullable = nullable_columns(connection, table_name)
+        # 빈 칸은 값을 지우겠다는 뜻이지만, NOT NULL 열은 지울 수 없어 기존 값을 유지한다.
+        assignments = []
+        for field in definition["fields"]:
+            value = request.form.get(field, "").strip()
+            if value:
+                assignments.append((field, value))
+            elif field in nullable:
+                assignments.append((field, None))
+        if not assignments:
+            flash("수정할 내용을 입력하세요.", "error")
+            return redirect(url_for("admin.admin_index"))
+
+        setters = ", ".join(f"`{field}` = %s" for field, _ in assignments)
+        where = " AND ".join(f"`{key}` <=> %s" for key, _ in conditions)
+        condition_values = [value for _, value in conditions]
+        with connection.cursor() as cursor:
+            # 값이 그대로면 UPDATE의 반영 행 수가 0이므로, 대상 존재 여부는 따로 확인한다.
+            cursor.execute(f"SELECT COUNT(*) AS matched FROM `{table_name}` WHERE {where}", condition_values)
+            if not cursor.fetchone()["matched"]:
+                flash("수정할 항목을 찾지 못했습니다. 목록을 새로고침한 뒤 다시 시도하세요.", "error")
+                return redirect(url_for("admin.admin_index"))
+            cursor.execute(
+                f"UPDATE `{table_name}` SET {setters} WHERE {where}",
+                [value for _, value in assignments] + condition_values,
+            )
+        connection.commit()
+        flash(f"{definition['title']} 항목을 수정했습니다.", "success")
+    except Exception:
+        logging.exception("관리자 데이터 수정 실패: %s", table_name)
+        if connection:
+            connection.rollback()
+        flash("수정하지 못했습니다. 값의 형식과 중복 여부를 확인하세요.", "error")
+    finally:
+        if connection:
+            connection.close()
+    return redirect(url_for("admin.admin_index"))
+
+
 @admin_bp.route("/data/<table_name>/delete", methods=["POST"])
 @login_required
 def delete_row(table_name):
     require_csrf()
     if table_name not in CONTENT_TABLES:
         abort(404)
-    try:
-        row = row_serializer().loads(request.form["row_token"])
-    except (KeyError, BadSignature):
-        abort(400, "삭제 요청이 만료되었거나 잘못되었습니다.")
     definition = CONTENT_TABLES[table_name]
-    allowed_columns = set(definition.get("key_fields", definition["fields"]))
-    conditions = [(key, value) for key, value in row.items() if key in allowed_columns]
+    row = load_row_token(request.form.get("row_token", ""))
+    conditions = row_conditions(definition, row)
     if not conditions:
         abort(400)
 
@@ -189,4 +321,35 @@ def delete_row(table_name):
     finally:
         if connection:
             connection.close()
+    return redirect(url_for("admin.admin_index"))
+
+
+@admin_bp.route("/karaoke/import", methods=["POST"])
+@login_required
+def import_karaoke_songs():
+    """노래방 곡을 한 번에 여러 개 등록한다.
+
+    `source=seed`는 저장소에 들어 있는 기본 목록을, 그 밖에는 붙여넣은 표를 사용한다.
+    곡명과 가수가 같으면 새로 만들지 않고 기존 곡을 갱신한다.
+    """
+    require_csrf()
+    replace = request.form.get("replace") == "on"
+    try:
+        if request.form.get("source") == "seed":
+            stats = import_seed_file(replace=replace)
+        else:
+            stats = import_text(request.form.get("bulk_text", ""), replace=replace)
+    except SeedError as error:
+        flash(str(error), "error")
+    except Exception:
+        logging.exception("노래방 곡 일괄 등록 실패")
+        flash("일괄 등록에 실패했습니다. 입력 형식과 DB 상태를 확인하세요.", "error")
+    else:
+        for warning in stats["warnings"][:5]:
+            flash(warning, "error")
+        flash(
+            f"노래방 곡 {stats['total']}건을 처리했습니다. (새로 추가 {stats['inserted']}건, 갱신 {stats['updated']}건"
+            + (", 기존 곡 전체 삭제 후 등록)" if stats["replaced"] else ")"),
+            "success",
+        )
     return redirect(url_for("admin.admin_index"))

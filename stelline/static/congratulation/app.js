@@ -27,6 +27,14 @@ const disableButton = document.getElementById('disableNotificationsButton');
 enableButton.disabled = true;
 disableButton.disabled = true;
 
+// 버튼의 시각 상태는 CSS 클래스로만 표현한다 (색상 하드코딩 금지).
+function setButtonState(button, state) {
+    button.classList.remove('is-blocked', 'is-active');
+    if (state) {
+        button.classList.add(state);
+    }
+}
+
 /**
  * 1. Service Worker를 등록합니다.
  * 웹 푸시 알림은 Service Worker 없이는 작동하지 않습니다.
@@ -42,7 +50,7 @@ function registerServiceWorker() {
             .catch((error) => {
                 console.error('Service Worker 등록 실패:', error);
                 statusElement.textContent = 'Service Worker 등록 실패. (HTTPS 및 경로 확인)';
-                statusElement.className = 'error';
+                statusElement.className = 'status-text is-error';
                 enableButton.disabled = true;
                 enableButton.textContent = '알림 지원 안됨';
                 disableButton.disabled = true;
@@ -51,7 +59,7 @@ function registerServiceWorker() {
     } else {
         console.warn('이 브라우저는 Service Worker를 지원하지 않습니다.');
         statusElement.textContent = '이 브라우저는 웹 푸시 알림을 지원하지 않습니다.';
-        statusElement.className = 'error';
+        statusElement.className = 'status-text is-error';
         enableButton.disabled = true;
         enableButton.textContent = '알림 지원 안됨';
         disableButton.disabled = true;
@@ -59,21 +67,18 @@ function registerServiceWorker() {
 }
 
 async function checkAndSetUIBasedOnToken() {
-    statusElement.className = 'info';
+    statusElement.className = 'status-text is-info';
 
     const permission = Notification.permission; // 브라우저 알림 권한 확인
 
     if (permission === 'denied') {
         statusElement.textContent = '알림이 브라우저 설정에서 차단되었습니다. 새로고침 하거나 수동으로 설정해주세요.';
-        statusElement.className = 'error';
+        statusElement.className = 'status-text is-error';
         enableButton.disabled = true;
         enableButton.textContent = '알림 차단됨';
-        enableButton.style.backgroundColor = '#dc3545';
-        enableButton.style.cursor = 'default';
+        setButtonState(enableButton, 'is-blocked');
         disableButton.disabled = true;
         disableButton.textContent = '알림 취소 불가';
-        disableButton.style.backgroundColor = '#cccccc';
-        disableButton.style.cursor = 'not-allowed';
         return; // 일찍 종료
     }
 
@@ -87,16 +92,13 @@ async function checkAndSetUIBasedOnToken() {
     } catch (err) {
         console.error('FCM 토큰 가져오는 중 오류 발생 (checkAndSetUIBasedOnToken):', err);
         statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}`;
-        statusElement.className = 'error';
+        statusElement.className = 'status-text is-error';
         // 토큰 가져오기 실패 시, 다시 '알림 허용하기'를 누를 수 있도록 허용
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
-        enableButton.style.backgroundColor = '#007bff';
-        enableButton.style.cursor = 'pointer';
+        setButtonState(enableButton, null);
         disableButton.disabled = true;
         disableButton.textContent = '알림 취소하기';
-        disableButton.style.backgroundColor = '#cccccc';
-        disableButton.style.cursor = 'not-allowed';
         return;
     }
 
@@ -104,27 +106,21 @@ async function checkAndSetUIBasedOnToken() {
     if (await currentTokenIsValid(currentToken)) {
         // 토큰이 존재하면 알림이 활성화된 것으로 간주
         statusElement.textContent = '알림이 허용되었고, 토큰이 발급되었습니다.';
-        statusElement.className = 'success';
+        statusElement.className = 'status-text is-success';
         enableButton.disabled = true;
         enableButton.textContent = '알림 허용됨';
-        enableButton.style.backgroundColor = '#28a745';
-        enableButton.style.cursor = 'default';
+        setButtonState(enableButton, 'is-active');
 
         disableButton.disabled = false;
         disableButton.textContent = '알림 취소하기';
-        disableButton.style.backgroundColor = '#6c757d';
-        disableButton.style.cursor = 'pointer';
     } else { // permission === 'default' (아직 묻지 않음) 또는 그 외 토큰 없는 경우
         statusElement.textContent = '앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.';
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
-        enableButton.style.backgroundColor = '#007bff';
-        enableButton.style.cursor = 'pointer';
+        setButtonState(enableButton, null);
 
         disableButton.disabled = true;
         disableButton.textContent = '알림 취소하기';
-        disableButton.style.backgroundColor = '#cccccc';
-        disableButton.style.cursor = 'not-allowed';
     }
 }
 
@@ -152,7 +148,7 @@ async function currentTokenIsValid(token) {
     } catch (error) {
         console.error('서버 확인 실패:', error);
         statusElement.textContent = `서버 확인 실패: ${error.message}`;
-        statusElement.className = 'error';
+        statusElement.className = 'status-text is-error';
     }
 
     return false;
@@ -170,7 +166,7 @@ function requestPermissionAndGetToken() {
         if (permission === 'granted') {
             console.log('알림 권한 승인됨. 토큰 가져오기 시도...');
             statusElement.textContent = '알림 권한이 승인되었습니다. 토큰 가져오는 중...';
-            statusElement.className = 'info';
+            statusElement.className = 'status-text is-info';
             enableButton.textContent = '토큰 가져오는 중...';
 
             // FCM 토큰 가져오기 (웹 푸시 구독 정보)
@@ -186,19 +182,19 @@ function requestPermissionAndGetToken() {
                 } else {
                     console.warn('푸시 알림 토큰을 가져올 수 없습니다. 알림 권한이 없거나 다른 문제일 수 있습니다.');
                     statusElement.textContent = '토큰을 가져올 수 없습니다. 권한을 확인하세요.';
-                    statusElement.className = 'error';
+                    statusElement.className = 'status-text is-error';
                     checkAndSetUIBasedOnToken(); // 실패 시 UI 상태 재조정
                 }
             }).catch((err) => {
                 console.error('웹 푸시 토큰 가져오는 중 에러 발생:', err);
                 statusElement.textContent = `토큰 가져오기 실패: ${err.message}`;
-                statusElement.className = 'error';
+                statusElement.className = 'status-text is-error';
                 checkAndSetUIBasedOnToken(); // 실패 시 UI 상태 재조정
             });
         } else {
             console.warn('알림 권한 거부됨.');
             statusElement.textContent = '알림 권한이 거부되었습니다.';
-            statusElement.className = 'error';
+            statusElement.className = 'status-text is-error';
             checkAndSetUIBasedOnToken(); // 권한 거부 시 UI 상태 재조정
         }
     });
@@ -222,16 +218,16 @@ async function sendTokenToServer(token) {
         if (response.ok) {
             console.log('웹 푸시 토큰 서버 전송 성공');
             statusElement.textContent = '토큰 서버 전송 성공! 이제 알림을 받을 수 있습니다.';
-            statusElement.className = 'success';
+            statusElement.className = 'status-text is-success';
         } else {
             console.error('서버 에러:', response.status, response.statusText);
             statusElement.textContent = `서버 에러: ${response.status}`;
-            statusElement.className = 'error';
+            statusElement.className = 'status-text is-error';
         }
     } catch (error) {
         console.error('서버 전송 실패:', error);
         statusElement.textContent = `서버 전송 실패: ${error.message}`;
-        statusElement.className = 'error';
+        statusElement.className = 'status-text is-error';
     } finally {
         // 토큰 전송 결과에 따라 UI를 업데이트
         checkAndSetUIBasedOnToken();
@@ -246,7 +242,7 @@ async function unsubscribeNotifications() {
     enableButton.disabled = true;
 
     statusElement.textContent = '알림 구독을 해지하는 중...';
-    statusElement.className = 'info';
+    statusElement.className = 'status-text is-info';
 
     try {
         const currentToken = await messaging.getToken({ vapidKey: VAPID_KEY }); // 현재 활성화된 토큰 가져오기
@@ -255,7 +251,7 @@ async function unsubscribeNotifications() {
             await messaging.deleteToken(currentToken);
             console.log('Firebase 구독 해지 성공');
             statusElement.textContent = 'Firebase에서 구독이 해지되었습니다. 서버에 알리는 중...';
-            statusElement.className = 'info';
+            statusElement.className = 'status-text is-info';
 
             // 2. 서버에서 토큰 삭제 (필수)
             const serverUrl = "/api/congratulation/unregister";
@@ -270,21 +266,21 @@ async function unsubscribeNotifications() {
             if (response.ok) {
                 console.log('웹 푸시 토큰 서버 삭제 성공');
                 statusElement.textContent = '알림 구독이 완전히 취소되었습니다.';
-                statusElement.className = 'info';
+                statusElement.className = 'status-text is-info';
             } else {
                 console.error('서버에서 토큰 삭제 실패:', response.status, response.statusText);
                 statusElement.textContent = `서버에서 토큰 삭제 실패: ${response.status}`;
-                statusElement.className = 'error';
+                statusElement.className = 'status-text is-error';
             }
         } else {
             console.warn('구독 해지할 토큰이 없습니다. 이미 해지되었거나 알림이 허용되지 않았습니다.');
             statusElement.textContent = '구독 해지할 토큰이 없습니다.';
-            statusElement.className = 'info';
+            statusElement.className = 'status-text is-info';
         }
     } catch (error) {
         console.error('알림 구독 해지 중 에러 발생:', error);
         statusElement.textContent = `알림 구독 해지 실패: ${error.message}`;
-        statusElement.className = 'error';
+        statusElement.className = 'status-text is-error';
     } finally {
         // 구독 해지 후 UI 상태 업데이트 (버튼 상태 재조정)
         checkAndSetUIBasedOnToken();
@@ -328,6 +324,7 @@ disableButton.addEventListener('click', unsubscribeNotifications);
 // ⭐ iOS 사용자를 위한 추가 안내 (PWA 설치 유도) ⭐
 if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
     if (!window.matchMedia('(display-mode: standalone)').matches && !navigator.standalone) {
-        statusElement.innerHTML += '<br><b><span style="color: #dc3545;">🚨 iOS 사용자는 Safari에서 "홈 화면에 추가"해야 알림을 받을 수 있습니다.</span></b>';
+        statusElement.insertAdjacentHTML('beforeend',
+            '<br><strong class="status-note">🚨 iOS 사용자는 Safari에서 "홈 화면에 추가"해야 알림을 받을 수 있습니다.</strong>');
     }
 }

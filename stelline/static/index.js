@@ -27,6 +27,15 @@ function copyText(id) {
   });
 }
 
+function showEmptyState(container, message, isError = false) {
+  if (!container) return;
+  container.innerHTML = "";
+  const note = document.createElement("p");
+  note.className = isError ? "empty-state is-error" : "empty-state";
+  note.textContent = message;
+  container.appendChild(note);
+}
+
 function toArray(value) {
   if (value == null) return [];
   if (Array.isArray(value)) return value.filter(Boolean);
@@ -85,6 +94,7 @@ async function fetchBugs() {
     });
   } catch (error) {
     console.error("벅스 데이터 로드 실패:", error);
+    showEmptyState(document.getElementById("bugs"), "벅스 순위를 불러오지 못했습니다.", true);
   }
 }
 
@@ -119,6 +129,7 @@ async function fetchEvents() {
     });
   } catch (error) {
     console.error("이벤트 API 요청 중 오류 발생:", error);
+    showEmptyState(container, "이벤트 정보를 불러오지 못했습니다.", true);
   }
 }
 
@@ -199,6 +210,7 @@ async function fetchTwits() {
     });
   } catch (err) {
     console.error("트윗 데이터 로드 실패:", err);
+    showEmptyState(document.getElementById("twitContainer"), "트윗 안내를 불러오지 못했습니다.", true);
   }
 }
 

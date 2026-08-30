@@ -1,17 +1,44 @@
 :root {
   --background: #f3f7ff;
   --surface: #ffffff;
+  --surface-panel: rgba(255,255,255,0.76);
+  --surface-panel-solid: rgba(255,255,255,0.88);
   --surface-soft: rgba(255,255,255,0.75);
+  --surface-subtle: #f8fafc;
+  --on-dark: #f8fafc;
   --text: #111827;
+  --text-strong: #0f172a;
   --muted: #475569;
   --muted-soft: #64748b;
+
   --primary: #3b82f6;
+  --primary-hover: #2563eb;
   --primary-strong: #1d4ed8;
+  --primary-active: #1e40af;
   --primary-soft: rgba(59,130,246,0.12);
+  --primary-tint: #eff6ff;
+  --primary-tint-strong: #eef2ff;
+  --primary-outline: rgba(59,130,246,0.25);
+
   --border: rgba(148,163,184,0.22);
-  --shadow: rgba(15,23,42,0.08);
-  --shadow-strong: rgba(15,23,42,0.12);
+  --border-card: rgba(148,163,184,0.25);
+  --border-subtle: #e6eef8;
+
+  --shadow-sm: 0 8px 20px rgba(15,23,42,0.03);
+  --shadow-card: 0 12px 30px rgba(15,23,42,0.08);
+  --shadow-card-hover: 0 22px 42px rgba(15,23,42,0.12);
+  --shadow-panel: 0 20px 40px rgba(15,23,42,0.06);
+  --shadow-raised: 0 14px 30px rgba(15,23,42,0.05);
+
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
   --success: #0f766e;
+  --success-soft: #d1fae5;
+
+  --radius-panel: 24px;
+  --radius-card: 20px;
+  --radius-control: 12px;
+
   font-family: Inter, "Noto Sans KR", Arial, sans-serif;
   color: var(--text);
 }
@@ -21,13 +48,22 @@ html, body { height: 100%; }
 body {
   margin: 0;
   padding: 0;
-  background:
-    radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 26%),
-    linear-gradient(180deg, #f2f7ff 0%, #edf3fb 100%);
-  background-attachment: fixed;
+  background: var(--background);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--text);
+}
+
+/* 장식용 배경. 고정 레이어로 분리해 스크롤 중 리페인트를 피한다. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 26%),
+    linear-gradient(180deg, #f2f7ff 0%, #edf3fb 100%);
 }
 
 img { display: block; max-width: 100%; }
@@ -39,25 +75,19 @@ a { color: inherit; text-decoration: none; }
   padding: 24px 16px 56px;
 }
 
-.site-header {
-  display: flex;
+.site-brand {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 12px 0 18px;
-}
-
-.site-title {
-  font-size: 1.08rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  gap: 12px;
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
 
-.site-sub {
-  margin-top: 4px;
-  font-size: 0.9rem;
-  color: var(--muted);
-  text-align: center;
+.site-brand img {
+  border-radius: 10px;
 }
 
 .page-nav {
@@ -72,15 +102,21 @@ a { color: inherit; text-decoration: none; }
 .congrats-hero,
 .notification-panel,
 .congrats-section {
-  background: rgba(255,255,255,0.76);
+  background: var(--surface-panel-solid);
   border: 1px solid var(--border);
-  border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(15,23,42,0.06);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+/* 배경 그라디언트가 실제로 비쳐 보이는 최상단 셸에만 블러를 남긴다. */
+.page-shell,
+.hero,
+.congrats-hero {
+  background: var(--surface-panel);
   backdrop-filter: blur(12px);
 }
 
 .page-shell,
-.hero,
 .congrats-hero {
   padding: 30px 28px 24px;
 }
@@ -136,6 +172,41 @@ a { color: inherit; text-decoration: none; }
   padding: 22px 18px 18px;
 }
 
+.congrats-section {
+  padding: 22px 18px 18px;
+}
+
+.congrats-hero {
+  margin-bottom: 20px;
+}
+
+/* 제목 묶음 + 우측 액션 버튼. search / congratulation 이 공유한다. */
+.hero-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.page-heading {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.notification-panel {
+  padding: 20px 22px;
+  margin-bottom: 18px;
+}
+
+.notification-panel h2 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  text-align: left;
+}
+
 .section-header {
   display: flex;
   align-items: center;
@@ -154,13 +225,88 @@ a { color: inherit; text-decoration: none; }
   text-align: left;
 }
 
+.status-text.is-error { color: var(--danger); }
+.status-text.is-success { color: var(--success); }
+.status-text.is-info { color: var(--muted); }
+
+.status-note {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--danger);
+}
+
+/* 알림 버튼의 확정 상태. 비활성이어도 상태색이 읽히도록 opacity 를 되돌린다. */
+.btn-primary.is-blocked,
+.btn-primary.is-blocked:disabled {
+  background: var(--danger);
+  color: #fff;
+  opacity: 1;
+  cursor: default;
+}
+
+.btn-primary.is-active,
+.btn-primary.is-active:disabled {
+  background: var(--success);
+  color: #fff;
+  opacity: 1;
+  cursor: default;
+}
+
+.report-toggle {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.report-panel {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.report-panel h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+}
+
+.report-panel p {
+  margin-bottom: 14px;
+}
+
+.report-panel form {
+  display: grid;
+  gap: 8px;
+}
+
+.report-panel label {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.report-panel textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: rgba(255,255,255,0.86);
+  color: var(--text);
+  font: inherit;
+}
+
+.report-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .results-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 7px 12px;
   border-radius: 999px;
-  background: #eff6ff;
+  background: var(--primary-tint);
   color: var(--primary-strong);
   font-size: 0.82rem;
   font-weight: 700;
@@ -169,19 +315,23 @@ a { color: inherit; text-decoration: none; }
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
   text-align: center;
-  margin-top: 6px;
+  width: min(100%, 56rem);
+  margin: 6px auto 0;
+  padding: 34px 28px 32px;
 }
 
 .hero-actions,
 .notification-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 12px;
 }
+
+.hero-actions { justify-content: center; }
+.notification-actions { justify-content: flex-start; }
 
 button,
 .button,
@@ -192,7 +342,7 @@ button,
   justify-content: center;
   gap: 8px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   padding: 10px 16px;
   font: inherit;
   font-weight: 700;
@@ -213,12 +363,26 @@ button:active,
 .btn-secondary:active { transform: translateY(0); }
 button:disabled { opacity: .55; cursor: not-allowed; }
 
+:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+button:focus-visible,
+.button:focus-visible,
+a.btn-primary:focus-visible,
+a.btn-secondary:focus-visible,
+.query-chip:focus-visible {
+  border-radius: var(--radius-control);
+}
+
 .btn-primary,
 button.btn-primary,
 .card button.btn-primary,
 .congrats-hero button.btn-primary,
 .notification-panel button.btn-primary {
-  background: #2563eb;
+  background: var(--primary-hover);
   color: #fff;
   box-shadow: 0 6px 18px rgba(37,99,235,0.12);
 }
@@ -228,7 +392,7 @@ button.btn-primary:hover,
 .card button.btn-primary:hover,
 .congrats-hero button.btn-primary:hover,
 .notification-panel button.btn-primary:hover {
-  background: #1e40af;
+  background: var(--primary-active);
   color: #fff;
 }
 
@@ -237,10 +401,10 @@ button.btn-secondary,
 .card button.btn-secondary,
 .congrats-hero button.btn-secondary,
 .notification-panel button.btn-secondary {
-  background: #f8fafc;
-  color: #0f172a;
-  border: 1px solid #e6eef8;
-  box-shadow: 0 8px 20px rgba(15,23,42,0.03);
+  background: var(--surface-subtle);
+  color: var(--text-strong);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-secondary:hover,
@@ -248,8 +412,8 @@ button.btn-secondary:hover,
 .card button.btn-secondary:hover,
 .congrats-hero button.btn-secondary:hover,
 .notification-panel button.btn-secondary:hover {
-  background: #eef2ff;
-  color: #0f172a;
+  background: var(--primary-tint-strong);
+  color: var(--text-strong);
 }
 
 .btn-primary svg,
@@ -270,7 +434,7 @@ button svg {
   width: 100%;
   justify-content: center;
   padding: 11px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   font-size: 0.92rem;
 }
 
@@ -287,21 +451,50 @@ button svg {
   overflow: hidden;
   min-height: 100%;
   background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.96));
-  border: 1px solid rgba(148,163,184,0.25);
-  border-radius: 20px;
-  box-shadow: 0 12px 30px rgba(15,23,42,0.08);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 22px 42px rgba(15,23,42,0.12);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .card img {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
+}
+
+.thumb-wrap {
+  position: relative;
+  background: #dfeafc;
+}
+
+.thumb-wrap img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.card-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(15,23,42,0.72);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: var(--on-dark);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .card .info {
@@ -314,10 +507,16 @@ button svg {
 
 .card h3 {
   margin: 0;
+  overflow-wrap: anywhere;
   font-size: 1.05rem;
   line-height: 1.4;
   letter-spacing: -0.02em;
   color: var(--text);
+  text-align: left;
+}
+
+.card p {
+  font-size: 0.9rem;
   text-align: left;
 }
 
@@ -345,7 +544,7 @@ button svg {
   width: 100%;
   justify-content: center;
   padding: 11px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-control);
   font-size: 0.92rem;
 }
 
@@ -357,7 +556,7 @@ button svg {
   border-radius: 22px;
   background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,250,255,0.94));
   border: 1px solid var(--border);
-  box-shadow: 0 14px 30px rgba(15,23,42,0.05);
+  box-shadow: var(--shadow-raised);
 }
 
 .stage {
@@ -391,7 +590,7 @@ button svg {
   width: fit-content;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #eff6ff;
+  background: var(--primary-tint);
   color: var(--primary-strong);
   font-size: 0.75rem;
   font-weight: 700;
@@ -424,6 +623,27 @@ button svg {
 .info-stack {
   display: grid;
   gap: 18px;
+  margin-top: 18px;
+}
+
+/* 그리드 gap 과 중복돼 간격이 두 배가 되지 않도록 한다. */
+.info-stack > .section-panel {
+  margin-top: 0;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: rgba(148,163,184,0.06);
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty-state.is-error {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .stack-list,
@@ -451,18 +671,18 @@ button svg {
   justify-content: space-between;
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #e6eef8;
-  border-radius: 12px;
-  background: #f8fafc;
-  color: #0f172a;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+  color: var(--text-strong);
   font-weight: 700;
   text-align: left;
-  box-shadow: 0 8px 20px rgba(15,23,42,0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .toggle-button:hover {
-  background: #eef2ff;
-  color: #0f172a;
+  background: var(--primary-tint-strong);
+  color: var(--text-strong);
   transform: translateY(-1px);
 }
 
@@ -474,8 +694,8 @@ button svg {
 }
 
 .toggle-button.is-open {
-  background: #eef2ff;
-  border-color: rgba(59,130,246,0.25);
+  background: var(--primary-tint-strong);
+  border-color: var(--primary-outline);
 }
 
 .toggle-button.is-open::after {
@@ -499,6 +719,12 @@ button svg {
   background: rgba(248,250,252,0.9);
   color: var(--muted);
   text-align: left;
+}
+
+.list-item-body,
+.copy-text,
+.toggle-button {
+  overflow-wrap: anywhere;
 }
 
 .list-item-body strong {
@@ -525,8 +751,8 @@ button svg {
   align-items: stretch;
   gap: 12px;
   padding: 16px;
-  border: 1px solid rgba(148,163,184,0.25);
-  border-radius: 20px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
   background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
   box-shadow: 0 12px 30px rgba(15,23,42,0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -584,7 +810,7 @@ button svg {
   align-items: center;
   padding: 6px 10px;
   border-radius: 999px;
-  background: #eff6ff;
+  background: var(--primary-tint);
   color: var(--primary-strong);
   font-size: 0.8rem;
   font-weight: 700;
@@ -644,9 +870,16 @@ tr:last-child td { border-bottom: 0; }
   }
 
   .page-shell,
-  .hero,
   .congrats-hero {
     padding: 22px 18px 18px;
+  }
+
+  .hero {
+    padding: 26px 18px 24px;
+  }
+
+  .site-brand {
+    font-size: 1.6rem;
   }
 
   .page-header,
@@ -658,8 +891,10 @@ tr:last-child td { border-bottom: 0; }
     text-align: center;
   }
 
-  .page-header {
+  .page-header,
+  .page-heading {
     align-items: center;
+    text-align: center;
   }
 
   .section-header {
@@ -673,16 +908,39 @@ tr:last-child td { border-bottom: 0; }
   .card-grid {
     grid-template-columns: 1fr;
   }
+
+  .hero-heading {
+    flex-direction: column;
+  }
+
+  .report-toggle {
+    align-self: stretch;
+  }
+
+  .congrats-hero h1,
+  .congrats-hero p,
+  .notification-panel h2 {
+    text-align: center;
+  }
+
+  .notification-actions { justify-content: center; }
 }
 
-.bg-blue-600:hover, .bg-blue-700:hover { color: #fff; }
-.bg-slate-100:hover, .bg-slate-200:hover { color: #0f172a; }
-button[class*="bg-blue-"]:hover,
-button[class*="bg-slate-"]:hover {
-  color: inherit !important;
-}
-button[class*="bg-"] svg,
-button[class*="bg-"]:hover svg {
-  stroke: currentColor !important;
-  fill: currentColor !important;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .card:hover,
+  .copy-card:hover,
+  button:hover,
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .toggle-button:hover {
+    transform: none;
+  }
 }

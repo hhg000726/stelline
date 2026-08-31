@@ -109,4 +109,9 @@ MIGRATIONS = [
         # (008을 지우지 않고 새 마이그레이션으로 되돌려야 이미 적용한 DB도 맞춰진다.)
         drop_column_if_present("karaoke_songs", "youtube_video_id"),
     ]),
+    ("010_drop_karaoke_note_and_order", [
+        # 비고와 정렬 순서는 화면에서 쓰지 않기로 했다. 목록은 랜덤·가나다순으로만 본다.
+        drop_column_if_present("karaoke_songs", "note"),
+        drop_column_if_present("karaoke_songs", "sort_order"),
+    ]),
 ]

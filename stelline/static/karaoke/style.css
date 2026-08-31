@@ -329,12 +329,6 @@ body {
   font-weight: 700;
 }
 
-.song-note {
-  margin: 4px 0 0;
-  color: var(--muted-soft);
-  font-size: 0.78rem;
-}
-
 .song-numbers {
   display: flex;
   gap: 6px;

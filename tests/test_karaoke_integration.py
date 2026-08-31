@@ -14,13 +14,13 @@ pytestmark = requires_db
 def _insert_song(db, title, artist, **overrides):
     values = {
         "title": title, "artist": artist, "members": None, "section": "solo",
-        "category": "cover", "tj": None, "ky": None, "note": None, "sort_order": 0,
+        "category": "cover", "tj": None, "ky": None,
     }
     values.update(overrides)
     with db.cursor() as cursor:
         cursor.execute(
-            "INSERT INTO karaoke_songs (title, artist, members, section, category, tj, ky, note, sort_order)"
-            " VALUES (%(title)s, %(artist)s, %(members)s, %(section)s, %(category)s, %(tj)s, %(ky)s, %(note)s, %(sort_order)s)",
+            "INSERT INTO karaoke_songs (title, artist, members, section, category, tj, ky)"
+            " VALUES (%(title)s, %(artist)s, %(members)s, %(section)s, %(category)s, %(tj)s, %(ky)s)",
             values,
         )
         cursor.execute("SELECT * FROM karaoke_songs WHERE title = %s AND artist = %s", (title, artist))
@@ -43,7 +43,7 @@ def test_songs_api_returns_empty_payload_without_data(client, clean_db):
 
 
 def test_songs_api_serializes_row(client, db, clean_db):
-    _insert_song(db, "테스트곡", "아이리 칸나", members="아이리 칸나, 유즈하 리코", tj="12345", section="unit", category="original", note="메모")
+    _insert_song(db, "테스트곡", "아이리 칸나", members="아이리 칸나, 유즈하 리코", tj="12345", section="unit", category="original")
     payload = client.get("/api/karaoke/songs").get_json()
 
     assert len(payload["songs"]) == 1
@@ -54,16 +54,15 @@ def test_songs_api_serializes_row(client, db, clean_db):
     assert song["ky"] == ""  # 번호 없음은 빈 문자열로 내려간다
     assert song["section"] == "unit"
     assert song["category"] == "original"
-    assert song["note"] == "메모"
     assert payload["updatedAt"]
 
 
-def test_songs_api_orders_by_sort_order(client, db, clean_db):
-    _insert_song(db, "세번째", "칸나", sort_order=30)
-    _insert_song(db, "첫번째", "칸나", sort_order=10)
-    _insert_song(db, "두번째", "칸나", sort_order=20)
+def test_songs_api_returns_every_song(client, db, clean_db):
+    """화면이 랜덤·가나다순으로 다시 정렬하므로 내려주는 차례는 정하지 않는다."""
+    for title in ("첫번째", "두번째", "세번째"):
+        _insert_song(db, title, "칸나")
     titles = [song["title"] for song in client.get("/api/karaoke/songs").get_json()["songs"]]
-    assert titles == ["첫번째", "두번째", "세번째"]
+    assert sorted(titles) == ["두번째", "세번째", "첫번째"]
 
 
 def test_songs_api_uses_member_master_when_present(client, db, clean_db):
@@ -205,7 +204,7 @@ def test_admin_can_add_song_with_defaults_for_blank_fields(admin_client, db, cle
         row = cursor.fetchone()
     assert row["tj"] == "555"
     assert row["ky"] is None
-    assert row["sort_order"] == 0  # 빈 칸은 열 기본값을 쓴다
+    assert row["section"] == "solo"  # 빈 칸은 열 기본값을 쓴다
 
 
 def test_admin_update_changes_only_submitted_row(admin_client, db, clean_db):
@@ -245,18 +244,18 @@ def test_admin_update_clears_nullable_field_left_blank(admin_client, db, clean_d
 
 def test_admin_update_keeps_not_null_field_left_blank(admin_client, db, clean_db):
     """NOT NULL 열은 비워도 지울 수 없으므로 기존 값을 유지한다."""
-    target = _insert_song(db, "구분 유지 곡", "칸나", section="unit", sort_order=7)
+    target = _insert_song(db, "구분 유지 곡", "칸나", section="unit")
     admin_client.post(
         "/admin/data/karaoke_songs/update",
         data={
             "csrf_token": admin_client.csrf, "row_token": serialize_row(target),
-            "title": "구분 유지 곡", "artist": "칸나", "section": "", "category": "", "sort_order": "",
+            "title": "구분 유지 곡", "artist": "칸나", "section": "", "category": "",
         },
     )
     with db.cursor() as cursor:
         cursor.execute("SELECT * FROM karaoke_songs WHERE id = %s", (target["id"],))
         row = cursor.fetchone()
-    assert (row["section"], row["category"], row["sort_order"]) == ("unit", "cover", 7)
+    assert (row["section"], row["category"]) == ("unit", "cover")
 
 
 def test_admin_update_rejects_forged_row_token(admin_client, db, clean_db):

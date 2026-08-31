@@ -24,7 +24,7 @@
     const state = {
         query: "",
         machine: "both",
-        sort: "default",
+        sort: "random",
         // "or"는 고른 것 중 하나라도, "and"는 고른 것을 모두 만족하는 곡만 남긴다.
         filterMode: "or",
         members: new Set(),
@@ -98,12 +98,19 @@
     }
 
     function decorate(song) {
-        const searchText = normalizeText([song.title, song.titleAlt, song.artist, (song.members || []).join(" "), song.note, song.tj, song.ky].join(" "));
+        const searchText = normalizeText([song.title, song.titleAlt, song.artist, (song.members || []).join(" "), song.tj, song.ky].join(" "));
         return Object.assign({}, song, {
             key: songKey(song),
             searchText,
             searchChoseong: toChoseong(searchText),
+            shuffle: Math.random(),
         });
+    }
+
+    /* 랜덤순은 화면을 여는 동안에는 고정이어야 한다. 검색어를 칠 때마다 순서가
+     * 바뀌면 목록을 눈으로 따라갈 수 없다. 그래서 곡마다 섞기 값을 한 번 정해 둔다. */
+    function reshuffle() {
+        songs.forEach((song) => { song.shuffle = Math.random(); });
     }
 
     /* ---------- 필터·정렬 ---------- */
@@ -141,8 +148,7 @@
         if (state.sort === "title") {
             filtered.sort((a, b) => a.title.localeCompare(b.title, "ko"));
         } else {
-            // 관리자가 정한 정렬 순서. 구분(단체·유닛·개인)끼리 묶여 있어 훑어보기 좋다.
-            filtered.sort((a, b) => a.sortOrder - b.sortOrder);
+            filtered.sort((a, b) => a.shuffle - b.shuffle);
         }
         return { list: filtered, query };
     }
@@ -179,12 +185,10 @@
         const isFavorite = favorites.has(song.key);
         const inSetlist = setlist.includes(song.key);
         const tags = [SECTION_LABELS[song.section] || song.section, CATEGORY_LABELS[song.category] || song.category];
-        const footnotes = [song.note].filter(Boolean);
         return `<article class="song-card" data-key="${esc(song.key)}">
       <div class="song-main">
         <p class="song-title">${highlight(song.title, query)}</p>
         <p class="song-meta"><span class="song-artist">${highlight(song.artist, query)}</span>${tags.map((tag) => `<span class="song-tag">${esc(tag)}</span>`).join("")}</p>
-        ${footnotes.length ? `<p class="song-note">${esc(footnotes.join(" · "))}</p>` : ""}
       </div>
       <div class="song-numbers">${numberButton(song, "tj")}${numberButton(song, "ky")}</div>
       <div class="song-actions">
@@ -380,7 +384,7 @@
         const params = new URLSearchParams();
         if (state.query) params.set("q", state.query);
         if (state.machine !== "both") params.set("machine", state.machine);
-        if (state.sort !== "default") params.set("sort", state.sort);
+        if (state.sort !== "random") params.set("sort", state.sort);
         if (state.filterMode !== "or") params.set("match", state.filterMode);
         if (state.members.size) params.set("member", Array.from(state.members).join("|"));
         if (state.sections.size) params.set("section", Array.from(state.sections).join("|"));
@@ -395,7 +399,7 @@
         const params = new URLSearchParams(window.location.search);
         if (params.get("q")) state.query = params.get("q");
         if (["tj", "ky", "both"].includes(params.get("machine"))) state.machine = params.get("machine");
-        if (["default", "title"].includes(params.get("sort"))) state.sort = params.get("sort");
+        if (["random", "title"].includes(params.get("sort"))) state.sort = params.get("sort");
         if (["or", "and"].includes(params.get("match"))) state.filterMode = params.get("match");
         (params.get("member") || "").split("|").filter(Boolean).forEach((value) => state.members.add(value));
         (params.get("section") || "").split("|").filter(Boolean).forEach((value) => state.sections.add(value));
@@ -423,7 +427,7 @@
     /* ---------- 데이터 ---------- */
 
     function ingest(payload) {
-        songs = (payload.songs || []).map((song, index) => decorate(Object.assign({ sortOrder: index }, song)));
+        songs = (payload.songs || []).map(decorate);
         members = payload.members || [];
         songByKey.clear();
         songById.clear();
@@ -583,6 +587,8 @@
 
         el.sortSelect.addEventListener("change", () => {
             state.sort = el.sortSelect.value;
+            // 랜덤순을 다시 고르면 새로 섞어 준다.
+            if (state.sort === "random") reshuffle();
             renderList();
             syncUrl();
         });

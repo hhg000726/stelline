@@ -54,8 +54,7 @@ class KaraokeListViewTest(unittest.TestCase):
         song = {
             'id': 1, 'title': '테스트곡', 'title_alt': None, 'artist': '아이리 칸나',
             'members': '아이리 칸나', 'section': 'group', 'category': 'cover',
-            'tj': '12345', 'ky': None, 'release_date': '2024-01-01',
-            'note': None, 'sort_order': 0,
+            'tj': '12345', 'ky': None, 'title_alt': None,
             'updated_at': '2026-08-31 09:00:00',
         }
         with patch('stelline.admin.routes.get_connection'),              patch('stelline.admin.routes.load_table',
@@ -83,7 +82,16 @@ class KaraokeListViewTest(unittest.TestCase):
         """표에서 뺀 열도 행을 누르면 양식에 채워져야 한다."""
         html = self._render()
         self.assertIn('data-row=', html)
-        self.assertIn('sort_order', html)
+        self.assertIn('title_alt', html)
+
+    def test_every_row_offers_a_copy_button(self):
+        """행을 누르면 수정이라, 값을 그대로 가져다 새 항목을 만들 길을 따로 둔다."""
+        html = self._render()
+        self.assertIn('data-copy-row', html)
+        self.assertIn('새 항목으로 추가', html)
+        # 버튼을 눌렀을 때 행 클릭(수정)이 덮어쓰지 않도록 연결돼 있어야 한다.
+        self.assertIn("row.querySelector('[data-copy-row]')", html)
+        self.assertIn('copyButton.addEventListener', html)
 
 
 if __name__ == '__main__':

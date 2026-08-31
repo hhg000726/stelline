@@ -7,6 +7,7 @@ import pytest
 from stelline.admin.routes import serialize_row
 from stelline.apis import reports
 from stelline.database import karaoke_release_dates as release_dates
+from stelline.database import karaoke_youtube_links as youtube_links
 from tests.conftest import requires_db
 
 pytestmark = requires_db
@@ -480,3 +481,27 @@ def test_bulk_import_keeps_a_saved_video_when_the_pasted_table_has_none(admin_cl
     # 표에 있는 값은 갱신되고(= 실제로 등록이 돌았고), 표에 없는 영상은 남아 있어야 한다.
     assert _scalar(db, "SELECT tj FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "12345"
     assert _scalar(db, "SELECT youtube_video_id FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "aaaaaaaaaaa"
+
+
+# ---------- 유튜브 영상 자동 연결 ----------
+
+def test_saving_links_never_overwrites_a_video_already_written(db, clean_db):
+    empty = _insert_cover(db, "영상이 없는 곡", None)
+    taken = _insert_cover(db, "영상이 있는 곡", "aaaaaaaaaaa")
+
+    saved = youtube_links.save_links([("bbbbbbbbbbb", empty["id"]), ("ccccccccccc", taken["id"])])
+
+    assert saved == 1
+    assert _scalar(db, "SELECT youtube_video_id FROM karaoke_songs WHERE title = %s", ("영상이 없는 곡",)) == "bbbbbbbbbbb"
+    assert _scalar(db, "SELECT youtube_video_id FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "aaaaaaaaaaa"
+
+
+def test_loading_songs_reads_the_member_master(db, clean_db):
+    _insert_cover(db, "곡 하나", None)
+    with db.cursor() as cursor:
+        cursor.execute("INSERT INTO karaoke_members (name, unit, display_order) VALUES (%s, %s, %s)", ("아이리 칸나", "MYSTIC", 1))
+
+    songs, known = youtube_links.load_songs()
+
+    assert [song["title"] for song in songs] == ["곡 하나"]
+    assert known == ["아이리 칸나"]

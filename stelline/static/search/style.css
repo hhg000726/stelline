@@ -63,7 +63,7 @@
   appearance: none;
   border: 1px solid rgba(59,130,246,0.18);
   border-radius: 999px;
-  background: linear-gradient(180deg, #f8fbff 0%, #ecf4ff 100%);
+  background: var(--surface-raised);
   color: var(--text);
   padding: 10px 16px;
   font: inherit;

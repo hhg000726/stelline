@@ -86,4 +86,8 @@ MIGRATIONS = [
                   ('congratulation', '조회수 축하 알림', TRUE, 3)
            ON DUPLICATE KEY UPDATE button_key = button_key""",
     ]),
+    ("008_karaoke_youtube_video", [
+        # 커버 곡의 발매일을 유튜브 업로드 날짜로 채우려면 어느 영상인지 알아야 한다.
+        add_column_if_missing("karaoke_songs", "youtube_video_id", "VARCHAR(32) NULL AFTER release_date"),
+    ]),
 ]

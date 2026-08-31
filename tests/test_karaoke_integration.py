@@ -6,6 +6,7 @@ import pytest
 
 from stelline.admin.routes import serialize_row
 from stelline.apis import reports
+from stelline.database import karaoke_release_dates as release_dates
 from tests.conftest import requires_db
 
 pytestmark = requires_db
@@ -369,3 +370,113 @@ def test_main_page_marks_every_button_with_a_key(client):
     html = client.get("/").get_data(as_text=True)
     for key in ("search", "karaoke", "congratulation"):
         assert f'data-button-key="{key}"' in html
+
+
+# ---------- 커버 곡 발매일 채우기 ----------
+
+def _insert_cover(db, title, video_id, release_date=None, category="cover"):
+    with db.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO karaoke_songs (title, artist, section, category, release_date, youtube_video_id)"
+            " VALUES (%s, %s, 'solo', %s, %s, %s)",
+            (title, "테스트 가수", category, release_date, video_id),
+        )
+        cursor.execute("SELECT * FROM karaoke_songs WHERE title = %s", (title,))
+        return cursor.fetchone()
+
+
+def _release_date(db, title):
+    value = _scalar(db, "SELECT release_date FROM karaoke_songs WHERE title = %s", (title,))
+    return value.isoformat() if value else None
+
+
+def test_backfill_fills_only_covers_missing_a_release_date(db, clean_db):
+    _insert_cover(db, "발매일 없는 커버", "aaaaaaaaaaa")
+    _insert_cover(db, "발매일 있는 커버", "bbbbbbbbbbb", release_date="2020-01-01")
+    _insert_cover(db, "오리지널 곡", "ccccccccccc", category="original")
+    _insert_cover(db, "영상 없는 커버", None)
+
+    with patch.object(
+        release_dates, "fetch_upload_dates",
+        return_value={"aaaaaaaaaaa": "2024-02-03", "bbbbbbbbbbb": "2024-02-04", "ccccccccccc": "2024-02-05"},
+    ) as fetch:
+        stats = release_dates.backfill_release_dates()
+
+    # 이미 발매일이 있는 곡·오리지널 곡·영상이 없는 곡은 조회 대상에서부터 빠진다.
+    assert fetch.call_args.args[0] == ["aaaaaaaaaaa"]
+    assert stats["updated"] == 1
+    assert _release_date(db, "발매일 없는 커버") == "2024-02-03"
+    assert _release_date(db, "발매일 있는 커버") == "2020-01-01"
+    assert _release_date(db, "오리지널 곡") is None
+    assert _release_date(db, "영상 없는 커버") is None
+
+
+def test_backfill_logs_videos_it_could_not_read_and_keeps_going(db, clean_db):
+    _insert_cover(db, "지워진 영상 커버", "aaaaaaaaaaa")
+    _insert_cover(db, "살아 있는 영상 커버", "bbbbbbbbbbb")
+
+    with patch.object(release_dates, "fetch_upload_dates", return_value={"bbbbbbbbbbb": "2024-03-03"}):
+        stats = release_dates.backfill_release_dates()
+
+    assert stats["updated"] == 1
+    assert len(stats["missing"]) == 1
+    assert "지워진 영상 커버" in stats["missing"][0]
+    assert _release_date(db, "지워진 영상 커버") is None
+    assert _release_date(db, "살아 있는 영상 커버") == "2024-03-03"
+
+
+def test_backfill_can_overwrite_existing_release_dates(db, clean_db):
+    _insert_cover(db, "덮어쓸 커버", "aaaaaaaaaaa", release_date="2020-01-01")
+
+    with patch.object(release_dates, "fetch_upload_dates", return_value={"aaaaaaaaaaa": "2024-04-04"}):
+        stats = release_dates.backfill_release_dates(overwrite=True)
+
+    assert stats["updated"] == 1
+    assert _release_date(db, "덮어쓸 커버") == "2024-04-04"
+
+
+def test_backfill_dry_run_does_not_write(db, clean_db):
+    _insert_cover(db, "미리보기 커버", "aaaaaaaaaaa")
+
+    with patch.object(release_dates, "fetch_upload_dates", return_value={"aaaaaaaaaaa": "2024-05-05"}):
+        stats = release_dates.backfill_release_dates(dry_run=True)
+
+    assert stats["updated"] == 1
+    assert _release_date(db, "미리보기 커버") is None
+
+
+def test_backfill_accepts_a_full_url_saved_on_the_song(db, clean_db):
+    _insert_cover(db, "주소로 적힌 커버", "youtu.be/aaaaaaaaaaa")
+
+    with patch.object(release_dates, "fetch_upload_dates", return_value={"aaaaaaaaaaa": "2024-06-06"}) as fetch:
+        release_dates.backfill_release_dates()
+
+    assert fetch.call_args.args[0] == ["aaaaaaaaaaa"]
+    assert _release_date(db, "주소로 적힌 커버") == "2024-06-06"
+
+
+def test_admin_saves_only_the_video_id_from_a_pasted_url(admin_client, db, clean_db):
+    resp = admin_client.post(
+        "/admin/data/karaoke_songs",
+        data={
+            "csrf_token": admin_client.csrf, "title": "링크로 등록한 곡", "artist": "테스트 가수",
+            "youtube_video_id": "https://www.youtube.com/watch?v=aaaaaaaaaaa&t=30",
+        },
+    )
+    assert resp.status_code == 302
+    assert _scalar(db, "SELECT youtube_video_id FROM karaoke_songs WHERE title = %s", ("링크로 등록한 곡",)) == "aaaaaaaaaaa"
+
+
+def test_bulk_import_keeps_a_saved_video_when_the_pasted_table_has_none(admin_client, db, clean_db):
+    """유튜브 열이 없는 표를 다시 붙여 넣어도 이미 적어 둔 영상은 지워지지 않아야 한다."""
+    _insert_cover(db, "영상이 있는 곡", "aaaaaaaaaaa")
+    pasted = "\t".join(["곡명", "가수", "TJ"]) + "\n" + "\t".join(["영상이 있는 곡", "테스트 가수", "12345"])
+
+    resp = admin_client.post(
+        "/admin/karaoke/import",
+        data={"csrf_token": admin_client.csrf, "source": "paste", "bulk_text": pasted},
+    )
+    assert resp.status_code == 302
+    # 표에 있는 값은 갱신되고(= 실제로 등록이 돌았고), 표에 없는 영상은 남아 있어야 한다.
+    assert _scalar(db, "SELECT tj FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "12345"
+    assert _scalar(db, "SELECT youtube_video_id FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "aaaaaaaaaaa"

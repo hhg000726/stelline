@@ -170,6 +170,14 @@ body {
   background: var(--surface-subtle);
 }
 
+/* 여러 조건을 고를 때 찾는 방법. 기기 선택 스위치와 같은 모양을 쓴다. */
+.kara-filter-hint {
+  margin: 8px 0 0;
+  color: var(--muted-soft);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .kara-filter-group h3 {
   margin: 0 0 8px;
   color: var(--muted);
@@ -294,8 +302,8 @@ body {
 .song-title mark {
   padding: 0 1px;
   border-radius: 3px;
-  background: #fde68a;
-  color: inherit;
+  background: var(--highlight);
+  color: var(--highlight-text);
 }
 
 .song-meta {
@@ -576,6 +584,30 @@ button.num-btn:active {
   margin: 0;
 }
 
+/* 뽑은 곡을 바로 담는 줄. 이미 담긴 곡은 눌린 채로 비활성이라 두 번 담기지 않는다. */
+.pick-collect {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.pick-collect button {
+  flex: 1;
+  min-width: 140px;
+  font-size: 0.9rem;
+}
+
+.pick-collect button.is-on,
+.pick-collect button.is-on:disabled {
+  border-color: var(--primary-outline);
+  background: var(--primary-tint);
+  color: var(--primary-strong);
+  opacity: 1;
+  cursor: default;
+}
+
 .pick-actions {
   display: flex;
   gap: 8px;
@@ -607,29 +639,8 @@ button.num-btn:active {
 }
 
 /* ---------- 노래방 모드 ---------- */
-/* 어두운 방에서 폰으로 보기 위한 고대비·큰 글씨 배색이다. */
-
-body.karaoke-mode {
-  --background: #080d1a;
-  --surface: #131c2e;
-  --surface-panel: rgba(15, 23, 42, 0.92);
-  --surface-panel-solid: #0f172a;
-  --surface-subtle: #1e293b;
-  --text: #f8fafc;
-  --text-strong: #ffffff;
-  --muted: #cbd5e1;
-  --muted-soft: #94a3b8;
-  --border: rgba(148, 163, 184, 0.32);
-  --border-card: rgba(148, 163, 184, 0.28);
-  --border-subtle: #334155;
-  --primary-tint: #1e293b;
-  --primary-tint-strong: #1e293b;
-  color: var(--text);
-}
-
-body.karaoke-mode::before {
-  background: #080d1a;
-}
+/* 노래방에서 멀찍이 두고 봐도 읽히도록 글씨와 번호를 키운다.
+ * 어두운 배색은 사이트 전역 다크 모드(site.css)가 따로 맡는다. */
 
 body.karaoke-mode .song-title {
   font-size: 1.15rem;
@@ -641,17 +652,19 @@ body.karaoke-mode .num-value {
 
 body.karaoke-mode .num-btn.is-primary:not(.is-empty) {
   border-color: var(--primary);
-  background: #1d283d;
+  background: var(--primary-tint);
 }
 
-body.karaoke-mode .song-title mark {
-  background: #a16207;
-  color: #fff;
+/* ---------- 다크 모드 보정 ---------- */
+/* 토큰만으로 안 되는 곳만 손본다. */
+
+:root[data-theme="dark"] .song-title mark {
+  background: var(--highlight);
+  color: var(--highlight-text);
 }
 
-body.karaoke-mode .song-tag {
-  background: #1e3a5f;
-  color: #bfdbfe;
+:root[data-theme="dark"] .setlist-bar {
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* ---------- 좁은 화면 ---------- */

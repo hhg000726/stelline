@@ -26,6 +26,8 @@
         query: "",
         machine: "both",
         sort: "recent",
+        // "or"는 고른 것 중 하나라도, "and"는 고른 것을 모두 만족하는 곡만 남긴다.
+        filterMode: "or",
         members: new Set(),
         sections: new Set(),
         categories: new Set(),
@@ -39,6 +41,7 @@
     let setlist = [];
     let visibleSongs = [];
     let usingCache = false;
+    let currentPick = null;
     const songByKey = new Map();
     const songById = new Map();
 
@@ -118,6 +121,13 @@
         return song.searchText.includes(query.normalized);
     }
 
+    function matchesMembers(song) {
+        const names = song.members || [];
+        // 구분·종류는 곡마다 하나뿐이라 '모두'로 찾을 수 없다. 여러 값을 가지는 멤버에만 적용한다.
+        if (state.filterMode === "and") return Array.from(state.members).every((name) => names.includes(name));
+        return names.some((name) => state.members.has(name));
+    }
+
     function sortValue(song) {
         const candidates = [];
         if (state.machine !== "ky" && song.tj) candidates.push(Number(song.tj));
@@ -132,7 +142,7 @@
             if (state.onlyNumbered && !hasNumber(song)) return false;
             if (state.sections.size && !state.sections.has(song.section)) return false;
             if (state.categories.size && !state.categories.has(song.category)) return false;
-            if (state.members.size && !(song.members || []).some((name) => state.members.has(name))) return false;
+            if (state.members.size && !matchesMembers(song)) return false;
             return matchesQuery(song, query);
         });
 
@@ -145,6 +155,9 @@
                 // 번호가 없는 곡은 값이 Infinity라 뒤로 밀리고, 서로 같으면 곡명 순으로 둔다.
                 return left !== right ? left - right : a.title.localeCompare(b.title, "ko");
             });
+        } else if (state.sort === "oldest") {
+            // sortOrder는 작을수록 최신이라, 오래된순은 그대로 뒤집으면 된다.
+            filtered.sort((a, b) => b.sortOrder - a.sortOrder);
         } else {
             filtered.sort((a, b) => a.sortOrder - b.sortOrder);
         }
@@ -249,7 +262,16 @@
         syncChipStates();
     }
 
+    function syncMatchButtons() {
+        el.matchButtons.forEach((button) => {
+            const active = button.dataset.match === state.filterMode;
+            button.classList.toggle("is-on", active);
+            button.setAttribute("aria-pressed", String(active));
+        });
+    }
+
     function syncChipStates() {
+        syncMatchButtons();
         el.filterPanel.querySelectorAll("[data-filter]").forEach((chip) => {
             const group = chip.dataset.filter === "member" ? state.members : chip.dataset.filter === "section" ? state.sections : state.categories;
             chip.classList.toggle("is-on", group.has(chip.dataset.value));
@@ -279,6 +301,12 @@
         return setlist.map((key) => songByKey.get(key)).filter(Boolean);
     }
 
+    /* 하단 고정 바 높이를 알려 두면 다크 모드 토글 버튼이 그 위로 비켜선다. */
+    function syncFloatingOffset() {
+        const height = el.setlistBar.hidden ? 0 : el.setlistBar.offsetHeight;
+        document.documentElement.style.setProperty("--floating-offset", height + "px");
+    }
+
     function renderSetlist() {
         const list = setlistSongs();
         el.setlistBar.hidden = list.length === 0;
@@ -287,6 +315,7 @@
             el.setlistPanel.hidden = true;
             el.setlistToggle.setAttribute("aria-expanded", "false");
             el.setlistItems.innerHTML = "";
+            syncFloatingOffset();
             return;
         }
         el.setlistItems.innerHTML = list.map((song, index) => `<li class="setlist-item" data-key="${esc(song.key)}">
@@ -298,6 +327,7 @@
         <button type="button" class="icon-btn" data-setlist-action="remove" aria-label="빼기">×</button>
       </span>
     </li>`).join("");
+        syncFloatingOffset();
     }
 
     function setlistText() {
@@ -368,6 +398,7 @@
         if (state.query) params.set("q", state.query);
         if (state.machine !== "both") params.set("machine", state.machine);
         if (state.sort !== "recent") params.set("sort", state.sort);
+        if (state.filterMode !== "or") params.set("match", state.filterMode);
         if (state.members.size) params.set("member", Array.from(state.members).join("|"));
         if (state.sections.size) params.set("section", Array.from(state.sections).join("|"));
         if (state.categories.size) params.set("category", Array.from(state.categories).join("|"));
@@ -381,7 +412,8 @@
         const params = new URLSearchParams(window.location.search);
         if (params.get("q")) state.query = params.get("q");
         if (["tj", "ky", "both"].includes(params.get("machine"))) state.machine = params.get("machine");
-        if (["recent", "title", "number"].includes(params.get("sort"))) state.sort = params.get("sort");
+        if (["recent", "oldest", "title", "number"].includes(params.get("sort"))) state.sort = params.get("sort");
+        if (["or", "and"].includes(params.get("match"))) state.filterMode = params.get("match");
         (params.get("member") || "").split("|").filter(Boolean).forEach((value) => state.members.add(value));
         (params.get("section") || "").split("|").filter(Boolean).forEach((value) => state.sections.add(value));
         (params.get("category") || "").split("|").filter(Boolean).forEach((value) => state.categories.add(value));
@@ -503,9 +535,24 @@
 
     /* ---------- 랜덤 뽑기 ---------- */
 
+    /* 뽑은 곡이 이미 담겨 있으면 버튼을 눌린 상태로 두어 두 번 담기지 않게 한다. */
+    function syncPickActions() {
+        const isFavorite = Boolean(currentPick) && favorites.has(currentPick.key);
+        const inSetlist = Boolean(currentPick) && setlist.includes(currentPick.key);
+        el.pickFavorite.disabled = isFavorite;
+        el.pickFavorite.classList.toggle("is-on", isFavorite);
+        el.pickFavorite.setAttribute("aria-pressed", String(isFavorite));
+        el.pickFavorite.textContent = isFavorite ? "★ 즐겨찾기에 있음" : "☆ 즐겨찾기 추가";
+        el.pickSetlist.disabled = inSetlist;
+        el.pickSetlist.classList.toggle("is-on", inSetlist);
+        el.pickSetlist.setAttribute("aria-pressed", String(inSetlist));
+        el.pickSetlist.textContent = inSetlist ? "✓ 부를 곡에 담김" : "+ 부를 곡 추가";
+    }
+
     function showRandomPick() {
         if (!visibleSongs.length) return;
         const song = visibleSongs[Math.floor(Math.random() * visibleSongs.length)];
+        currentPick = song;
         el.pickTitle.textContent = song.title;
         el.pickArtist.textContent = song.artist;
         const numbers = [];
@@ -514,6 +561,7 @@
         el.pickNumbers.innerHTML = numbers.length
             ? numbers.map((item) => `<button type="button" class="num-btn is-primary" data-action="copy" data-number="${esc(item.value)}" data-machine="${item.label === "TJ" ? "tj" : "ky"}"><span class="num-label">${item.label}</span><span class="num-value">${esc(item.value)}</span></button>`).join("")
             : '<p class="empty-state">아직 노래방 번호가 없는 곡이에요.<br>필터의 “번호 있는 곡만”을 켜면 부를 수 있는 곡만 뽑습니다.</p>';
+        syncPickActions();
         el.pickDialog.hidden = false;
     }
 
@@ -561,6 +609,15 @@
             el.filterToggle.setAttribute("aria-expanded", String(!el.filterPanel.hidden));
         });
 
+        el.matchButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                state.filterMode = button.dataset.match;
+                syncMatchButtons();
+                renderList();
+                syncUrl();
+            });
+        });
+
         el.filterPanel.addEventListener("click", (event) => {
             const chip = event.target.closest("[data-filter]");
             if (!chip) return;
@@ -588,6 +645,7 @@
             state.members.clear();
             state.sections.clear();
             state.categories.clear();
+            state.filterMode = "or";
             state.onlyNumbered = false;
             state.onlyFavorites = false;
             syncChipStates();
@@ -639,6 +697,7 @@
             el.setlistPanel.hidden = !el.setlistPanel.hidden;
             el.setlistToggle.setAttribute("aria-expanded", String(!el.setlistPanel.hidden));
             el.setlistToggle.classList.toggle("is-open", !el.setlistPanel.hidden);
+            syncFloatingOffset();
         });
 
         el.setlistItems.addEventListener("click", (event) => {
@@ -684,11 +743,34 @@
                 el.pickDialog.hidden = true;
                 return;
             }
-            const button = event.target.closest('[data-action="copy"]');
+            const button = event.target.closest("[data-action]");
             if (!button) return;
-            const copied = await copyText(button.dataset.number);
-            showToast(copied ? `${MACHINE_LABELS[button.dataset.machine]} ${button.dataset.number} 복사했어요` : "복사하지 못했어요");
-            if (copied) recordCopy();
+
+            if (button.dataset.action === "copy") {
+                const copied = await copyText(button.dataset.number);
+                showToast(copied ? `${MACHINE_LABELS[button.dataset.machine]} ${button.dataset.number} 복사했어요` : "복사하지 못했어요");
+                if (copied) recordCopy();
+                return;
+            }
+            if (!currentPick) return;
+            if (button.dataset.action === "favorite") {
+                if (favorites.has(currentPick.key)) return;
+                favorites.add(currentPick.key);
+                writeStore(STORAGE_KEYS.favorites, Array.from(favorites));
+                syncPickActions();
+                renderList();
+                showToast("즐겨찾기에 담았어요");
+                return;
+            }
+            if (button.dataset.action === "setlist") {
+                if (setlist.includes(currentPick.key)) return;
+                setlist.push(currentPick.key);
+                saveSetlist();
+                syncPickActions();
+                renderList();
+                renderSetlist();
+                showToast("부를 곡 목록에 담았어요");
+            }
         });
 
         document.addEventListener("keydown", (event) => {
@@ -707,6 +789,7 @@
         el.filterToggle = document.getElementById("filter-toggle");
         el.filterCount = document.getElementById("filter-count");
         el.filterPanel = document.getElementById("filter-panel");
+        el.matchButtons = Array.from(document.querySelectorAll("#match-switch [data-match]"));
         el.memberChips = document.getElementById("member-chips");
         el.sectionChips = document.getElementById("section-chips");
         el.categoryChips = document.getElementById("category-chips");
@@ -732,6 +815,8 @@
         el.pickTitle = document.getElementById("pick-title");
         el.pickArtist = document.getElementById("pick-artist");
         el.pickNumbers = document.getElementById("pick-numbers");
+        el.pickFavorite = document.getElementById("pick-favorite");
+        el.pickSetlist = document.getElementById("pick-setlist");
         el.pickAgain = document.getElementById("pick-again");
         el.pickClose = document.getElementById("pick-close");
     }
@@ -751,7 +836,11 @@
             document.body.classList.add("karaoke-mode");
             el.modeToggle.classList.add("is-on");
             el.modeToggle.setAttribute("aria-pressed", "true");
+            // 예전에는 노래방 모드가 어두운 배색까지 함께 켰다. 그때 켜 둔 사람이
+            // 갑자기 밝은 화면을 보지 않도록, 다크 모드를 고른 적이 없을 때만 옮겨 준다.
+            window.StellineTheme?.adopt("dark");
         }
+        syncMatchButtons();
         const hasFilters = state.members.size || state.sections.size || state.categories.size || state.onlyNumbered || state.onlyFavorites;
         if (hasFilters) {
             el.filterPanel.hidden = false;

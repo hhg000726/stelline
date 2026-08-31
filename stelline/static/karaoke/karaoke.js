@@ -10,8 +10,6 @@
         favorites: "stelline.karaoke.favorites",
         setlist: "stelline.karaoke.setlist",
         machine: "stelline.karaoke.machine",
-        // 예전 '노래방 모드' 설정. 다크 모드로 옮겨 주고 지우기 위해서만 읽는다.
-        legacyMode: "stelline.karaoke.mode",
         cache: "stelline.karaoke.cache",
     };
 
@@ -798,18 +796,6 @@
         el.pickClose = document.getElementById("pick-close");
     }
 
-    /* 예전 '노래방 모드'는 어두운 배색까지 함께 켰다. 그때 켜 두었던 사람이 갑자기
-     * 밝은 화면을 보지 않도록 다크 모드로 한 번 옮겨 주고, 남은 설정은 지운다. */
-    function adoptLegacyKaraokeMode() {
-        if (readStore(STORAGE_KEYS.legacyMode, false) !== true) return;
-        window.StellineTheme?.adopt("dark");
-        try {
-            window.localStorage.removeItem(STORAGE_KEYS.legacyMode);
-        } catch (error) {
-            /* 저장소를 못 건드려도 화면은 그대로 동작한다. */
-        }
-    }
-
     function restorePreferences() {
         favorites = new Set(readStore(STORAGE_KEYS.favorites, []));
         setlist = readStore(STORAGE_KEYS.setlist, []).filter((key) => typeof key === "string");
@@ -821,7 +807,6 @@
         el.searchClear.hidden = !state.query;
         el.sortSelect.value = state.sort;
         syncMachineButtons();
-        adoptLegacyKaraokeMode();
         syncMatchButtons();
         const hasFilters = state.members.size || state.sections.size || state.categories.size || state.onlyNumbered || state.onlyFavorites;
         if (hasFilters) {

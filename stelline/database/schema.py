@@ -38,6 +38,20 @@ def add_column_if_missing(table, column, definition):
     return migrate
 
 
+def drop_column_if_present(table, column):
+    """없는 열을 지우려 하면 실패하므로 존재 여부를 먼저 본다."""
+    def migrate(cursor):
+        cursor.execute(
+            """SELECT COUNT(*) AS column_count
+                 FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s""",
+            (table, column),
+        )
+        if cursor.fetchone()["column_count"]:
+            cursor.execute(f"ALTER TABLE `{table}` DROP COLUMN `{column}`")
+    return migrate
+
+
 MIGRATIONS = [
     ("001_initial_schema", [
         """CREATE TABLE IF NOT EXISTS song_infos (video_id VARCHAR(32) NOT NULL, query VARCHAR(512) PRIMARY KEY, risk INT NOT NULL DEFAULT 0) CHARACTER SET utf8mb4""",
@@ -89,5 +103,10 @@ MIGRATIONS = [
     ("008_karaoke_youtube_video", [
         # 커버 곡의 발매일을 유튜브 업로드 날짜로 채우려면 어느 영상인지 알아야 한다.
         add_column_if_missing("karaoke_songs", "youtube_video_id", "VARCHAR(32) NULL AFTER release_date"),
+    ]),
+    ("009_drop_karaoke_youtube_video", [
+        # 유튜브 영상은 노래방 화면에서 쓰지 않기로 해서 되돌린다.
+        # (008을 지우지 않고 새 마이그레이션으로 되돌려야 이미 적용한 DB도 맞춰진다.)
+        drop_column_if_present("karaoke_songs", "youtube_video_id"),
     ]),
 ]

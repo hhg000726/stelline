@@ -10,7 +10,6 @@ from itsdangerous import BadSignature, URLSafeSerializer
 from stelline.config import ADMIN_HTML_SNAPSHOT_PATH, APP_ENV, SECRET_KEY
 from stelline.database.connection import get_connection
 from stelline.database.import_admin_html import import_snapshot, parse_snapshot
-from stelline.database.karaoke_release_dates import extract_video_id
 from stelline.database.karaoke_seed import SeedError, import_seed_file, import_text
 from stelline.database.migrate import apply_migrations
 
@@ -27,13 +26,11 @@ CONTENT_TABLES = {
     "view_reports": {"title": "조회수 알림 누락 제보", "description": "사용자가 조회수 알림에서 누락되었다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
     "karaoke_songs": {
         "title": "노래방 번호",
-        "description": "노래방 번호 페이지에 표시할 곡입니다. 번호가 없으면 비워 두고, 멤버는 쉼표로 구분하세요. 순서는 작을수록 위(최신)에 옵니다."
-                       " 유튜브 영상을 적어 두면 비어 있는 발매일을 업로드 날짜로 한 번에 채울 수 있습니다.",
-        "fields": ("title", "artist", "tj", "ky", "section", "category", "members", "release_date", "youtube_video_id", "title_alt", "note", "sort_order"),
+        "description": "노래방 번호 페이지에 표시할 곡입니다. 번호가 없으면 비워 두고, 멤버는 쉼표로 구분하세요. 순서는 작을수록 위(최신)에 옵니다.",
+        "fields": ("title", "artist", "tj", "ky", "section", "category", "members", "title_alt", "note", "sort_order"),
         "labels": {
             "title": "곡명", "artist": "가수(표시용)", "tj": "TJ 번호", "ky": "금영 번호",
-            "section": "구분", "category": "종류", "members": "참여 멤버(쉼표 구분)", "release_date": "발매일",
-            "youtube_video_id": "유튜브 영상(주소 또는 ID)",
+            "section": "구분", "category": "종류", "members": "참여 멤버(쉼표 구분)",
             "title_alt": "검색용 다른 표기", "note": "비고", "sort_order": "정렬 순서",
         },
         "key_fields": ("id",),
@@ -42,9 +39,9 @@ CONTENT_TABLES = {
         # 곡이 수백 개라 목록을 넓게 펴고, 표에는 눈으로 훑을 열만 남긴다.
         # 나머지 값은 행을 클릭하면 수정 양식에 그대로 채워진다.
         "wide": True,
-        "list_fields": ("title", "artist", "section", "category", "tj", "ky", "release_date", "youtube_video_id", "members"),
+        "list_fields": ("title", "artist", "section", "category", "tj", "ky", "members", "note"),
         # 표 머리글은 양식보다 짧아야 열이 좁아지지 않는다.
-        "list_labels": {"artist": "가수", "tj": "TJ", "ky": "금영", "youtube_video_id": "유튜브", "members": "참여 멤버"},
+        "list_labels": {"artist": "가수", "tj": "TJ", "ky": "금영", "members": "참여 멤버"},
     },
     "karaoke_members": {"title": "노래방 멤버 목록", "description": "노래방 페이지 멤버 필터의 순서와 유닛 묶음입니다. 졸업일을 넣으면 필터에서 졸업으로 묶이고, 유닛을 옮긴 멤버는 이전 유닛에 적어 두세요.", "fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"), "labels": {"name": "멤버 이름", "unit": "현재 소속 유닛", "former_units": "이전 유닛(쉼표 구분)", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "표시 순서"}},
     "karaoke_reports": {"title": "노래방 번호 제보", "description": "사용자가 남긴 노래방 번호 추가·정정 제보입니다.", "fields": ("content",), "key_fields": ("id",)},
@@ -58,24 +55,12 @@ CONTENT_TABLES = {
 }
 READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "record_karaoke", "song_counts", "fcm_tokens")
 
-# 붙여 넣은 유튜브 주소는 영상 ID만 남겨 저장한다. 알아볼 수 없으면 입력한 값을 그대로 두어
-# 잘못 넣었다는 사실이 화면에 드러나게 한다.
-FIELD_NORMALIZERS = {
-    "youtube_video_id": lambda value: extract_video_id(value) or value,
-}
-
 # 값이 정해져 있는 열은 직접 입력 대신 선택 목록으로 보여준다.
 FIELD_CHOICES = {
     "section": (("group", "단체"), ("unit", "유닛"), ("collab", "콜라보"), ("gift", "기프트"), ("solo", "개인")),
     "category": (("original", "오리지널"), ("cover", "커버")),
     "visible": (("1", "표시"), ("0", "숨김")),
 }
-
-
-def normalize_field(field, value):
-    """저장 전에 다듬어야 하는 열의 값을 손본다."""
-    normalizer = FIELD_NORMALIZERS.get(field)
-    return normalizer(value) if normalizer else value
 
 
 def login_required(view):
@@ -241,7 +226,7 @@ def add_row(table_name):
     if definition is None:
         abort(404)
     # 빈 칸은 INSERT 대상에서 빼서 열의 기본값이 그대로 쓰이게 한다.
-    entries = [(field, normalize_field(field, value)) for field in definition["fields"] if (value := request.form.get(field, "").strip())]
+    entries = [(field, value) for field in definition["fields"] if (value := request.form.get(field, "").strip())]
     if not entries:
         flash("저장할 내용을 입력하세요.", "error")
         return redirect(url_for("admin.admin_index"))
@@ -293,7 +278,7 @@ def update_row(table_name):
         for field in definition["fields"]:
             value = request.form.get(field, "").strip()
             if value:
-                assignments.append((field, normalize_field(field, value)))
+                assignments.append((field, value))
             elif field in nullable:
                 assignments.append((field, None))
         if not assignments:

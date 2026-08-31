@@ -11,7 +11,7 @@ def test_header_line_allows_any_column_order():
     assert rows == [{
         "title": "테스트곡", "title_alt": None, "artist": "아이리 칸나", "members": None,
         "section": "solo", "category": "cover", "tj": "111", "ky": "222",
-        "release_date": None, "youtube_video_id": None, "note": None, "sort_order": None,
+        "release_date": None, "note": None, "sort_order": None,
     }]
 
 
@@ -89,7 +89,7 @@ def test_bundled_seed_file_parses_cleanly():
     assert all(row["ky"] is None or row["ky"].isdigit() for row in rows)
     assert all(row["section"] in {"group", "unit", "collab", "gift", "solo"} for row in rows)
     assert all(row["category"] in {"original", "cover"} for row in rows)
-    # 시드는 순서를 직접 지정해 "최신순" 정렬이 원본 글과 같은 차례를 유지한다.
+    # 시드는 순서를 직접 지정해 기본 정렬이 원본 글과 같은 차례를 유지한다.
     assert [row["sort_order"] for row in rows] == sorted(row["sort_order"] for row in rows)
 
 
@@ -201,23 +201,3 @@ def test_star_trail_ep_tracks_credit_the_members_who_sang_them():
         assert row["release_date"] == "2026-05-08"
     # 트랙마다 참여 멤버가 다르다. 타이틀곡 크레딧을 앨범 전체에 적용하면 안 된다.
     assert "사키하네 후야" in tracks["별을 쫓던 빛에게"]["members"]
-
-
-def test_youtube_column_keeps_only_the_video_id():
-    rows, warnings = parse_rows(
-        "곡명,가수,유튜브" + "\n" + "테스트곡,아이리 칸나,https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    )
-    assert warnings == []
-    assert rows[0]["youtube_video_id"] == "dQw4w9WgXcQ"
-
-
-def test_unreadable_youtube_value_is_warned_and_left_empty():
-    rows, warnings = parse_rows("곡명,가수,유튜브" + "\n" + "테스트곡,아이리 칸나,어제 올라온 영상")
-    assert rows[0]["youtube_video_id"] is None
-    assert "유튜브" in warnings[0]
-
-
-def test_blank_youtube_column_is_not_a_warning():
-    rows, warnings = parse_rows("곡명,가수,유튜브" + "\n" + "테스트곡,아이리 칸나,-")
-    assert rows[0]["youtube_video_id"] is None
-    assert warnings == []

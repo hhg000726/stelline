@@ -10,7 +10,7 @@ from stelline.apis.reports import handle_report_submission
 from stelline.database.connection import database_cursor
 
 SONG_QUERY = """
-    SELECT id, title, title_alt, artist, members, section, category, tj, ky, release_date, note, sort_order, updated_at
+    SELECT id, title, title_alt, artist, members, section, category, tj, ky, note, sort_order, updated_at
       FROM karaoke_songs
      ORDER BY sort_order, id
 """
@@ -31,7 +31,6 @@ def _serialize_song(row):
         "category": row["category"],
         "tj": row["tj"] or "",
         "ky": row["ky"] or "",
-        "releaseDate": row["release_date"].isoformat() if row["release_date"] else "",
         "note": row["note"] or "",
     }
 

@@ -50,8 +50,12 @@ KEEP = "0-9a-z가-힣ぁ-んァ-ヺ一-龥"
 
 
 def _prepare(text):
-    """유튜브 제목에는 자모가 분리된 한글(NFD)이 섞여 있어 그대로 비교하면 어긋난다."""
-    return unicodedata.normalize("NFC", str(text or "")).lower()
+    """비교하기 전에 표기를 하나로 맞춘다.
+
+    유튜브 제목에는 자모가 분리된 한글(NFD)과 전각 문자가 섞여 있다.
+    'Ｗ●ＲＫ'의 Ｗ는 보통의 W와 다른 글자라, 맞춰 두지 않으면 영영 못 찾는다.
+    """
+    return unicodedata.normalize("NFKC", str(text or "")).lower()
 
 
 def normalize(text):
@@ -80,9 +84,10 @@ def title_variants(song):
     parts += re.findall(r"[(（\[]([^)）\]]+)[)）\]]", raw)
     # 짧은 조각은 아무 영상에나 걸리므로 버린다. 다만 '逆光'처럼 두 글자로 끝나는
     # 한자·한글 제목은 그 자체로 충분히 드문 말이라 남긴다.
+    # 짧아도 낱말 단위로 찾으므로('Oh...') 두 글자까지는 남긴다.
     variants = {
         (tight, loosen(part)) for part in parts
-        if len(tight := normalize(part)) >= (3 if tight.isascii() else 2)
+        if len(tight := normalize(part)) >= 2
     }
     return sorted(variants, key=lambda pair: len(pair[0]), reverse=True)
 

@@ -109,6 +109,29 @@ def test_decomposed_hangul_in_a_video_title_still_matches():
     assert confirmed[0]["video"]["video_id"] == "aaaaaaaaaaa"
 
 
+def test_full_width_letters_in_a_video_title_still_match():
+    """'Ｗ●ＲＫ'의 Ｗ는 보통의 W와 다른 글자다. 맞춰 두지 않으면 영영 못 찾는다."""
+    songs = [_song("W●RK", "아오쿠모 린, 하나코 나나", "아오쿠모 린, 하나코 나나")]
+    videos = [_video("aaaaaaaaaaa", "Ｗ●ＲＫ (MILLENNIUM PARADE) / 아오쿠모 린 x 하나코 나나 Cover")]
+
+    confirmed, _, _ = links.match_songs(songs, videos, KNOWN)
+
+    assert confirmed[0]["video"]["video_id"] == "aaaaaaaaaaa"
+
+
+def test_two_letter_title_matches_as_a_whole_word():
+    songs = [_song("Oh...", "아오쿠모 린", "아오쿠모 린")]
+    videos = [
+        _video("aaaaaaaaaaa", "Oh... [只野 楓] / 아오쿠모 린 Cover"),
+        _video("bbbbbbbbbbb", "Ohio (something) / 아오쿠모 린 Cover"),
+    ]
+
+    confirmed, _, _ = links.match_songs(songs, videos, KNOWN)
+
+    # 'oh'가 'Ohio'에 걸리면 후보가 둘이 되어 확정되지 않는다.
+    assert confirmed[0]["video"]["video_id"] == "aaaaaaaaaaa"
+
+
 def test_song_with_no_video_is_reported_as_missing():
     songs = [_song("아무도 안 부른 곡", "아이리 칸나", "아이리 칸나")]
 

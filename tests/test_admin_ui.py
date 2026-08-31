@@ -55,7 +55,7 @@ class KaraokeListViewTest(unittest.TestCase):
             'id': 1, 'title': '테스트곡', 'title_alt': None, 'artist': '아이리 칸나',
             'members': '아이리 칸나', 'section': 'group', 'category': 'cover',
             'tj': '12345', 'ky': None, 'release_date': '2024-01-01',
-            'youtube_video_id': None, 'note': None, 'sort_order': 0,
+            'note': None, 'sort_order': 0,
             'updated_at': '2026-08-31 09:00:00',
         }
         with patch('stelline.admin.routes.get_connection'),              patch('stelline.admin.routes.load_table',
@@ -68,14 +68,14 @@ class KaraokeListViewTest(unittest.TestCase):
     def test_karaoke_table_uses_korean_headers_and_values(self):
         html = self._render()
         self.assertIn('<th>곡명</th>', html)
-        self.assertIn('<th>유튜브</th>', html)
+        self.assertIn('<th>참여 멤버</th>', html)
         # 구분·종류는 DB 값 대신 한글 이름으로 보여준다.
         self.assertIn('>단체</td>', html)
         self.assertIn('>커버</td>', html)
 
     def test_karaoke_table_marks_empty_cells_and_spans_the_full_width(self):
         html = self._render()
-        self.assertIn('class="is-empty"', html)   # 금영 번호·유튜브가 비었음을 눈에 띄게
+        self.assertIn('class="is-empty"', html)   # 금영 번호가 비었음을 눈에 띄게
         self.assertIn('section.wide', html)       # 넓은 칸 스타일
         self.assertIn('data-table="karaoke_songs" class="wide"', html)
 

@@ -638,23 +638,6 @@ button.num-btn:active {
   transform: translate(-50%, 0);
 }
 
-/* ---------- 노래방 모드 ---------- */
-/* 노래방에서 멀찍이 두고 봐도 읽히도록 글씨와 번호를 키운다.
- * 어두운 배색은 사이트 전역 다크 모드(site.css)가 따로 맡는다. */
-
-body.karaoke-mode .song-title {
-  font-size: 1.15rem;
-}
-
-body.karaoke-mode .num-value {
-  font-size: 1.35rem;
-}
-
-body.karaoke-mode .num-btn.is-primary:not(.is-empty) {
-  border-color: var(--primary);
-  background: var(--primary-tint);
-}
-
 /* ---------- 다크 모드 보정 ---------- */
 /* 토큰만으로 안 되는 곳만 손본다. */
 

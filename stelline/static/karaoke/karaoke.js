@@ -10,7 +10,8 @@
         favorites: "stelline.karaoke.favorites",
         setlist: "stelline.karaoke.setlist",
         machine: "stelline.karaoke.machine",
-        mode: "stelline.karaoke.mode",
+        // 예전 '노래방 모드' 설정. 다크 모드로 옮겨 주고 지우기 위해서만 읽는다.
+        legacyMode: "stelline.karaoke.mode",
         cache: "stelline.karaoke.cache",
     };
 
@@ -25,7 +26,7 @@
     const state = {
         query: "",
         machine: "both",
-        sort: "recent",
+        sort: "default",
         // "or"는 고른 것 중 하나라도, "and"는 고른 것을 모두 만족하는 곡만 남긴다.
         filterMode: "or",
         members: new Set(),
@@ -128,13 +129,6 @@
         return names.some((name) => state.members.has(name));
     }
 
-    function sortValue(song) {
-        const candidates = [];
-        if (state.machine !== "ky" && song.tj) candidates.push(Number(song.tj));
-        if (state.machine !== "tj" && song.ky) candidates.push(Number(song.ky));
-        return candidates.length ? Math.min.apply(null, candidates) : Number.POSITIVE_INFINITY;
-    }
-
     function applyFilters() {
         const query = prepareQuery(state.query);
         const filtered = songs.filter((song) => {
@@ -148,17 +142,8 @@
 
         if (state.sort === "title") {
             filtered.sort((a, b) => a.title.localeCompare(b.title, "ko"));
-        } else if (state.sort === "number") {
-            filtered.sort((a, b) => {
-                const left = sortValue(a);
-                const right = sortValue(b);
-                // 번호가 없는 곡은 값이 Infinity라 뒤로 밀리고, 서로 같으면 곡명 순으로 둔다.
-                return left !== right ? left - right : a.title.localeCompare(b.title, "ko");
-            });
-        } else if (state.sort === "oldest") {
-            // sortOrder는 작을수록 최신이라, 오래된순은 그대로 뒤집으면 된다.
-            filtered.sort((a, b) => b.sortOrder - a.sortOrder);
         } else {
+            // 관리자가 정한 정렬 순서. 구분(단체·유닛·개인)끼리 묶여 있어 훑어보기 좋다.
             filtered.sort((a, b) => a.sortOrder - b.sortOrder);
         }
         return { list: filtered, query };
@@ -196,7 +181,7 @@
         const isFavorite = favorites.has(song.key);
         const inSetlist = setlist.includes(song.key);
         const tags = [SECTION_LABELS[song.section] || song.section, CATEGORY_LABELS[song.category] || song.category];
-        const footnotes = [song.note, song.releaseDate ? `${song.releaseDate} 발매` : ""].filter(Boolean);
+        const footnotes = [song.note].filter(Boolean);
         return `<article class="song-card" data-key="${esc(song.key)}">
       <div class="song-main">
         <p class="song-title">${highlight(song.title, query)}</p>
@@ -397,7 +382,7 @@
         const params = new URLSearchParams();
         if (state.query) params.set("q", state.query);
         if (state.machine !== "both") params.set("machine", state.machine);
-        if (state.sort !== "recent") params.set("sort", state.sort);
+        if (state.sort !== "default") params.set("sort", state.sort);
         if (state.filterMode !== "or") params.set("match", state.filterMode);
         if (state.members.size) params.set("member", Array.from(state.members).join("|"));
         if (state.sections.size) params.set("section", Array.from(state.sections).join("|"));
@@ -412,7 +397,7 @@
         const params = new URLSearchParams(window.location.search);
         if (params.get("q")) state.query = params.get("q");
         if (["tj", "ky", "both"].includes(params.get("machine"))) state.machine = params.get("machine");
-        if (["recent", "oldest", "title", "number"].includes(params.get("sort"))) state.sort = params.get("sort");
+        if (["default", "title"].includes(params.get("sort"))) state.sort = params.get("sort");
         if (["or", "and"].includes(params.get("match"))) state.filterMode = params.get("match");
         (params.get("member") || "").split("|").filter(Boolean).forEach((value) => state.members.add(value));
         (params.get("section") || "").split("|").filter(Boolean).forEach((value) => state.sections.add(value));
@@ -653,13 +638,6 @@
             syncUrl();
         });
 
-        el.modeToggle.addEventListener("click", () => {
-            const enabled = document.body.classList.toggle("karaoke-mode");
-            el.modeToggle.setAttribute("aria-pressed", String(enabled));
-            el.modeToggle.classList.toggle("is-on", enabled);
-            writeStore(STORAGE_KEYS.mode, enabled);
-        });
-
         el.songList.addEventListener("click", async (event) => {
             const button = event.target.closest("[data-action]");
             if (!button) return;
@@ -796,7 +774,6 @@
         el.onlyNumbered = document.getElementById("only-numbered");
         el.onlyFavorites = document.getElementById("only-favorites");
         el.filterReset = document.getElementById("filter-reset");
-        el.modeToggle = document.getElementById("mode-toggle");
         el.resultCount = document.getElementById("result-count");
         el.randomPick = document.getElementById("random-pick");
         el.songList = document.getElementById("song-list");
@@ -821,6 +798,18 @@
         el.pickClose = document.getElementById("pick-close");
     }
 
+    /* 예전 '노래방 모드'는 어두운 배색까지 함께 켰다. 그때 켜 두었던 사람이 갑자기
+     * 밝은 화면을 보지 않도록 다크 모드로 한 번 옮겨 주고, 남은 설정은 지운다. */
+    function adoptLegacyKaraokeMode() {
+        if (readStore(STORAGE_KEYS.legacyMode, false) !== true) return;
+        window.StellineTheme?.adopt("dark");
+        try {
+            window.localStorage.removeItem(STORAGE_KEYS.legacyMode);
+        } catch (error) {
+            /* 저장소를 못 건드려도 화면은 그대로 동작한다. */
+        }
+    }
+
     function restorePreferences() {
         favorites = new Set(readStore(STORAGE_KEYS.favorites, []));
         setlist = readStore(STORAGE_KEYS.setlist, []).filter((key) => typeof key === "string");
@@ -832,14 +821,7 @@
         el.searchClear.hidden = !state.query;
         el.sortSelect.value = state.sort;
         syncMachineButtons();
-        if (readStore(STORAGE_KEYS.mode, false) === true) {
-            document.body.classList.add("karaoke-mode");
-            el.modeToggle.classList.add("is-on");
-            el.modeToggle.setAttribute("aria-pressed", "true");
-            // 예전에는 노래방 모드가 어두운 배색까지 함께 켰다. 그때 켜 둔 사람이
-            // 갑자기 밝은 화면을 보지 않도록, 다크 모드를 고른 적이 없을 때만 옮겨 준다.
-            window.StellineTheme?.adopt("dark");
-        }
+        adoptLegacyKaraokeMode();
         syncMatchButtons();
         const hasFilters = state.members.size || state.sections.size || state.categories.size || state.onlyNumbered || state.onlyFavorites;
         if (hasFilters) {

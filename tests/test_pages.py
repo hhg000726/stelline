@@ -97,16 +97,23 @@ def test_dark_theme_is_defined_for_the_whole_site(client):
     assert ".theme-toggle" in css
 
 
-def test_karaoke_mode_no_longer_owns_the_dark_palette(client):
-    """노래방 모드는 글씨 크기만 담당하고 배색은 전역 다크 모드가 맡는다."""
+def test_karaoke_mode_is_gone(client):
+    """어두운 배색은 전역 다크 모드가 맡으므로 노래방 모드는 없앴다."""
     css = client.get("/karaoke/style.css").get_data(as_text=True)
-    assert "body.karaoke-mode .song-title" in css   # 글씨 키우기는 그대로 남는다
-    assert "body.karaoke-mode {" not in css         # 배색 토큰을 다시 정의하지 않는다
+    html = client.get("/karaoke/").get_data(as_text=True)
+    assert "karaoke-mode" not in css
+    assert "노래방 모드" not in html
 
 
 def test_karaoke_page_offers_the_new_controls(client):
     html = client.get("/karaoke/").get_data(as_text=True)
-    assert '<option value="oldest">' in html      # 오래된순 정렬
     assert 'data-match="and"' in html             # 필터 AND 옵션
     assert 'id="pick-favorite"' in html           # 랜덤 뽑기에서 바로 담기
     assert 'id="pick-setlist"' in html
+
+
+def test_karaoke_page_has_no_date_based_sorting(client):
+    """정렬 순서는 날짜가 아니라 관리자가 정한 순서라, 최신순·오래된순이라는 이름을 쓰지 않는다."""
+    html = client.get("/karaoke/").get_data(as_text=True)
+    assert "최신순" not in html and "오래된순" not in html
+    assert '<option value="default">' in html

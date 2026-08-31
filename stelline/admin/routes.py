@@ -39,6 +39,12 @@ CONTENT_TABLES = {
         "key_fields": ("id",),
         "bulk_import": True,
         "searchable": True,
+        # 곡이 수백 개라 목록을 넓게 펴고, 표에는 눈으로 훑을 열만 남긴다.
+        # 나머지 값은 행을 클릭하면 수정 양식에 그대로 채워진다.
+        "wide": True,
+        "list_fields": ("title", "artist", "section", "category", "tj", "ky", "release_date", "youtube_video_id", "members"),
+        # 표 머리글은 양식보다 짧아야 열이 좁아지지 않는다.
+        "list_labels": {"artist": "가수", "tj": "TJ", "ky": "금영", "youtube_video_id": "유튜브", "members": "참여 멤버"},
     },
     "karaoke_members": {"title": "노래방 멤버 목록", "description": "노래방 페이지 멤버 필터의 순서와 유닛 묶음입니다. 졸업일을 넣으면 필터에서 졸업으로 묶이고, 유닛을 옮긴 멤버는 이전 유닛에 적어 두세요.", "fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"), "labels": {"name": "멤버 이름", "unit": "현재 소속 유닛", "former_units": "이전 유닛(쉼표 구분)", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "표시 순서"}},
     "karaoke_reports": {"title": "노래방 번호 제보", "description": "사용자가 남긴 노래방 번호 추가·정정 제보입니다.", "fields": ("content",), "key_fields": ("id",)},
@@ -170,6 +176,18 @@ def admin_index():
     forms = {
         name: {
             **definition,
+            # 표 머리글도 양식과 같은 한글 이름을 쓴다. 목록에 보일 열을 따로 정하지
+            # 않은 테이블은 지금처럼 모든 열을 그대로 보여준다.
+            "columns": [
+                {
+                    "name": field,
+                    "label": definition.get("list_labels", {}).get(field)
+                             or definition.get("labels", {}).get(field, field),
+                    # 구분·종류처럼 값이 정해진 열은 표에서도 한글 이름으로 보여준다.
+                    "choices": dict(FIELD_CHOICES.get(field, ())),
+                }
+                for field in definition.get("list_fields", ())
+            ],
             "inputs": [
                 {
                     "name": field,

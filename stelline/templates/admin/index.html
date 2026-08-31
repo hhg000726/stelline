@@ -21,6 +21,17 @@
     .edit-hint { color: #b45309; font-weight: bold; font-size: .85rem; }
     .filter-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; } .filter-row input { flex: 1; }
     .bulk { background: #f8fbff; } .bulk form { margin-bottom: 14px; } .bulk .checkbox { display: flex; gap: 6px; align-items: center; font-weight: normal; margin: 8px 0; }
+    /* 곡 목록처럼 열과 행이 많은 표는 칸을 가로로 다 쓰고, 머리글을 붙박이로 둔다. */
+    section.wide { grid-column: 1 / -1; }
+    .table-scroll { max-height: 60vh; overflow: auto; margin-top: 12px; }
+    .table-scroll table { margin-top: 0; }
+    .table-scroll thead th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
+    /* 한 곡이 한 줄을 차지해야 수백 곡을 눈으로 훑을 수 있다. 잘린 값은 칸에 마우스를 올리면 다 보인다. */
+    .table-scroll td { max-width: 20ch; padding: 5px 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .table-scroll td:first-child { max-width: 28ch; }
+    .table-scroll button { padding: 3px 8px; font-size: .78rem; }
+    tbody tr:nth-child(even) { background: #fafcff; }
+    td.is-empty { color: #94a3b8; } td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     @media (max-width: 600px) { body { padding: 14px; } header { align-items: flex-start; flex-direction: column; } .fields { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -41,7 +52,7 @@
   </div>
   <main class="grid">
     {% for table_name, form in forms.items() %}
-    <section data-table="{{ table_name }}">
+    <section data-table="{{ table_name }}"{% if form.wide %} class="wide"{% endif %}>
       <h2>{{ form.title }}</h2>
       <p class="hint">{{ form.description }} 아래 표에서 행을 클릭하면 양식에 값이 채워지고 <strong>수정</strong> 모드가 됩니다.</p>
       <form data-admin-form method="post"
@@ -96,12 +107,17 @@
         <summary>등록된 항목 {{ rows|length }}개 보기</summary>
         {% if rows %}
         {% if form.searchable %}<div class="filter-row"><input type="search" data-table-filter placeholder="목록에서 검색"><span class="hint" data-filter-count></span></div>{% endif %}
+        <div class="table-scroll">
         <table>
-          <thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}<th>관리</th></tr></thead>
+          <thead><tr>{% if form.columns %}{% for column in form.columns %}<th>{{ column.label }}</th>{% endfor %}{% else %}{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}{% endif %}<th>관리</th></tr></thead>
           <tbody>
             {% for row in rows %}
             <tr data-row='{{ row | tojson | safe }}' data-row-token="{{ serialize_row(row) }}">
+              {% if form.columns %}
+              {% for column in form.columns %}{% set value = row.get(column.name) %}{% set shown = column.choices.get(value|string, value) if value not in (None, '') else '' %}<td class="{% if not shown %}is-empty{% elif column.name in ('tj', 'ky') %}num{% endif %}"{% if shown %} title="{{ shown }}"{% endif %}>{{ shown or '—' }}</td>{% endfor %}
+              {% else %}
               {% for value in row.values() %}<td>{{ value }}</td>{% endfor %}
+              {% endif %}
               <td>
                 <form class="inline" method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -113,6 +129,8 @@
             {% endfor %}
           </tbody>
         </table>
+        </div>
+        {% if form.columns %}<p class="hint">표에는 훑어보기 좋은 열만 보여줍니다. 행을 클릭하면 나머지 값까지 위 양식에 채워집니다.</p>{% endif %}
         {% else %}<p class="hint">등록된 항목이 없습니다.</p>{% endif %}
       </details>
     </section>{% endfor %}
@@ -232,6 +250,7 @@
     document.querySelectorAll('[data-table-filter]').forEach((input) => {
       const table = input.closest('details').querySelector('table');
       const counter = input.parentElement.querySelector('[data-filter-count]');
+      const total = table.querySelectorAll('tbody tr').length;
       input.addEventListener('input', () => {
         const keyword = input.value.trim().toLowerCase();
         let shown = 0;
@@ -240,7 +259,7 @@
           row.hidden = !matched;
           if (matched) shown += 1;
         });
-        counter.textContent = keyword ? `${shown}개 표시 중` : '';
+        counter.textContent = keyword ? `${total}개 중 ${shown}개` : '';
       });
     });
 

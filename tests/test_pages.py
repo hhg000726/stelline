@@ -112,8 +112,10 @@ def test_karaoke_page_offers_the_new_controls(client):
     assert 'id="pick-setlist"' in html
 
 
-def test_karaoke_page_has_no_date_based_sorting(client):
-    """정렬 순서는 날짜가 아니라 관리자가 정한 순서라, 최신순·오래된순이라는 이름을 쓰지 않는다."""
+def test_karaoke_page_sorts_randomly_or_by_name(client):
+    """정렬 기준으로 삼을 만한 날짜·순서 값을 두지 않아, 랜덤순과 가나다순만 남겼다."""
     html = client.get("/karaoke/").get_data(as_text=True)
-    assert "최신순" not in html and "오래된순" not in html
-    assert '<option value="default">' in html
+    assert '<option value="random">랜덤순</option>' in html
+    assert '<option value="title">가나다순</option>' in html
+    for gone in ("최신순", "오래된순", "번호순", "기본순"):
+        assert gone not in html

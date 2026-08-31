@@ -17,6 +17,9 @@
     th, td { padding: 7px; border: 1px solid #d5e1f2; text-align: left; vertical-align: top; word-break: break-word; } th { background: #f1f6fc; } form.inline { display: inline; } .readonly { opacity: .82; }
     tr[data-row] { cursor: pointer; } tr[data-row]:hover td { background: #f1f6fc; } tr[data-row] td:first-child::before { content: "✎ "; color: var(--primary); }
     tr[data-row].is-editing td { background: #fff5d6; }
+    tr[data-row].is-copying td { background: #e0f2fe; }
+    td.row-actions { white-space: nowrap; } td.row-actions button { margin-right: 4px; }
+    .edit-hint.is-copy { color: #0369a1; }
     .form-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .edit-hint { color: #b45309; font-weight: bold; font-size: .85rem; }
     .filter-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; } .filter-row input { flex: 1; }
@@ -118,7 +121,8 @@
               {% else %}
               {% for value in row.values() %}<td>{{ value }}</td>{% endfor %}
               {% endif %}
-              <td>
+              <td class="row-actions">
+                <button type="button" class="secondary" data-copy-row>복제</button>
                 <form class="inline" method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <input type="hidden" name="row_token" value="{{ serialize_row(row) }}">
@@ -190,21 +194,15 @@
       const hint = form.querySelector('[data-edit-hint]');
       hint.hidden = true;
       hint.textContent = '';
-      if (section) section.querySelectorAll('tr.is-editing').forEach((row) => row.classList.remove('is-editing'));
+      hint.classList.remove('is-copy');
+      if (section) {
+        section.querySelectorAll('tr.is-editing, tr.is-copying')
+          .forEach((row) => row.classList.remove('is-editing', 'is-copying'));
+      }
     }
 
-    function enterEditMode(row) {
-      const section = row.closest('section');
-      const form = section ? section.querySelector('form[data-admin-form]') : null;
-      if (!form) return;
-
-      let rowData = {};
-      try {
-        rowData = JSON.parse(row.dataset.row || '{}');
-      } catch (error) {
-        return;
-      }
-
+    // 행의 값을 양식에 채운다. '수정'과 '복제'가 같은 방식으로 쓴다.
+    function fillForm(form, rowData) {
       form.querySelectorAll('input[name], select[name]').forEach((field) => {
         if (field.name === 'csrf_token' || field.name === 'row_token') return;
         const value = rowData[field.name];
@@ -217,27 +215,80 @@
         else field.value = String(value);
       });
 
+      // 안내 문구에는 양식의 첫 입력값(제목·이름 등)을 쓴다. data-row는 키가 정렬돼 있어 순서를 믿을 수 없다.
+      const labelField = Array.from(form.querySelectorAll('input[name], select[name]'))
+        .find((field) => field.type !== 'hidden' && field.value);
+      return (labelField ? labelField.value : '선택한 항목').slice(0, 40);
+    }
+
+    function prepareRow(row) {
+      const section = row.closest('section');
+      const form = section ? section.querySelector('form[data-admin-form]') : null;
+      if (!form) return null;
+
+      let rowData = {};
+      try {
+        rowData = JSON.parse(row.dataset.row || '{}');
+      } catch (error) {
+        return null;
+      }
+
+      section.querySelectorAll('tr.is-editing, tr.is-copying')
+        .forEach((other) => other.classList.remove('is-editing', 'is-copying'));
+      return { form, label: fillForm(form, rowData) };
+    }
+
+    function enterEditMode(row) {
+      const prepared = prepareRow(row);
+      if (!prepared) return;
+
+      const { form, label } = prepared;
       form.action = form.dataset.updateAction;
       form.querySelector('[data-row-token]').value = row.dataset.rowToken || '';
       form.querySelector('[data-submit-label]').textContent = '수정 저장';
       form.querySelector('[data-cancel-edit]').hidden = false;
 
-      // 안내 문구에는 양식의 첫 입력값(제목·이름 등)을 쓴다. data-row는 키가 정렬돼 있어 순서를 믿을 수 없다.
-      const labelField = Array.from(form.querySelectorAll('input[name], select[name]'))
-        .find((field) => field.type !== 'hidden' && field.value);
       const hint = form.querySelector('[data-edit-hint]');
-      hint.textContent = `수정 중: ${(labelField ? labelField.value : '선택한 항목').slice(0, 40)}`;
+      hint.classList.remove('is-copy');
+      hint.textContent = `수정 중: ${label}`;
       hint.hidden = false;
 
-      section.querySelectorAll('tr.is-editing').forEach((other) => other.classList.remove('is-editing'));
       row.classList.add('is-editing');
       form.scrollIntoView({ block: 'nearest' });
     }
 
+    /* 값만 그대로 가져와 '추가' 모드로 둔다. 저장하면 원래 행은 그대로 있고 새 항목이 생긴다. */
+    function enterCopyMode(row) {
+      const prepared = prepareRow(row);
+      if (!prepared) return;
+
+      const { form, label } = prepared;
+      form.action = form.dataset.addAction;
+      form.querySelector('[data-row-token]').value = '';
+      form.querySelector('[data-submit-label]').textContent = '새 항목으로 추가';
+      form.querySelector('[data-cancel-edit]').hidden = false;
+
+      const hint = form.querySelector('[data-edit-hint]');
+      hint.classList.add('is-copy');
+      hint.textContent = `${label} 복제 — 값을 고쳐 저장하세요. 이름이 같으면 저장되지 않습니다.`;
+      hint.hidden = false;
+
+      row.classList.add('is-copying');
+      form.scrollIntoView({ block: 'nearest' });
+    }
+
     document.querySelectorAll('tr[data-row]').forEach((row) => {
+      // 행을 누르면 수정이므로, 관리 칸의 버튼은 그 동작까지 번지지 않게 막는다.
       const deleteButton = row.querySelector('.danger');
       if (deleteButton) {
         deleteButton.addEventListener('click', (event) => event.stopPropagation());
+      }
+      const copyButton = row.querySelector('[data-copy-row]');
+      if (copyButton) {
+        copyButton.addEventListener('click', (event) => {
+          event.stopPropagation();
+          enterCopyMode(row);
+        });
       }
       row.addEventListener('click', () => enterEditMode(row));
     });

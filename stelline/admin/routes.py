@@ -26,12 +26,12 @@ CONTENT_TABLES = {
     "view_reports": {"title": "조회수 알림 누락 제보", "description": "사용자가 조회수 알림에서 누락되었다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
     "karaoke_songs": {
         "title": "노래방 번호",
-        "description": "노래방 번호 페이지에 표시할 곡입니다. 번호가 없으면 비워 두고, 멤버는 쉼표로 구분하세요. 순서는 작을수록 위(최신)에 옵니다.",
-        "fields": ("title", "artist", "tj", "ky", "section", "category", "members", "title_alt", "note", "sort_order"),
+        "description": "노래방 번호 페이지에 표시할 곡입니다. 번호가 없으면 비워 두고, 멤버는 쉼표로 구분하세요. 목록은 화면에서 랜덤·가나다순으로 보여 주므로 순서를 정할 필요가 없습니다.",
+        "fields": ("title", "artist", "tj", "ky", "section", "category", "members", "title_alt"),
         "labels": {
             "title": "곡명", "artist": "가수(표시용)", "tj": "TJ 번호", "ky": "금영 번호",
             "section": "구분", "category": "종류", "members": "참여 멤버(쉼표 구분)",
-            "title_alt": "검색용 다른 표기", "note": "비고", "sort_order": "정렬 순서",
+            "title_alt": "검색용 다른 표기",
         },
         "key_fields": ("id",),
         "bulk_import": True,
@@ -39,18 +39,19 @@ CONTENT_TABLES = {
         # 곡이 수백 개라 목록을 넓게 펴고, 표에는 눈으로 훑을 열만 남긴다.
         # 나머지 값은 행을 클릭하면 수정 양식에 그대로 채워진다.
         "wide": True,
-        "list_fields": ("title", "artist", "section", "category", "tj", "ky", "members", "note"),
+        "list_fields": ("title", "artist", "section", "category", "tj", "ky", "members"),
         # 표 머리글은 양식보다 짧아야 열이 좁아지지 않는다.
         "list_labels": {"artist": "가수", "tj": "TJ", "ky": "금영", "members": "참여 멤버"},
     },
-    "karaoke_members": {"title": "노래방 멤버 목록", "description": "노래방 페이지 멤버 필터의 순서와 유닛 묶음입니다. 졸업일을 넣으면 필터에서 졸업으로 묶이고, 유닛을 옮긴 멤버는 이전 유닛에 적어 두세요.", "fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"), "labels": {"name": "멤버 이름", "unit": "현재 소속 유닛", "former_units": "이전 유닛(쉼표 구분)", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "표시 순서"}},
+    "karaoke_members": {"title": "노래방 멤버 목록", "description": "노래방 페이지 멤버 필터의 순서와 유닛 묶음입니다. 졸업일을 넣으면 필터에서 졸업으로 묶이고, 유닛을 옮긴 멤버는 이전 유닛에 적어 두세요.", "fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"), "labels": {"name": "멤버 이름", "unit": "현재 소속 유닛", "former_units": "이전 유닛(쉼표 구분)", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "표시 순서(비우면 맨 뒤)"}, "order_field": "display_order"},
     "karaoke_reports": {"title": "노래방 번호 제보", "description": "사용자가 남긴 노래방 번호 추가·정정 제보입니다.", "fields": ("content",), "key_fields": ("id",)},
     "main_buttons": {
         "title": "메인 화면 버튼",
         "description": "메인 화면 상단 버튼을 감추거나 다시 보이게 합니다. 표시 순서는 작을수록 왼쪽에 옵니다. 버튼 키는 화면에 심어 둔 값이라 바꾸지 마세요.",
         "fields": ("button_key", "label", "visible", "display_order"),
-        "labels": {"button_key": "버튼 키(수정 금지)", "label": "버튼 이름", "visible": "표시 여부", "display_order": "표시 순서"},
+        "labels": {"button_key": "버튼 키(수정 금지)", "label": "버튼 이름", "visible": "표시 여부", "display_order": "표시 순서(비우면 맨 뒤)"},
         "key_fields": ("button_key",),
+        "order_field": "display_order",
     },
 }
 READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "record_karaoke", "song_counts", "fcm_tokens")
@@ -234,6 +235,12 @@ def add_row(table_name):
     connection = None
     try:
         connection = get_connection()
+        # 순서 열을 비워 두면 열의 기본값(0)이 들어가 목록 맨 앞에 끼어든다. 맨 뒤가 자연스럽다.
+        order_field = definition.get("order_field")
+        if order_field and all(field != order_field for field, _ in entries):
+            with connection.cursor() as cursor:
+                cursor.execute(f"SELECT COALESCE(MAX(`{order_field}`), -1) + 1 AS next_order FROM `{table_name}`")
+                entries.append((order_field, cursor.fetchone()["next_order"]))
         columns = ", ".join(f"`{field}`" for field, _ in entries)
         with connection.cursor() as cursor:
             cursor.execute(

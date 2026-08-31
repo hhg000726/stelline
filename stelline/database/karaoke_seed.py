@@ -15,8 +15,8 @@ from stelline.database.connection import get_connection
 
 SEED_PATH = Path(__file__).resolve().parent / "data" / "karaoke_seed.tsv"
 
-# DB에 실제로 저장하는 열. sort_order는 비어 있으면 자동으로 채운다.
-SONG_COLUMNS = ("title", "title_alt", "artist", "members", "section", "category", "tj", "ky", "release_date", "note", "sort_order")
+# DB에 실제로 저장하는 열.
+SONG_COLUMNS = ("title", "title_alt", "artist", "members", "section", "category", "tj", "ky", "release_date")
 
 # 붙여넣기 편의를 위해 한글 머리글도 인식한다.
 HEADER_ALIASES = {
@@ -29,8 +29,6 @@ HEADER_ALIASES = {
     "tj": "tj", "태진": "tj",
     "ky": "ky", "금영": "ky",
     "release_date": "release_date", "발매일": "release_date", "공개일": "release_date",
-    "note": "note", "비고": "note", "메모": "note",
-    "sort_order": "sort_order", "순서": "sort_order", "정렬": "sort_order",
 }
 
 # 머리글 줄이 없을 때 가정하는 순서(참고 사이트 표와 같은 순서다).
@@ -73,7 +71,7 @@ MEMBER_SEED = (
 )
 KNOWN_MEMBERS = {row[0] for row in MEMBER_SEED}
 
-MAX_LENGTHS = {"title": 255, "title_alt": 255, "artist": 255, "members": 512, "tj": 16, "ky": 16, "note": 255}
+MAX_LENGTHS = {"title": 255, "title_alt": 255, "artist": 255, "members": 512, "tj": 16, "ky": 16}
 EMPTY_MARKS = {"", "-", "–", "—", "없음", "x", "X"}
 
 
@@ -186,15 +184,9 @@ def parse_rows(text):
             if len(values.get(field, "")) > MAX_LENGTHS[field]:
                 raise SeedError(f"{line_no}번째 줄: {field}이(가) 너무 깁니다({MAX_LENGTHS[field]}자 이내).")
 
-        sort_order = (values.get("sort_order") or "").strip()
-        if sort_order and not sort_order.lstrip("-").isdigit():
-            raise SeedError(f"{line_no}번째 줄: 순서는 정수로 입력하세요.")
-
         title_alt = (values.get("title_alt") or "").strip() or None
-        note = (values.get("note") or "").strip() or None
-        for field, value in (("title_alt", title_alt), ("note", note)):
-            if value and len(value) > MAX_LENGTHS[field]:
-                raise SeedError(f"{line_no}번째 줄: {field}이(가) 너무 깁니다({MAX_LENGTHS[field]}자 이내).")
+        if title_alt and len(title_alt) > MAX_LENGTHS["title_alt"]:
+            raise SeedError(f"{line_no}번째 줄: title_alt이(가) 너무 깁니다({MAX_LENGTHS['title_alt']}자 이내).")
 
         rows.append({
             "title": title,
@@ -206,8 +198,6 @@ def parse_rows(text):
             "tj": _clean_number(values.get("tj"), "tj", line_no),
             "ky": _clean_number(values.get("ky"), "ky", line_no),
             "release_date": _clean_date(values.get("release_date"), line_no),
-            "note": note,
-            "sort_order": int(sort_order) if sort_order else None,
         })
 
     seen_keys = set()
@@ -230,18 +220,14 @@ def import_songs(rows, replace=False):
             if replace:
                 cursor.execute("DELETE FROM karaoke_songs")
                 existing = set()
-                next_order = 0
             else:
                 cursor.execute("SELECT title, artist FROM karaoke_songs")
                 existing = {(row["title"], row["artist"]) for row in cursor.fetchall()}
-                cursor.execute("SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM karaoke_songs")
-                next_order = cursor.fetchone()["max_order"] + 1
 
             inserted = updated = 0
             payload = []
-            for offset, row in enumerate(rows):
-                order = row["sort_order"] if row["sort_order"] is not None else next_order + offset
-                payload.append(tuple(order if column == "sort_order" else row[column] for column in SONG_COLUMNS))
+            for row in rows:
+                payload.append(tuple(row[column] for column in SONG_COLUMNS))
                 if (row["title"], row["artist"]) in existing:
                     updated += 1
                 else:

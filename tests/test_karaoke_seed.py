@@ -11,7 +11,7 @@ def test_header_line_allows_any_column_order():
     assert rows == [{
         "title": "테스트곡", "title_alt": None, "artist": "아이리 칸나", "members": None,
         "section": "solo", "category": "cover", "tj": "111", "ky": "222",
-        "release_date": None, "note": None, "sort_order": None,
+        "release_date": None,
     }]
 
 
@@ -67,7 +67,6 @@ def test_duplicate_rows_are_warned():
     ("테스트곡\t\t1\t2", "가수가 비어"),
     ("곡명\t가수\t구분\n테스트곡\t칸나\t알수없음", "구분 값"),
     ("곡명\t가수\t종류\n테스트곡\t칸나\t알수없음", "종류 값"),
-    ("곡명\t가수\t순서\n테스트곡\t칸나\t첫번째", "순서는 정수"),
 ])
 def test_invalid_input_raises_seed_error(text, message):
     with pytest.raises(SeedError) as error:
@@ -89,8 +88,7 @@ def test_bundled_seed_file_parses_cleanly():
     assert all(row["ky"] is None or row["ky"].isdigit() for row in rows)
     assert all(row["section"] in {"group", "unit", "collab", "gift", "solo"} for row in rows)
     assert all(row["category"] in {"original", "cover"} for row in rows)
-    # 시드는 순서를 직접 지정해 기본 정렬이 원본 글과 같은 차례를 유지한다.
-    assert [row["sort_order"] for row in rows] == sorted(row["sort_order"] for row in rows)
+    assert all(row["release_date"] is None or len(row["release_date"]) == 10 for row in rows)
 
 
 # ---------- 발매일 ----------
@@ -180,7 +178,6 @@ def test_tooniverse_medley_is_not_in_the_seed():
     """투니버스 메들리는 원본 표의 번호가 한 칸씩 밀려 있어 시드에서 제외했다."""
     rows = _seed_rows()
     assert all("메들리" not in row["title"] for row in rows)
-    assert all("메들리" not in (row["note"] or "") for row in rows)
 
 
 def test_every_member_name_in_the_seed_is_registered():
@@ -195,8 +192,9 @@ def test_every_member_name_in_the_seed_is_registered():
 
 
 def test_star_trail_ep_tracks_credit_the_members_who_sang_them():
-    tracks = {row["title"]: row for row in _seed_rows() if row["note"] == "1st EP"}
-    assert set(tracks) == {"STAR TRAIL (스타트레일)", "별을 쫓던 빛에게", "히로인이 되고싶어"}
+    titles = {"STAR TRAIL (스타트레일)", "별을 쫓던 빛에게", "히로인이 되고싶어"}
+    tracks = {row["title"]: row for row in _seed_rows() if row["title"] in titles}
+    assert set(tracks) == titles
     for row in tracks.values():
         assert row["release_date"] == "2026-05-08"
     # 트랙마다 참여 멤버가 다르다. 타이틀곡 크레딧을 앨범 전체에 적용하면 안 된다.

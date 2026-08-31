@@ -12,11 +12,15 @@ from datetime import date
 from pathlib import Path
 
 from stelline.database.connection import get_connection
+from stelline.database.karaoke_release_dates import extract_video_id
 
 SEED_PATH = Path(__file__).resolve().parent / "data" / "karaoke_seed.tsv"
 
 # DB에 실제로 저장하는 열. sort_order는 비어 있으면 자동으로 채운다.
-SONG_COLUMNS = ("title", "title_alt", "artist", "members", "section", "category", "tj", "ky", "release_date", "note", "sort_order")
+SONG_COLUMNS = ("title", "title_alt", "artist", "members", "section", "category", "tj", "ky", "release_date", "youtube_video_id", "note", "sort_order")
+
+# 비워 둔 칸이 이미 저장된 값을 지우면 곤란한 열. 표에 없으면 기존 값을 그대로 둔다.
+KEEP_WHEN_BLANK_COLUMNS = ("youtube_video_id",)
 
 # 붙여넣기 편의를 위해 한글 머리글도 인식한다.
 HEADER_ALIASES = {
@@ -29,6 +33,7 @@ HEADER_ALIASES = {
     "tj": "tj", "태진": "tj",
     "ky": "ky", "금영": "ky",
     "release_date": "release_date", "발매일": "release_date", "공개일": "release_date",
+    "youtube_video_id": "youtube_video_id", "youtube": "youtube_video_id", "유튜브": "youtube_video_id", "영상": "youtube_video_id", "링크": "youtube_video_id",
     "note": "note", "비고": "note", "메모": "note",
     "sort_order": "sort_order", "순서": "sort_order", "정렬": "sort_order",
 }
@@ -122,6 +127,17 @@ def _clean_date(value, line_no):
         raise SeedError(f"{line_no}번째 줄: 발매일 '{value}'은(는) 없는 날짜입니다.") from None
 
 
+def _clean_video_id(value, line_no, warnings):
+    """유튜브 주소든 ID든 11자 영상 ID만 남긴다. 알아볼 수 없으면 경고하고 비워 둔다."""
+    text = (value or "").strip()
+    if not text or text in EMPTY_MARKS:
+        return None
+    video_id = extract_video_id(text)
+    if not video_id:
+        warnings.append(f"{line_no}번째 줄: 유튜브 영상 '{text}'을(를) 알아볼 수 없어 비워 둡니다.")
+    return video_id
+
+
 def _clean_members(value, line_no, warnings):
     parts = [part.strip() for part in (value or "").replace("/", ",").split(",")]
     members, seen = [], set()
@@ -206,6 +222,7 @@ def parse_rows(text):
             "tj": _clean_number(values.get("tj"), "tj", line_no),
             "ky": _clean_number(values.get("ky"), "ky", line_no),
             "release_date": _clean_date(values.get("release_date"), line_no),
+            "youtube_video_id": _clean_video_id(values.get("youtube_video_id"), line_no, warnings),
             "note": note,
             "sort_order": int(sort_order) if sort_order else None,
         })
@@ -250,7 +267,10 @@ def import_songs(rows, replace=False):
             column_list = ", ".join("`" + column + "`" for column in SONG_COLUMNS)
             placeholders = ", ".join(["%s"] * len(SONG_COLUMNS))
             assignments = ", ".join(
-                "`" + column + "` = VALUES(`" + column + "`)"
+                # 유튜브 영상처럼 표에 없을 때가 많은 열은 빈 값으로 덮어쓰지 않는다.
+                "`" + column + "` = COALESCE(VALUES(`" + column + "`), `" + column + "`)"
+                if column in KEEP_WHEN_BLANK_COLUMNS
+                else "`" + column + "` = VALUES(`" + column + "`)"
                 for column in SONG_COLUMNS
                 if column not in ("title", "artist")
             )

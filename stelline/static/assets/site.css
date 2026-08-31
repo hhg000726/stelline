@@ -24,6 +24,18 @@
   --border-card: rgba(148,163,184,0.25);
   --border-subtle: #e6eef8;
 
+  --page-gradient:
+    radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 26%),
+    linear-gradient(180deg, #f2f7ff 0%, #edf3fb 100%);
+  --surface-card: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.96));
+  --surface-raised: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,250,255,0.94));
+  --surface-input: rgba(255,255,255,0.86);
+  --surface-inset: rgba(248,250,252,0.9);
+  --surface-mute: rgba(148,163,184,0.06);
+  --surface-thumb: #dfeafc;
+  --highlight: #fde68a;
+  --highlight-text: inherit;
+
   --shadow-sm: 0 8px 20px rgba(15,23,42,0.03);
   --shadow-card: 0 12px 30px rgba(15,23,42,0.08);
   --shadow-card-hover: 0 22px 42px rgba(15,23,42,0.12);
@@ -34,6 +46,9 @@
   --danger-soft: #fee2e2;
   --success: #0f766e;
   --success-soft: #d1fae5;
+  /* 흰 글씨를 얹는 버튼용. 밝기와 상관없이 진하게 유지한다. */
+  --danger-solid: #b91c1c;
+  --success-solid: #0f766e;
 
   --radius-panel: 24px;
   --radius-card: 20px;
@@ -41,6 +56,65 @@
 
   font-family: Inter, "Noto Sans KR", Arial, sans-serif;
   color: var(--text);
+  /* 스크롤바·기본 폼 컨트롤도 테마를 따라가게 한다. */
+  color-scheme: light;
+}
+
+/* ---------- 다크 모드 ----------
+ * theme.js가 <html data-theme="dark">를 붙이면 사이트 전체가 이 배색으로 바뀐다.
+ * 노래방 모드와는 별개라, 어느 화면에서든 켜고 끌 수 있다.
+ */
+:root[data-theme="dark"] {
+  --background: #080d1a;
+  --surface: #131c2e;
+  --surface-panel: rgba(15,23,42,0.92);
+  --surface-panel-solid: #0f172a;
+  --surface-soft: rgba(19,28,46,0.75);
+  --surface-subtle: #1e293b;
+  --text: #f8fafc;
+  --text-strong: #ffffff;
+  --muted: #cbd5e1;
+  --muted-soft: #94a3b8;
+
+  --primary: #60a5fa;
+  --primary-hover: #3b82f6;
+  --primary-strong: #93c5fd;
+  --primary-active: #2563eb;
+  --primary-soft: rgba(96,165,250,0.16);
+  --primary-tint: #16233c;
+  --primary-tint-strong: #1c2b47;
+  --primary-outline: rgba(96,165,250,0.45);
+
+  --border: rgba(148,163,184,0.32);
+  --border-card: rgba(148,163,184,0.28);
+  --border-subtle: #334155;
+
+  --page-gradient:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.22), transparent 30%),
+    linear-gradient(180deg, #080d1a 0%, #0b1324 100%);
+  --surface-card: linear-gradient(180deg, #162034, #121a2b);
+  --surface-raised: linear-gradient(180deg, #162034, #111a2b);
+  --surface-input: rgba(15,23,42,0.72);
+  --surface-inset: rgba(15,23,42,0.68);
+  --surface-mute: rgba(148,163,184,0.1);
+  --surface-thumb: #1b2740;
+  --highlight: #a16207;
+  --highlight-text: #ffffff;
+
+  --shadow-sm: 0 8px 20px rgba(0,0,0,0.35);
+  --shadow-card: 0 12px 30px rgba(0,0,0,0.45);
+  --shadow-card-hover: 0 22px 42px rgba(0,0,0,0.5);
+  --shadow-panel: 0 20px 40px rgba(0,0,0,0.4);
+  --shadow-raised: 0 14px 30px rgba(0,0,0,0.38);
+
+  --danger: #fca5a5;
+  --danger-soft: rgba(220,38,38,0.22);
+  --success: #6ee7b7;
+  --success-soft: rgba(16,185,129,0.2);
+  --danger-solid: #b91c1c;
+  --success-solid: #0f766e;
+
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -64,9 +138,7 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 26%),
-    linear-gradient(180deg, #f2f7ff 0%, #edf3fb 100%);
+  background: var(--page-gradient);
 }
 
 img { display: block; max-width: 100%; }
@@ -241,7 +313,7 @@ a { color: inherit; text-decoration: none; }
 /* 알림 버튼의 확정 상태. 비활성이어도 상태색이 읽히도록 opacity 를 되돌린다. */
 .btn-primary.is-blocked,
 .btn-primary.is-blocked:disabled {
-  background: var(--danger);
+  background: var(--danger-solid);
   color: #fff;
   opacity: 1;
   cursor: default;
@@ -249,7 +321,7 @@ a { color: inherit; text-decoration: none; }
 
 .btn-primary.is-active,
 .btn-primary.is-active:disabled {
-  background: var(--success);
+  background: var(--success-solid);
   color: #fff;
   opacity: 1;
   cursor: default;
@@ -291,7 +363,7 @@ a { color: inherit; text-decoration: none; }
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
-  background: rgba(255,255,255,0.86);
+  background: var(--surface-input);
   color: var(--text);
   font: inherit;
 }
@@ -453,7 +525,7 @@ button svg {
   flex-direction: column;
   overflow: hidden;
   min-height: 100%;
-  background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(248,250,252,0.96));
+  background: var(--surface-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
@@ -473,7 +545,7 @@ button svg {
 
 .thumb-wrap {
   position: relative;
-  background: #dfeafc;
+  background: var(--surface-thumb);
 }
 
 .thumb-wrap img {
@@ -557,7 +629,7 @@ button svg {
   margin: 18px auto;
   padding: 20px 18px;
   border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(247,250,255,0.94));
+  background: var(--surface-raised);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-raised);
 }
@@ -639,7 +711,7 @@ button svg {
   margin: 0;
   padding: 18px 20px;
   border-radius: 14px;
-  background: rgba(148,163,184,0.06);
+  background: var(--surface-mute);
   color: var(--muted);
   text-align: center;
 }
@@ -719,7 +791,7 @@ button svg {
   padding: 14px 16px;
   border: 1px solid rgba(148,163,184,0.2);
   border-radius: 16px;
-  background: rgba(248,250,252,0.9);
+  background: var(--surface-inset);
   color: var(--muted);
   text-align: left;
 }
@@ -756,8 +828,8 @@ button svg {
   padding: 16px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.96));
-  box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   text-align: left;
 }
@@ -857,7 +929,47 @@ th, td {
 
 tr:last-child td { border-bottom: 0; }
 
+/* ---------- 다크 모드 토글 ----------
+ * theme.js가 모든 화면의 본문 끝에 넣는 버튼이다.
+ * 노래방 페이지의 하단 고정 바처럼 아래에 붙는 요소는
+ * --floating-offset 으로 버튼을 위로 밀어 가리지 않게 한다.
+ */
+.theme-toggle {
+  position: fixed;
+  right: 18px;
+  bottom: calc(18px + var(--floating-offset, 0px));
+  z-index: 35;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 50%;
+  background: var(--surface-panel-solid);
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease, bottom 0.16s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--primary-tint);
+  color: var(--primary-strong);
+}
+
+.theme-toggle svg {
+  stroke: currentColor;
+  fill: none;
+}
+
 @media (max-width: 720px) {
+  .theme-toggle {
+    right: 12px;
+    width: 42px;
+    height: 42px;
+  }
+
   .site-container {
     padding-left: 14px;
     padding-right: 14px;

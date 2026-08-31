@@ -18,6 +18,7 @@
   <meta property="og:image" content="/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/assets/site.css">
+  <script src="/assets/theme.js"></script>
   <link rel="stylesheet" href="/karaoke/style.css">
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -72,6 +73,7 @@
           <label class="kara-sort">정렬
             <select id="sort-select" aria-label="정렬 기준">
               <option value="recent">최신순</option>
+              <option value="oldest">오래된순</option>
               <option value="title">가나다순</option>
               <option value="number">번호순</option>
             </select>
@@ -81,6 +83,14 @@
         </div>
 
         <div id="filter-panel" class="kara-filters" hidden>
+          <div class="kara-filter-group">
+            <h3>여러 개 고를 때</h3>
+            <div id="match-switch" class="machine-switch" role="group" aria-label="여러 조건을 고를 때 찾는 방법">
+              <button type="button" data-match="or">하나라도</button>
+              <button type="button" data-match="and">모두</button>
+            </div>
+            <p class="kara-filter-hint">멤버를 여러 명 고를 때 적용됩니다. 구분·종류는 곡마다 하나뿐이라 늘 “하나라도”로 찾습니다.</p>
+          </div>
           <div class="kara-filter-group">
             <h3>멤버</h3>
             <div id="member-chips" class="kara-chips"></div>
@@ -145,6 +155,10 @@
       <h2 id="pick-title"></h2>
       <p id="pick-artist" class="pick-artist"></p>
       <div id="pick-numbers" class="pick-numbers"></div>
+      <div class="pick-collect">
+        <button id="pick-favorite" class="btn-secondary" type="button" data-action="favorite">☆ 즐겨찾기 추가</button>
+        <button id="pick-setlist" class="btn-secondary" type="button" data-action="setlist">+ 부를 곡 추가</button>
+      </div>
       <div class="pick-actions">
         <button id="pick-again" class="btn-secondary" type="button">다시 뽑기</button>
         <button id="pick-close" class="btn-primary" type="button">닫기</button>

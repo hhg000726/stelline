@@ -474,8 +474,9 @@ def test_bulk_import_keeps_a_saved_video_when_the_pasted_table_has_none(admin_cl
 
     resp = admin_client.post(
         "/admin/karaoke/import",
-        data={"csrf_token": admin_client.csrf, "content": pasted},
+        data={"csrf_token": admin_client.csrf, "source": "paste", "bulk_text": pasted},
     )
     assert resp.status_code == 302
-    assert _scalar(db, "SELECT youtube_video_id FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "aaaaaaaaaaa"
+    # 표에 있는 값은 갱신되고(= 실제로 등록이 돌았고), 표에 없는 영상은 남아 있어야 한다.
     assert _scalar(db, "SELECT tj FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "12345"
+    assert _scalar(db, "SELECT youtube_video_id FROM karaoke_songs WHERE title = %s", ("영상이 있는 곡",)) == "aaaaaaaaaaa"

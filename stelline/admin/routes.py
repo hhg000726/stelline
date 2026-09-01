@@ -8,6 +8,7 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, s
 from itsdangerous import BadSignature, URLSafeSerializer
 
 from stelline.config import ADMIN_HTML_SNAPSHOT_PATH, APP_ENV, SECRET_KEY
+from stelline.content import CONTENT_GROUPS, admin_rows
 from stelline.database.connection import get_connection
 from stelline.database.import_admin_html import import_snapshot, parse_snapshot
 from stelline.database.karaoke_seed import SeedError, import_seed_file, import_text
@@ -328,6 +329,9 @@ def admin_index():
         data=data,
         forms=FORMS,
         groups=groups,
+        # 문구·그림은 표가 아니라 항목 단위로 고친다. 값은 DB가 비어 있어도 기본값으로 채워진다.
+        content_groups=CONTENT_GROUPS,
+        content_rows=admin_rows(),
         csrf_token=csrf_token(),
         serialize_row=serialize_row,
         development_mode=APP_ENV == "development",

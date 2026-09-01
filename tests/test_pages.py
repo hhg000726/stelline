@@ -21,6 +21,7 @@ def test_public_pages_render(client, path):
         ("/assets/site.js", "text/javascript"),
         ("/assets/theme.js", "text/javascript"),
         ("/assets/nav.js", "text/javascript"),
+        ("/assets/content.js", "text/javascript"),
         ("/firebase-messaging-sw.js", "text/javascript"),
         ("/search/style.css", "text/css"),
         ("/search/search.js", "text/javascript"),

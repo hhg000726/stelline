@@ -18,7 +18,15 @@ setup_logging()
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = SECRET_KEY
+# 관리자 화면의 그림 올리기가 유일한 파일 업로드다. 항목별 상한은 이보다 훨씬 작지만,
+# 그보다 큰 요청은 본문을 읽기도 전에 끊어 메모리를 붙들지 않게 한다.
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 CORS(app)
+
+
+@app.errorhandler(413)
+def payload_too_large(error):
+    return "올린 파일이 너무 큽니다. 관리자 화면에 적힌 용량 상한을 지켜 주세요.", 413
 
 # 화면 경로는 고정이라 요청마다 다시 조립할 이유가 없다.
 STATIC_ROOT = Path(app.static_folder)

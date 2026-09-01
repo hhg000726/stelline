@@ -44,6 +44,7 @@ CONTENT_AND_STATE_TABLES = (
     "karaoke_songs",
     "karaoke_members",
     "karaoke_reports",
+    "site_contents",
 )
 SEED_TABLES = ("record_main", "record_search", "record_karaoke", "main_buttons")
 

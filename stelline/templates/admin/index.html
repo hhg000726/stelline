@@ -228,6 +228,118 @@
     td.is-empty { color: var(--muted-soft); }
     td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+    /* ---------- 사이트 문구·그림 ---------- */
+
+    /* 항목이 서른 개가 넘어 전부 펼치면 훑어볼 수가 없다. 접힌 한 줄에
+       이름·상태·지금 값을 함께 보여 주고, 고칠 것만 펼친다. */
+    .content-list { display: grid; gap: 8px; }
+
+    .content-item {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--surface-inset);
+    }
+
+    .content-item > summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      align-items: baseline;
+      padding: 9px 12px;
+    }
+
+    .content-item[open] { padding: 0 12px 12px; }
+    .content-item[open] > summary { margin: 0 -12px 8px; border-bottom: 1px solid var(--border-subtle); }
+    .content-item > summary:hover { background: var(--primary-tint); }
+    .content-item .hint { margin-bottom: 8px; }
+    .content-name { font-weight: 700; font-size: .88rem; }
+
+    .content-state {
+      padding: 1px 8px;
+      border-radius: 999px;
+      background: var(--surface-mute);
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+    }
+
+    .content-state.is-custom { background: var(--primary-tint); color: var(--primary-strong); }
+    .content-state.is-cleared { background: var(--danger-soft); color: var(--danger); }
+
+    /* 지금 값은 한 줄만 보여 준다. 길면 잘라서 줄 높이를 지킨다. */
+    .content-current {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--muted-soft);
+      font-size: .8rem;
+      font-weight: 400;
+    }
+
+    .content-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 6px 0 0; color: var(--muted-soft); font-size: .78rem; }
+    .content-counter { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .content-counter.is-near { color: #b45309; }
+    .content-counter.is-over { color: var(--danger); }
+    :root[data-theme="dark"] .content-counter.is-near { color: #fbbf24; }
+
+    .content-rules {
+      margin: 0 0 8px;
+      padding: 7px 10px;
+      border-radius: var(--radius-control);
+      background: var(--surface-mute);
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.5;
+    }
+
+    /* 미리보기. 저장하기 전에 실제 화면에서 어떻게 보일지 확인하는 자리다.
+       그래서 상자 크기와 글자 크기를 공개 화면과 똑같이 맞춘다. */
+    .content-preview { margin-top: 10px; }
+    .preview-label { display: block; margin-bottom: 5px; color: var(--muted-soft); font-size: .74rem; font-weight: 700; }
+
+    .preview-box {
+      padding: 10px 12px;
+      border: 1px dashed var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+    }
+
+    .preview-text { margin: 0; color: var(--muted); font-size: .84rem; line-height: 1.6; white-space: pre-line; }
+    .preview-empty { margin: 0; color: var(--muted-soft); font-size: .78rem; font-style: italic; }
+
+    /* 공개 화면에서 쓰는 크기 그대로. site.css 의 .page-subtitle 등과 짝을 이룬다. */
+    .preview-box.is-subtitle .preview-text { font-size: .92rem; }
+    .preview-box.is-note .preview-text { font-size: .84rem; color: var(--muted-soft); }
+    .preview-box.is-hint .preview-text { font-size: .8rem; color: var(--muted-soft); }
+    .preview-box.is-step .preview-text { color: var(--text); font-size: .92rem; font-weight: 700; }
+    .preview-box.is-notice-title .preview-text { color: var(--text); font-size: 1.05rem; font-weight: 700; }
+    .preview-box.is-notice-body .preview-text { font-size: .9rem; }
+    .preview-box.is-footer .preview-text { font-size: .84rem; text-align: center; }
+    .preview-box.is-list .preview-text { padding-left: 4px; font-size: .9rem; line-height: 1.7; }
+
+    /* 그림 상자는 공개 화면의 상자 규칙을 그대로 옮긴다.
+       단계 그림은 140px 높이에 contain, 공지 그림은 16:9 를 cover 로 채운다. */
+    .preview-box.is-step .preview-image {
+      width: 100%;
+      height: 140px;
+      object-fit: contain;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-subtle);
+    }
+
+    .preview-box.is-notice .preview-image {
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+      border-radius: var(--radius-card);
+      border: 1px solid var(--border-subtle);
+      background: var(--surface-subtle);
+    }
+
     .readonly { margin-top: 14px; opacity: .9; }
     .readonly h3 { margin: 14px 0 6px; font-size: .92rem; }
     .readonly .table-scroll { max-height: 40vh; }
@@ -265,6 +377,7 @@
       {% for group in groups %}
       <button type="button" class="admin-tab{% if loop.first %} is-on{% endif %}" data-group="{{ group.key }}">{{ group.label }} <span class="tab-count">{{ group.count }}</span></button>
       {% endfor %}
+      <button type="button" class="admin-tab" data-group="content">사이트 문구·그림 <span class="tab-count">{{ content_rows|length }}</span></button>
       <button type="button" class="admin-tab" data-group="stats">읽기 전용 통계</button>
     </nav>
 
@@ -365,6 +478,95 @@
       {% endfor %}
     </main>
     {% endfor %}
+
+    <!-- 화면에 박아 둔 문구·그림. 표와 달리 항목 하나씩 고친다.
+         값을 비우고 저장하면 공개 화면에서 그 자리가 통째로 사라지고,
+         `기본값으로`를 누르면 코드에 적힌 원래 문구로 돌아간다. -->
+    <main class="admin-group" data-group-panel="content" hidden>
+      <p class="hint">항목을 눌러 펼친 뒤 고칩니다. <strong>저장 전 미리보기</strong>로 실제 화면에서 어떻게 보일지 확인할 수 있습니다.
+        <strong>비우기</strong>는 그 자리를 화면에서 없애고, <strong>기본값으로</strong>는 원래 문구·그림으로 되돌립니다.</p>
+
+      {% for group in content_groups %}
+      <section class="admin-card" data-content-group="{{ group.key }}">
+        <header>
+          <h2>{{ group.label }}</h2>
+          <span class="count">{{ group['items']|length }}개</span>
+        </header>
+
+        <div class="content-list">
+          {% for item in group['items'] %}{% set row = content_rows[item.key] %}
+          <details class="content-item" id="content-{{ item.key }}" data-content-item="{{ item.key }}">
+            <summary>
+              <span class="content-name">{{ item.title }}</span>
+              <span class="content-state is-{{ row.source }}">{% if row.source == 'custom' %}수정됨{% elif row.source == 'cleared' %}비움{% else %}기본값{% endif %}</span>
+              <span class="content-current">{% if row.hidden %}화면에 표시되지 않음{% elif item.type == 'text' %}{{ row.value }}{% elif row.source == 'custom' %}올린 그림 {{ row.width }}×{{ row.height }}{% else %}기본 그림{% endif %}</span>
+            </summary>
+
+            <p class="hint">{{ item.description }}</p>
+
+            <form method="post" action="{{ url_for('admin.save_content', key=item.key) }}"
+                  {% if item.type == 'image' %}enctype="multipart/form-data"{% endif %} data-content-form>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+              {% if item.type == 'text' %}
+              <label>내용
+                {% if item.multiline %}
+                <textarea name="text" rows="4" maxlength="{{ item.max_length }}" data-content-input>{{ row.editing_text }}</textarea>
+                {% else %}
+                <input name="text" type="text" maxlength="{{ item.max_length }}" value="{{ row.editing_text }}" data-content-input>
+                {% endif %}
+              </label>
+              <p class="content-meta">
+                <span class="content-counter" data-content-counter data-max="{{ item.max_length }}"></span>
+                <span>{% if item.multiline %}한 줄에 하나씩. 빈 줄은 저장할 때 사라집니다. {% endif %}비우고 저장하면 화면에서 그 자리가 없어집니다.</span>
+              </p>
+
+              {% else %}
+              <p class="content-rules">
+                PNG·JPEG·WebP·GIF · 최대 {{ item.max_bytes // 1000 }}KB ·
+                {{ item.min_width }}×{{ item.min_height }} ~ {{ item.max_width }}×{{ item.max_height }} ·
+                {{ item.aspect_hint }}
+              </p>
+              <label>새 그림 고르기
+                <input type="file" name="image" accept="image/png,image/jpeg,image/webp,image/gif"
+                       data-content-file
+                       data-max-bytes="{{ item.max_bytes }}"
+                       data-min-width="{{ item.min_width }}" data-min-height="{{ item.min_height }}"
+                       data-max-width="{{ item.max_width }}" data-max-height="{{ item.max_height }}"
+                       data-min-aspect="{{ item.min_aspect }}" data-max-aspect="{{ item.max_aspect }}">
+              </label>
+              <p class="content-meta"><span data-content-filecheck>고른 그림이 규격에 맞는지 여기서 먼저 알려 드립니다.</span></p>
+              {% endif %}
+
+              <div class="content-preview">
+                <span class="preview-label">미리보기 (실제 화면과 같은 크기)</span>
+                <div class="preview-box is-{{ item.preview if item.type == 'text' else item.box }}">
+                  {% if item.type == 'text' %}
+                  <p class="preview-text" data-content-preview-text>{{ row.editing_text }}</p>
+                  <p class="preview-empty" data-content-preview-empty {% if row.editing_text %}hidden{% endif %}>비어 있어 화면에서 사라집니다.</p>
+                  {% else %}
+                  <img class="preview-image" data-content-preview-image alt=""
+                       {% if not row.hidden %}src="{{ row.value }}"{% endif %} {% if row.hidden %}hidden{% endif %}>
+                  <p class="preview-empty" data-content-preview-empty {% if not row.hidden %}hidden{% endif %}>비어 있어 화면에서 사라집니다.</p>
+                  {% endif %}
+                </div>
+              </div>
+
+              <p class="form-actions">
+                <button class="btn-primary" type="submit" name="action" value="save">저장</button>
+                <button class="secondary" type="submit" name="action" value="clear" formnovalidate
+                        onclick="return confirm('이 항목을 비울까요? 화면에서 그 자리가 사라집니다.')">비우기</button>
+                <button class="secondary" type="submit" name="action" value="reset" formnovalidate
+                        onclick="return confirm('기본값으로 되돌릴까요?')">기본값으로</button>
+                {% if row.updated_at %}<span class="content-meta">마지막 수정 {{ row.updated_at }}</span>{% endif %}
+              </p>
+            </form>
+          </details>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+    </main>
 
     <main class="admin-group" data-group-panel="stats" hidden>
       {% for table_name, rows in data.items() if table_name not in forms %}
@@ -585,6 +787,146 @@
       let saved = null;
       try { saved = window.localStorage.getItem(STORAGE_KEY); } catch (error) { saved = null; }
       if (saved) show(saved);
+
+      /* 문구·그림을 저장하면 고친 항목 자리(#content-<키>)로 돌아온다. 그 탭이 숨겨져 있으면
+         브라우저가 스스로 옮겨 가지 못하므로, 탭을 열고 항목을 펼쳐 준다. */
+      const anchor = window.location.hash;
+      if (/^#content-[a-z0-9_]+$/.test(anchor)) {
+        show('content');
+        const target = document.querySelector(anchor);
+        if (target) {
+          target.open = true;
+          target.scrollIntoView({ block: 'center' });
+        }
+      }
+    })();
+
+    /* 사이트 문구·그림 편집기.
+     *
+     * 글자 수와 그림 규격을 저장 전에 여기서 먼저 알려 준다. 서버가 같은 규칙으로 다시
+     * 확인하므로 이 검사는 "미리 알려 주는" 쪽이고, 마지막 판단은 언제나 서버가 한다.
+     * 미리보기는 저장했을 때와 같은 모양(빈 줄 제거 등)으로 보여 줘야 의미가 있다.
+     */
+    (function () {
+      const MAX_LINES = 12;
+
+      // 서버(stelline/content/store.py)의 normalize_text 와 같은 규칙이어야 한다.
+      function normalizeText(value, multiline) {
+        const lines = value.replace(/\r\n?/g, '\n').split('\n')
+          .map((line) => line.replace(/[\u0000-\u001f]/g, ' ').trim());
+        if (!multiline) return lines.filter(Boolean).join(' ');
+        return lines.filter(Boolean).join('\n');
+      }
+
+      function countCharacters(value) {
+        // 서버는 코드 포인트로 센다. 이모지가 섞여도 같은 숫자가 나오게 맞춘다.
+        return Array.from(value).length;
+      }
+
+      function bindText(form) {
+        const input = form.querySelector('[data-content-input]');
+        if (!input) return;
+        const multiline = input.tagName === 'TEXTAREA';
+        const counter = form.querySelector('[data-content-counter]');
+        const preview = form.querySelector('[data-content-preview-text]');
+        const empty = form.querySelector('[data-content-preview-empty]');
+        const max = Number(counter.dataset.max || 0);
+
+        function refresh() {
+          const value = normalizeText(input.value, multiline);
+          const length = countCharacters(value);
+          const lines = value ? value.split('\n').length : 0;
+
+          counter.textContent = `${length} / ${max}자`;
+          counter.classList.toggle('is-over', length > max || lines > MAX_LINES);
+          counter.classList.toggle('is-near', length <= max && length > max * 0.9);
+          if (lines > MAX_LINES) counter.textContent += ` · 줄이 너무 많습니다(${lines}/${MAX_LINES})`;
+
+          preview.textContent = value;
+          preview.hidden = !value;
+          empty.hidden = Boolean(value);
+        }
+
+        input.addEventListener('input', refresh);
+        refresh();
+      }
+
+      function bindImage(form) {
+        const file = form.querySelector('[data-content-file]');
+        if (!file) return;
+        const status = form.querySelector('[data-content-filecheck]');
+        const preview = form.querySelector('[data-content-preview-image]');
+        const empty = form.querySelector('[data-content-preview-empty]');
+        const rules = file.dataset;
+        // 미리 만든 주소는 다음 그림을 고를 때 반드시 풀어 준다(안 그러면 계속 쌓인다).
+        let objectUrl = '';
+
+        function problem(chosen, width, height) {
+          if (chosen.size > Number(rules.maxBytes)) {
+            return `파일이 너무 큽니다(${Math.round(chosen.size / 1000)}KB / 최대 ${Math.round(rules.maxBytes / 1000)}KB).`;
+          }
+          if (width < Number(rules.minWidth) || height < Number(rules.minHeight)) {
+            return `그림이 너무 작습니다(${width}×${height} / 최소 ${rules.minWidth}×${rules.minHeight}).`;
+          }
+          if (width > Number(rules.maxWidth) || height > Number(rules.maxHeight)) {
+            return `그림이 너무 큽니다(${width}×${height} / 최대 ${rules.maxWidth}×${rules.maxHeight}).`;
+          }
+          const aspect = width / height;
+          if (aspect < Number(rules.minAspect) || aspect > Number(rules.maxAspect)) {
+            return `비율이 맞지 않습니다(${aspect.toFixed(2)} / ${Number(rules.minAspect).toFixed(2)}~${Number(rules.maxAspect).toFixed(2)}).`;
+          }
+          return '';
+        }
+
+        file.addEventListener('change', () => {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          form.dataset.imageProblem = '';
+          const chosen = file.files && file.files[0];
+          if (!chosen) {
+            status.textContent = '고른 그림이 규격에 맞는지 여기서 먼저 알려 드립니다.';
+            return;
+          }
+
+          objectUrl = URL.createObjectURL(chosen);
+          const probe = new Image();
+          probe.onload = () => {
+            const message = problem(chosen, probe.naturalWidth, probe.naturalHeight);
+            form.dataset.imageProblem = message;
+            status.textContent = message
+              ? `저장할 수 없습니다 — ${message}`
+              : `확인했습니다 — ${probe.naturalWidth}×${probe.naturalHeight}, ${Math.round(chosen.size / 1000)}KB`;
+            // 규격을 벗어난 그림도 미리 보여 준다. 무엇이 문제인지 눈으로 확인할 수 있다.
+            preview.src = objectUrl;
+            preview.hidden = false;
+            empty.hidden = true;
+          };
+          probe.onerror = () => {
+            form.dataset.imageProblem = '이미지 파일이 아니거나 열 수 없습니다.';
+            status.textContent = '저장할 수 없습니다 — 이미지 파일이 아니거나 열 수 없습니다.';
+          };
+          probe.src = objectUrl;
+        });
+      }
+
+      document.querySelectorAll('[data-content-form]').forEach((form) => {
+        bindText(form);
+        bindImage(form);
+
+        form.addEventListener('submit', (event) => {
+          // 비우기·기본값으로는 입력값과 상관없는 동작이라 그대로 보낸다.
+          if (event.submitter && event.submitter.value !== 'save') return;
+          const counter = form.querySelector('[data-content-counter]');
+          if (counter && counter.classList.contains('is-over')) {
+            event.preventDefault();
+            alert('글자 수가 상한을 넘었습니다. 줄이고 다시 저장하세요.');
+            return;
+          }
+          if (form.dataset.imageProblem) {
+            event.preventDefault();
+            alert(`이 그림은 저장할 수 없습니다.\n${form.dataset.imageProblem}`);
+          }
+        });
+      });
     })();
 
     document.getElementById('forceSearchBtn').addEventListener('click', async () => { if (!confirm('지금 검색 점검을 시작할까요?')) return; try { const response = await fetch('/api/search/force_search'); if (!response.ok) throw new Error(); alert('검색 점검을 시작했습니다.'); } catch { alert('실행하지 못했습니다.'); } });

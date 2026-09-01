@@ -158,6 +158,9 @@ function renderQueryList(filterText = "") {
         return;
     }
 
+    // 검색어를 한 글자 칠 때마다 다시 그린다. 화면에 붙은 목록에 하나씩 넣으면
+    // 항목 수만큼 배치가 다시 계산되므로, 조각에 모아 두었다가 한 번에 붙인다.
+    const fragment = document.createDocumentFragment();
     filteredQueries.forEach(item => {
         const li = document.createElement("li");
         li.className = "query-item";
@@ -170,8 +173,9 @@ function renderQueryList(filterText = "") {
         button.onclick = () => handleButtonClick(item.query);
 
         li.appendChild(button);
-        listElement.appendChild(li);
+        fragment.appendChild(li);
     });
+    listElement.appendChild(fragment);
 
     countElement.textContent = `${filteredQueries.length}개`;
 }
@@ -234,6 +238,8 @@ function renderCards(data, containerId) {
     const container = document.getElementById(containerId);
     container.innerHTML = ""; // 기존 제거
 
+    // 카드를 하나씩 화면에 붙이지 않고 조각에 모아 한 번에 붙인다(배치 계산 1회).
+    const fragment = document.createDocumentFragment();
     data.forEach(song => {
         // 카드 전체가 "복사 & 이동" 버튼이라 별도의 버튼 줄이 필요 없다.
         const card = document.createElement("button");
@@ -270,8 +276,9 @@ function renderCards(data, containerId) {
 
         card.appendChild(info);
         card.onclick = () => handleButtonClick(song.query);
-        container.appendChild(card);
+        fragment.appendChild(card);
     });
+    container.appendChild(fragment);
 
     if (data.length === 0) {
         const message = document.createElement("p");

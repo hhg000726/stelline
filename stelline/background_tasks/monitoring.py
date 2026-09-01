@@ -5,12 +5,12 @@ import logging
 import threading
 import time
 
-import requests
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 
 from stelline.config import API_CHECK_INTERVAL, API_KEY, MAX_RESULTS, PLAYLIST_ID, PROJECT_ID, SERVICE_ACCOUNT_FILE
 from stelline.database.connection import database_cursor
+from stelline.http_client import SESSION
 
 SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
 
@@ -38,7 +38,7 @@ def get_playlist_videos():
         }
         if page_token:
             params["pageToken"] = page_token
-        response = requests.get("https://www.googleapis.com/youtube/v3/playlistItems", params=params, timeout=10)
+        response = SESSION.get("https://www.googleapis.com/youtube/v3/playlistItems", params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         for item in data.get("items", []):
@@ -48,7 +48,7 @@ def get_playlist_videos():
             break
 
     for start in range(0, len(video_ids), MAX_RESULTS):
-        response = requests.get(
+        response = SESSION.get(
             "https://www.googleapis.com/youtube/v3/videos",
             params={"part": "snippet,statistics", "id": ",".join(video_ids[start:start + MAX_RESULTS]), "key": API_KEY},
             timeout=10,
@@ -72,41 +72,63 @@ def remove_expired_data(cursor):
 
 
 def send_milestone_notifications(cursor, access_token, song):
+    """등록된 모든 토큰에 달성 알림을 보낸다.
+
+    같은 호스트로 토큰 수만큼 연달아 POST 하므로 공용 세션으로 연결을 재사용한다.
+    사라진 토큰은 모아 두었다가 마지막에 한 번에 지운다(왕복 횟수를 줄인다).
+    """
     cursor.execute("SELECT token FROM fcm_tokens")
+    url = f"https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send"
+    headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+    data = {
+        "title": song["title"],
+        "body": f"{song['count'] // 100000}0만회 달성!",
+        "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg",
+        "video_url": f"https://www.youtube.com/watch?v={song['video_id']}",
+    }
+
+    unregistered = []
     for row in cursor.fetchall():
-        payload = {"message": {"token": row["token"], "data": {
-            "title": song["title"],
-            "body": f"{song['count'] // 100000}0만회 달성!",
-            "image": f"https://img.youtube.com/vi/{song['video_id']}/maxresdefault.jpg",
-            "video_url": f"https://www.youtube.com/watch?v={song['video_id']}",
-        }}}
-        response = requests.post(
-            f"https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send",
-            headers={"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"},
-            json=payload,
+        response = SESSION.post(
+            url,
+            headers=headers,
+            json={"message": {"token": row["token"], "data": data}},
             timeout=10,
         )
         if response.status_code == 404 and "UNREGISTERED" in response.text:
-            cursor.execute("DELETE FROM fcm_tokens WHERE token = %s", (row["token"],))
+            unregistered.append((row["token"],))
         elif not response.ok:
             logging.error("FCM 알림 실패 (%s): %s", response.status_code, response.text)
 
+    if unregistered:
+        cursor.executemany("DELETE FROM fcm_tokens WHERE token = %s", unregistered)
+
 
 def update_song_counts(cursor, songs, access_token):
+    """조회수를 갱신하고, 10만 단위를 새로 넘긴 곡만 알린다.
+
+    예전에는 곡마다 SELECT 를 한 번씩 던져 플레이리스트 크기만큼 왕복이 생겼다.
+    지금은 저장된 조회수를 한 번에 읽어 두고 메모리에서 비교한다.
+    """
+    cursor.execute("SELECT video_id, count FROM song_counts")
+    stored_counts = {row["video_id"]: row["count"] for row in cursor.fetchall()}
+
     for song in songs:
-        cursor.execute("SELECT count FROM song_counts WHERE video_id = %s", (song["video_id"],))
-        existing = cursor.fetchone()
+        existing = stored_counts.get(song["video_id"])
         if existing is None:
             cursor.execute(
                 "INSERT INTO song_counts (title, video_id, count, counted_time) VALUES (%s, %s, %s, %s)",
                 (song["title"], song["video_id"], song["count"], datetime(2000, 1, 1)),
             )
-        elif existing["count"] // 100000 < song["count"] // 100000:
+            # 같은 영상이 목록에 두 번 들어와도 예전처럼 한 번만 저장되도록 방금 쓴 값을 반영한다.
+            stored_counts[song["video_id"]] = song["count"]
+        elif existing // 100000 < song["count"] // 100000:
             send_milestone_notifications(cursor, access_token, song)
             cursor.execute(
                 "UPDATE song_counts SET count = %s, counted_time = %s WHERE video_id = %s",
                 (song["count"], datetime.now(), song["video_id"]),
             )
+            stored_counts[song["video_id"]] = song["count"]
 
 
 def monitoring_process():

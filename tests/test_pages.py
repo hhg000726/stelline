@@ -147,3 +147,17 @@ def test_karaoke_page_sorts_randomly_or_by_name(client):
     assert '<option value="title">가나다순</option>' in html
     for gone in ("최신순", "오래된순", "번호순", "기본순"):
         assert gone not in html
+
+
+def test_congratulation_badge_marks_exact_milestones_only(client):
+    """배지 색은 100만·1000만 '단위'로 딱 떨어질 때만 바뀐다.
+
+    예전에는 100만을 넘기기만 하면 계속 파란 배지가 붙어, 120만과 100만이 같아 보였다.
+    """
+    js = client.get("/congratulation/congratulation.js").get_data(as_text=True)
+    assert "function milestoneTier" in js
+    # 나머지 연산으로 '단위'를 판정한다(이상/초과가 아니다).
+    assert "tenThousands % 1000 === 0" in js
+    assert "tenThousands % 100 === 0" in js
+    assert "tenThousands >= 1000" not in js
+    assert "tenThousands >= 100" not in js

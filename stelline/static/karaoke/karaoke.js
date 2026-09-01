@@ -20,6 +20,8 @@
     const CHOSEONG = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
     const CHOSEONG_ONLY = /^[ㄱ-ㅎ]+$/;
     const KEY_SEPARATOR = "␟";
+    /* 가나다순 정렬에 쓰는 한국어 정렬기. 한 번 만들어 두고 계속 쓴다. */
+    const KO_COLLATOR = new Intl.Collator("ko");
 
     const state = {
         query: "",
@@ -153,7 +155,8 @@
         });
 
         if (state.sort === "title") {
-            filtered.sort((a, b) => a.title.localeCompare(b.title, "ko"));
+            // localeCompare는 부를 때마다 정렬기를 새로 만든다. 곡이 수백 개면 그 비용이 정렬 자체보다 크다.
+            filtered.sort((a, b) => KO_COLLATOR.compare(a.title, b.title));
         } else {
             filtered.sort((a, b) => a.shuffle - b.shuffle);
         }
@@ -162,10 +165,8 @@
 
     /* ---------- 그리기 ---------- */
 
-    function esc(value) {
-        // 공용 escapeHtml은 따옴표를 남겨 두므로, 속성값에도 그대로 넣을 수 있게 함께 바꾼다.
-        return window.Stelline.escapeHtml(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-    }
+    // 공용 escapeHtml이 따옴표까지 바꿔 주므로 속성값에도 그대로 넣을 수 있다.
+    const esc = window.Stelline.escapeHtml;
 
     function highlight(text, query) {
         if (!query.raw) return esc(text);
@@ -188,9 +189,9 @@
             + `<span class="num-label">${label}</span><span class="num-value">${esc(value)}</span></button>`;
     }
 
-    function songCard(song, query) {
+    function songCard(song, query, inSetlistKeys) {
         const isFavorite = favorites.has(song.key);
-        const inSetlist = setlist.includes(song.key);
+        const inSetlist = inSetlistKeys.has(song.key);
         const tags = [SECTION_LABELS[song.section] || song.section, CATEGORY_LABELS[song.category] || song.category];
         return `<article class="song-card" data-key="${esc(song.key)}">
       <div class="song-main">
@@ -226,7 +227,9 @@
         if (!list.length) {
             el.songList.innerHTML = '<p class="empty-state">조건에 맞는 곡이 없습니다. 검색어나 필터를 바꿔보세요.</p>';
         } else {
-            el.songList.innerHTML = page.map((song) => songCard(song, query)).join("");
+            // 카드마다 setlist 배열을 훑으면 O(카드수 x 목록길이)가 된다. 한 번만 집합으로 만든다.
+            const inSetlistKeys = new Set(setlist);
+            el.songList.innerHTML = page.map((song) => songCard(song, query, inSetlistKeys)).join("");
         }
 
         const remaining = list.length - page.length;

@@ -64,6 +64,19 @@ function attachReportForm() {
   });
 }
 
+/* 배지 색을 정하는 기준.
+ *
+ * 100만·1000만 "단위"로 딱 떨어지는 기록만 눈에 띄게 한다. 1000만 단위가 가장 위다.
+ * 120만이나 2500만처럼 중간에 걸친 기록은 기본 배지를 그대로 쓴다.
+ * (인자는 만 단위 값이다. 100 = 100만, 1000 = 1000만)
+ */
+function milestoneTier(tenThousands) {
+  if (tenThousands <= 0) return "";
+  if (tenThousands % 1000 === 0) return "is-ten-million";
+  if (tenThousands % 100 === 0) return "is-million";
+  return "";
+}
+
 function renderTable(data, tableId) {
   const container = document.getElementById(tableId);
   const resultsCount = document.getElementById('resultsCount');
@@ -95,12 +108,12 @@ function renderTable(data, tableId) {
     thumbWrap.className = "thumb-wrap";
 
     // 배지에는 순번 대신 달성 기록을 넣는다. 목록에서 바로 읽히는 값이다.
-    // 100만·1000만처럼 큰 고비는 색을 달리해 훑어보다가도 눈에 걸리게 한다.
+    // 100만·1000만 단위로 딱 떨어지는 고비만 색을 달리해 훑어보다가도 눈에 걸리게 한다.
     const tenThousands = Math.floor(song.count / 100000) * 10;
     const badge = document.createElement("span");
     badge.className = "card-badge";
-    if (tenThousands >= 1000) badge.classList.add("is-ten-million");
-    else if (tenThousands >= 100) badge.classList.add("is-million");
+    const tier = milestoneTier(tenThousands);
+    if (tier) badge.classList.add(tier);
     badge.textContent = `${tenThousands.toLocaleString("ko-KR")}만`;
 
     const img = document.createElement("img");

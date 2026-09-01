@@ -6,7 +6,6 @@
 
 import argparse
 import csv
-import io
 import logging
 from datetime import date
 from pathlib import Path
@@ -274,7 +273,7 @@ def import_text(text, replace=False):
 def load_seed_text():
     if not SEED_PATH.exists():
         raise SeedError(f"기본 데이터 파일을 찾을 수 없습니다: {SEED_PATH}")
-    return io.open(SEED_PATH, encoding="utf-8").read()
+    return SEED_PATH.read_text(encoding="utf-8")
 
 
 def import_seed_file(replace=False):
@@ -287,7 +286,7 @@ def main():
     parser.add_argument("--replace", action="store_true", help="기존 노래방 곡을 모두 지우고 새로 넣습니다.")
     args = parser.parse_args()
 
-    text = io.open(args.path, encoding="utf-8").read() if args.path else load_seed_text()
+    text = Path(args.path).read_text(encoding="utf-8") if args.path else load_seed_text()
     stats = import_text(text, replace=args.replace)
     for warning in stats["warnings"]:
         print("[경고]", warning)

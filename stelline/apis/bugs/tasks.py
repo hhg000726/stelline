@@ -17,7 +17,8 @@ def scrape_bugs_favorite(name, url_number):
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
     }
     page_url = "https://favorite.bugs.co.kr/" + str(url_number)
-    response = requests.get(page_url, headers=headers)
+    # 타임아웃이 없으면 응답이 끊긴 순간 순위 갱신 스레드가 영원히 멈춰 선다.
+    response = requests.get(page_url, headers=headers, timeout=10)
 
     if response.status_code != 200:
         logging.error("Bugs 요청 실패: status=%s", response.status_code)

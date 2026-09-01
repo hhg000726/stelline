@@ -44,28 +44,41 @@ def geocode_location(address, client_id, client_secret):
     return None, None
 
 
+def _needs_geocoding(event):
+    lat = event.get("latitude")
+    lng = event.get("longitude")
+    return (lat is None or lat < 1 or lng is None or lng < 1) and bool(event.get("address"))
+
+
 def fetch_offline_events():
+    """행사 목록을 내려주고, 좌표가 비어 있는 행사는 주소로 좌표를 채워 둔다.
+
+    지오코딩은 한 건에 최대 5초가 걸리는 외부 호출이라 DB 트랜잭션 밖에서 한다.
+    (예전에는 커서를 연 채 호출해, 주소가 여러 개면 그동안 커넥션을 붙들고 있었다.)
+    채워진 좌표는 마지막에 한 번에 저장한다.
+    """
     logging.info("오프라인 행사 데이터 조회 및 좌표 보완 요청")
     try:
         with database_cursor() as cursor:
             cursor.execute("SELECT * FROM offline")
             data = cursor.fetchall()
 
-            for event in data:
-                lat = event.get("latitude")
-                lng = event.get("longitude")
-                address = event.get("address")
-                name = event.get("name")
+        updates = []
+        for event in data:
+            if not _needs_geocoding(event):
+                continue
+            new_lat, new_lng = geocode_location(event.get("address"), NCP_CLIENT_ID, NCP_CLIENT_SECRET)
+            if new_lat and new_lng:
+                event["latitude"] = new_lat
+                event["longitude"] = new_lng
+                updates.append((new_lat, new_lng, event.get("name")))
 
-                if (lat is None or lat < 1 or lng is None or lng < 1) and address:
-                    new_lat, new_lng = geocode_location(address, NCP_CLIENT_ID, NCP_CLIENT_SECRET)
-                    if new_lat and new_lng:
-                        cursor.execute(
-                            "UPDATE offline SET latitude = %s, longitude = %s WHERE name = %s",
-                            (new_lat, new_lng, name),
-                        )
-                        event["latitude"] = new_lat
-                        event["longitude"] = new_lng
+        if updates:
+            with database_cursor() as cursor:
+                cursor.executemany(
+                    "UPDATE offline SET latitude = %s, longitude = %s WHERE name = %s",
+                    updates,
+                )
 
         logging.info("오프라인 행사 데이터 조회 및 좌표 보완 완료: count=%s", len(data))
         return jsonify(data), 200

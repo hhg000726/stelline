@@ -1,6 +1,6 @@
 """관리자용 콘텐츠 관리 화면."""
 
-from functools import wraps
+from functools import lru_cache, wraps
 import logging
 import secrets
 
@@ -186,7 +186,12 @@ def require_csrf():
         abort(400, "잘못된 요청입니다. 페이지를 새로고침한 뒤 다시 시도하세요.")
 
 
+@lru_cache(maxsize=1)
 def row_serializer():
+    """서명 객체는 상태가 없고 스레드 안전하므로 한 번만 만들어 재사용한다.
+
+    (행마다 새로 만들면 표 하나를 그리는 데 수백 개를 만들었다 버리게 된다.)
+    """
     return URLSafeSerializer(SECRET_KEY, salt="admin-row-delete")
 
 
@@ -211,6 +216,58 @@ def input_type(field):
     if field in {"url_number", "risk", "latitude", "longitude", "sort_order", "display_order"}:
         return "number"
     return "text"
+
+
+def _build_forms():
+    """CONTENT_TABLES 로부터 화면이 쓰는 폼 구조를 만든다.
+
+    입력값이 모두 모듈 상수라 요청마다 다시 만들 이유가 없어 import 시 한 번만 계산한다.
+    """
+    return {
+        name: {
+            **definition,
+            # 표 머리글도 양식과 같은 한글 이름을 쓴다. 목록에 보일 열을 따로 정하지
+            # 않은 테이블은 지금처럼 모든 열을 그대로 보여준다.
+            "columns": [
+                {
+                    "name": field,
+                    "label": definition.get("list_labels", {}).get(field)
+                             or definition.get("labels", {}).get(field, field),
+                    # 구분·종류처럼 값이 정해진 열은 표에서도 한글 이름으로 보여준다.
+                    "choices": dict(FIELD_CHOICES.get(field, ())),
+                }
+                for field in definition.get("list_fields", ())
+            ],
+            "inputs": [
+                {
+                    "name": field,
+                    # 표시 이름을 따로 정하지 않은 테이블은 기존처럼 열 이름을 그대로 보여준다.
+                    "label": definition.get("labels", {}).get(field, field),
+                    "type": input_type(field),
+                    "choices": FIELD_CHOICES.get(field),
+                }
+                for field in definition["fields"]
+            ],
+        }
+        for name, definition in CONTENT_TABLES.items()
+    }
+
+
+FORMS = _build_forms()
+
+# 표를 묶음별로 나눠 화면에서 탭으로 전환한다. 비어 있는 탭은 만들지 않는다.
+TABLE_GROUP_VIEWS = [
+    group
+    for group in (
+        {
+            "key": key,
+            "label": label,
+            "forms": {name: form for name, form in FORMS.items() if form.get("group") == key},
+        }
+        for key, label in TABLE_GROUPS
+    )
+    if group["forms"]
+]
 
 
 def load_table(connection, table_name):
@@ -261,50 +318,16 @@ def admin_index():
     finally:
         if connection:
             connection.close()
-    forms = {
-        name: {
-            **definition,
-            # 표 머리글도 양식과 같은 한글 이름을 쓴다. 목록에 보일 열을 따로 정하지
-            # 않은 테이블은 지금처럼 모든 열을 그대로 보여준다.
-            "columns": [
-                {
-                    "name": field,
-                    "label": definition.get("list_labels", {}).get(field)
-                             or definition.get("labels", {}).get(field, field),
-                    # 구분·종류처럼 값이 정해진 열은 표에서도 한글 이름으로 보여준다.
-                    "choices": dict(FIELD_CHOICES.get(field, ())),
-                }
-                for field in definition.get("list_fields", ())
-            ],
-            "inputs": [
-                {
-                    "name": field,
-                    # 표시 이름을 따로 정하지 않은 테이블은 기존처럼 열 이름을 그대로 보여준다.
-                    "label": definition.get("labels", {}).get(field, field),
-                    "type": input_type(field),
-                    "choices": FIELD_CHOICES.get(field),
-                }
-                for field in definition["fields"]
-            ],
-        }
-        for name, definition in CONTENT_TABLES.items()
-    }
-    # 표를 묶음별로 나눠 화면에서 탭으로 전환한다.
+    # 표 묶음별 항목 수만 요청마다 달라진다. 나머지 폼 구조는 상수에서 미리 만들어 둔다.
     groups = [
-        {
-            "key": key,
-            "label": label,
-            "forms": {name: form for name, form in forms.items() if form.get("group") == key},
-        }
-        for key, label in TABLE_GROUPS
+        {**group, "count": sum(len(data.get(name, [])) for name in group["forms"])}
+        for group in TABLE_GROUP_VIEWS
     ]
-    for group in groups:
-        group["count"] = sum(len(data.get(name, [])) for name in group["forms"])
     return render_template(
         "admin/index.html",
         data=data,
-        forms=forms,
-        groups=[group for group in groups if group["forms"]],
+        forms=FORMS,
+        groups=groups,
         csrf_token=csrf_token(),
         serialize_row=serialize_row,
         development_mode=APP_ENV == "development",

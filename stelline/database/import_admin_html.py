@@ -82,19 +82,26 @@ def parse_snapshot(path):
 
 
 def import_snapshot(snapshot, replace):
+    """스냅샷을 DB에 적재한다.
+
+    한 표의 행들은 같은 머리글에서 나오므로 열 구성이 같다. 그래서 행마다 왕복하지 않고
+    열 구성이 같은 묶음끼리 executemany 로 한 번에 넣는다.
+    """
     connection = get_connection()
     try:
         with connection.cursor() as cursor:
             for table_name, rows in snapshot.items():
                 if replace:
                     cursor.execute(f"DELETE FROM `{table_name}`")
+                batches = {}
                 for row in rows:
-                    columns = tuple(row)
+                    batches.setdefault(tuple(row), []).append([row[column] for column in row])
+                for columns, values in batches.items():
                     placeholders = ", ".join(["%s"] * len(columns))
                     names = ", ".join(f"`{column}`" for column in columns)
-                    cursor.execute(
+                    cursor.executemany(
                         f"INSERT INTO `{table_name}` ({names}) VALUES ({placeholders})",
-                        [row[column] for column in columns],
+                        values,
                     )
         connection.commit()
     except Exception:

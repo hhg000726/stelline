@@ -85,6 +85,8 @@ function renderList(events) {
     return;
   }
 
+  // 카드를 목록에 하나씩 붙이면 그때마다 배치가 다시 계산된다. 조각에 모아 한 번에 붙인다.
+  const fragment = document.createDocumentFragment();
   events.forEach((event, index) => {
     const card = document.createElement('button');
     card.type = 'button';
@@ -122,8 +124,9 @@ function renderList(events) {
     }
 
     card.addEventListener('click', () => focusEvent(index));
-    list.appendChild(card);
+    fragment.appendChild(card);
   });
+  list.appendChild(fragment);
 }
 
 function renderMarkers(events) {

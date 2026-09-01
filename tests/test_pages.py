@@ -20,6 +20,7 @@ def test_public_pages_render(client, path):
         ("/assets/site.css", "text/css"),
         ("/assets/site.js", "text/javascript"),
         ("/assets/theme.js", "text/javascript"),
+        ("/assets/nav.js", "text/javascript"),
         ("/firebase-messaging-sw.js", "text/javascript"),
         ("/search/style.css", "text/css"),
         ("/search/search.js", "text/javascript"),
@@ -110,6 +111,33 @@ def test_karaoke_page_offers_the_new_controls(client):
     assert 'data-match="and"' in html             # 필터 AND 옵션
     assert 'id="pick-favorite"' in html           # 랜덤 뽑기에서 바로 담기
     assert 'id="pick-setlist"' in html
+
+
+@pytest.mark.parametrize("path", ["/", "/search/", "/congratulation/", "/offline/", "/karaoke/"])
+def test_every_page_menu_follows_the_admin_button_settings(client, path):
+    """숨긴 기능이 어느 화면에는 남아 있으면 안 된다. 메뉴는 모두 같은 설정을 따른다."""
+    html = client.get(path).get_data(as_text=True)
+    assert "data-button-nav" in html
+    assert "/assets/nav.js" in html
+    for key in ("search", "karaoke", "congratulation", "offline"):
+        assert f'data-button-key="{key}"' in html
+
+
+@pytest.mark.parametrize("path", ["/search/", "/congratulation/", "/offline/", "/karaoke/"])
+def test_sub_pages_link_to_every_other_screen(client, path):
+    """화면마다 '메인으로'만 있으면 기능 사이를 오가려면 메인을 거쳐야 한다."""
+    html = client.get(path).get_data(as_text=True)
+    assert 'class="site-nav"' in html
+    assert 'aria-current="page"' in html
+
+
+def test_karaoke_list_is_shown_in_pages(client):
+    """곡이 수백 개라 한 번에 다 그리면 스크롤 막대가 실낱같이 얇아진다."""
+    html = client.get("/karaoke/").get_data(as_text=True)
+    assert 'id="load-more"' in html
+    js = client.get("/karaoke/karaoke.js").get_data(as_text=True)
+    assert "PAGE_SIZE" in js
+    assert "resetPaging" in js
 
 
 def test_karaoke_page_sorts_randomly_or_by_name(client):

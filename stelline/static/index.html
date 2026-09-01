@@ -32,12 +32,12 @@
           <img src="/favicon.svg" alt="" width="36" height="36">
           <span>Stelline</span>
         </h1>
-        <p class="page-subtitle">스텔라이브를 좋아해서 만든 비공식 팬 사이트입니다. 아래에서 찾는 기능을 골라주세요.</p>
+        <p class="page-subtitle">스텔라이브를 좋아해서 만든 비공식 팬 사이트입니다.</p>
       </div>
 
       <!-- 버튼만 늘어놓으면 무엇을 하는 곳인지 안 보여서, 한 줄 설명을 함께 둔다.
            data-button-key 는 관리자 화면의 `메인 화면 버튼` 설정과 짝을 이룬다. 바꾸지 마세요. -->
-      <div class="nav-card-grid" id="main-nav">
+      <div class="nav-card-grid" id="main-nav" data-button-nav>
         <a href="./search" class="nav-card" data-button-key="search">
           <span class="nav-card-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
           <span class="nav-card-body">
@@ -69,12 +69,14 @@
       </div>
     </section>
 
+    <!-- 세 칸 모두 같은 머리말 짜임을 쓴다. 한 칸에만 설명이 붙어 있으면
+         그 줄이 어디에 딸린 말인지 헷갈린다. -->
     <section class="info-stack is-split">
       <div class="section-panel is-full">
         <div class="section-header">
           <div class="section-title">
             <h2>트윗 안내</h2>
-            <p>키워드를 복사해 바로 트윗할 수 있습니다.</p>
+            <p>총공 시간에 맞춰 태그와 키워드를 복사해 트윗합니다.</p>
           </div>
         </div>
         <div id="twitContainer" class="stack-list"><p class="empty-state">불러오는 중…</p></div>
@@ -84,6 +86,7 @@
         <div class="section-header">
           <div class="section-title">
             <h2>이벤트·펀딩</h2>
+            <p>진행 중인 외부 이벤트로 이동합니다.</p>
           </div>
         </div>
         <div id="button-container" class="button-grid"><p class="empty-state">불러오는 중…</p></div>
@@ -93,6 +96,7 @@
         <div class="section-header">
           <div class="section-title">
             <h2>벅스 순위</h2>
+            <p>즐겨찾기 투표 현황입니다.</p>
           </div>
         </div>
         <div id="bugs" class="stack-list"><p class="empty-state">불러오는 중…</p></div>
@@ -106,6 +110,7 @@
   </main>
 
   <script src="/assets/site.js"></script>
+  <script src="/assets/nav.js"></script>
   <script src="/index.js"></script>
 </body>
 

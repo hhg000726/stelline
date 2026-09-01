@@ -41,6 +41,9 @@
   --surface-thumb: #dfeafc;
   --highlight: #fde68a;
   --highlight-text: inherit;
+  /* 조회수 달성 배지의 최상위 단계. 다크 모드와 짝이 맞도록 토큰으로 둔다. */
+  --milestone-top: #a16207;
+  --milestone-top-text: #ffffff;
 
   --shadow-sm: 0 8px 20px rgba(15,23,42,0.03);
   --shadow-card: 0 12px 30px rgba(15,23,42,0.08);
@@ -108,6 +111,8 @@
   --surface-thumb: #1b2740;
   --highlight: #a16207;
   --highlight-text: #ffffff;
+  --milestone-top: #fbbf24;
+  --milestone-top-text: #0f172a;
 
   --shadow-sm: 0 8px 20px rgba(0,0,0,0.35);
   --shadow-card: 0 12px 30px rgba(0,0,0,0.45);
@@ -339,6 +344,14 @@ a { color: inherit; text-decoration: none; }
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+/* 머리말 아래에 줄을 하나 그어 "이 아래가 이 제목에 딸린 내용"임을 보여 준다.
+ * 줄이 없으면 칸이 여러 개일 때 어느 제목의 내용인지 눈으로 묶기 어렵다. */
+.section-panel > .section-header,
+.congrats-section > .section-header {
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
 }
 
 .section-header h2,
@@ -680,6 +693,31 @@ button svg {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 큰 고비를 넘긴 기록은 한눈에 구분된다. 100만은 파랑, 1000만은 금색이다. */
+.card-badge.is-million,
+.card-badge.is-ten-million {
+  top: 7px;
+  left: 7px;
+  padding: 5px 11px;
+  font-size: 0.82rem;
+  letter-spacing: -0.01em;
+}
+
+.card-badge.is-million {
+  background: var(--primary-hover);
+  border-color: rgba(255,255,255,0.22);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15,23,42,0.28);
+}
+
+.card-badge.is-ten-million {
+  background: var(--milestone-top);
+  border-color: rgba(255,255,255,0.3);
+  color: var(--milestone-top-text);
+  box-shadow: 0 4px 14px rgba(15,23,42,0.32);
 }
 
 .card .info {
@@ -988,6 +1026,19 @@ button svg {
   width: 100%;
   justify-content: flex-start;
   text-align: left;
+  /* 한글 이름이 단어 중간에서 끊기지 않게 한다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* 옆 칸의 펼치기 줄(▾)과 생김새가 비슷해서, 눌렀을 때 어디로 가는지 알기 어렵다.
+ * 바깥으로 나가는 줄에는 화살표를 붙여 구분한다. */
+.button-grid > button::after {
+  content: "↗";
+  margin-left: auto;
+  padding-left: 10px;
+  color: var(--primary-strong);
+  font-size: 0.85rem;
 }
 
 .toggle-button {

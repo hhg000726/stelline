@@ -95,9 +95,13 @@ function renderTable(data, tableId) {
     thumbWrap.className = "thumb-wrap";
 
     // 배지에는 순번 대신 달성 기록을 넣는다. 목록에서 바로 읽히는 값이다.
+    // 100만·1000만처럼 큰 고비는 색을 달리해 훑어보다가도 눈에 걸리게 한다.
+    const tenThousands = Math.floor(song.count / 100000) * 10;
     const badge = document.createElement("span");
     badge.className = "card-badge";
-    badge.textContent = `${Math.floor(song.count / 100000)}0만`;
+    if (tenThousands >= 1000) badge.classList.add("is-ten-million");
+    else if (tenThousands >= 100) badge.classList.add("is-million");
+    badge.textContent = `${tenThousands.toLocaleString("ko-KR")}만`;
 
     const img = document.createElement("img");
     img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;

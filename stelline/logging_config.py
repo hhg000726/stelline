@@ -15,8 +15,16 @@ formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 
 # 로그 핸들러 설정 함수
 def create_log_handler(filename, level):
+    # 인코딩을 정하지 않으면 OS 기본값(윈도우는 cp949)을 쓴다. 로그에 한글 밖의
+    # 문자가 섞이면 그 줄이 통째로 사라지므로 utf-8로 못 박는다.
+    # delay=True: 실제로 기록할 때까지 파일을 열지 않는다.
     handler = TimedRotatingFileHandler(
-        f"{LOG_DIR}/{filename}", when=LOG_ROTATION_TIME, interval=LOG_INTERVAL, backupCount=LOG_BACKUP_DAYS
+        f"{LOG_DIR}/{filename}",
+        when=LOG_ROTATION_TIME,
+        interval=LOG_INTERVAL,
+        backupCount=LOG_BACKUP_DAYS,
+        encoding="utf-8",
+        delay=True,
     )
     handler.setFormatter(formatter)
     handler.setLevel(level)

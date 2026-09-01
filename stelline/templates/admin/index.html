@@ -340,8 +340,8 @@
         <table>
           <thead><tr>{% if form.columns %}{% for column in form.columns %}<th>{{ column.label }}</th>{% endfor %}{% else %}{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}{% endif %}<th>관리</th></tr></thead>
           <tbody>
-            {% for row in rows %}
-            <tr data-row='{{ row | tojson | safe }}' data-row-token="{{ serialize_row(row) }}">
+            {% for row in rows %}{# 행 서명은 값이 같으면 결과도 같다. 수정용·삭제용으로 두 번 서명하지 않는다. #}{% set row_token = serialize_row(row) %}
+            <tr data-row='{{ row | tojson | safe }}' data-row-token="{{ row_token }}">
               {% if form.columns %}
               {% for column in form.columns %}{% set value = row.get(column.name) %}{% set shown = column.choices.get(value|string, value) if value not in (None, '') else '' %}<td class="{% if not shown %}is-empty{% elif column.name in ('tj', 'ky') %}num{% endif %}{% if column.name == 'content' %} wrap{% endif %}"{% if shown %} title="{{ shown }}"{% endif %}>{{ shown or '—' }}</td>{% endfor %}
               {% else %}
@@ -351,7 +351,7 @@
                 <button type="button" class="secondary" data-copy-row>복제</button>
                 <form method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <input type="hidden" name="row_token" value="{{ serialize_row(row) }}">
+                  <input type="hidden" name="row_token" value="{{ row_token }}">
                   <button class="danger" type="submit">삭제</button>
                 </form>
               </td>

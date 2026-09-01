@@ -5,14 +5,25 @@ import random
 import re
 import threading
 import time
+from collections import defaultdict
 
 import requests
 
 from stelline.config import SEARCH_API_INTERVAL, SEARCH_API_KEY, TEMP_API_KEY
 from stelline.database.connection import database_cursor
+from stelline.http_client import SESSION
 
 LAST_SEARCH_FILE = "last_search_time.txt"
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+
+# 유튜브 검색 결과 페이지에 박혀 있는 JSON 덩어리. 크롤링마다 다시 만들 이유가 없다.
+YT_INITIAL_DATA_RE = re.compile(r"ytInitialData\s*=\s*({.*?});", re.DOTALL)
+
+# 위험도 값의 범위(1..28). 값이 큰 쪽부터 먼저 검사한다.
+MAX_RISK = 28
+
+# 한 회차에 위험도 높은 곡으로 채울 수 있는 최대 곡 수.
+SEARCH_TARGET_LIMIT = 12
 
 
 def read_last_search_timestamp():
@@ -24,14 +35,18 @@ def read_last_search_timestamp():
 
         with open(LAST_SEARCH_FILE, "r", encoding="utf-8") as file:
             return float(file.read().strip())
-    except OSError:
+    except (OSError, ValueError):
+        # 파일이 비었거나 깨져 있어도 앱이 뜨지 못하는 일은 없어야 한다.
         logging.error("마지막 검색 시간 불러오기 실패")
         return 0
 
 
 def write_last_search_timestamp(timestamp):
-    with open(LAST_SEARCH_FILE, "w", encoding="utf-8") as file:
+    """임시 파일에 쓴 뒤 바꿔치기한다. 쓰는 도중에 죽어도 원본이 깨지지 않는다."""
+    temporary = LAST_SEARCH_FILE + ".tmp"
+    with open(temporary, "w", encoding="utf-8") as file:
         file.write(str(timestamp))
+    os.replace(temporary, LAST_SEARCH_FILE)
 
 
 last_search_timestamp = read_last_search_timestamp()
@@ -86,7 +101,7 @@ def _youtube_video_ids_for_query(query, api_key):
         "maxResults": 3,
         "key": api_key,
     }
-    response = requests.get(YOUTUBE_SEARCH_URL, params=params, timeout=10)
+    response = SESSION.get(YOUTUBE_SEARCH_URL, params=params, timeout=10)
     response.raise_for_status()
     items = response.json().get("items", [])
     return [item["id"]["videoId"] for item in items if "id" in item]
@@ -112,10 +127,9 @@ def crawl_search_results_for_missing_videos(songs):
         params = {"search_query": query}
         video_id = case["video_id"]
         try:
-            response = requests.get(base_url, params=params, headers=headers, timeout=10)
+            response = SESSION.get(base_url, params=params, headers=headers, timeout=10)
             response.raise_for_status()
-            html = response.text
-            match = re.search(r"ytInitialData\s*=\s*({.*?});", html, re.DOTALL)
+            match = YT_INITIAL_DATA_RE.search(response.text)
             if not match:
                 logging.error("크롤링 데이터 파싱 실패: %s", query)
                 continue
@@ -154,20 +168,36 @@ def crawl_search_results_for_missing_videos(songs):
     return {"all_songs": not_searched, "searched_time": time.time()}
 
 
+def select_search_targets(song_infos):
+    """이번 회차에 검사할 곡을 고른다.
+
+    위험도가 높은 곡부터 최대 12곡까지 채우고, 남는 할당량은 위험도 0인 곡으로 채운다.
+    반환값은 (위험도 0인 곡, 우선 검사 대상)이다.
+
+    예전에는 위험도 1~28을 각각 전체 목록에서 훑어 스물여덟 번을 돌았다.
+    한 번만 훑어 위험도별로 담아 두면 고르는 순서는 그대로면서 훨씬 싸다.
+    """
+    by_risk = defaultdict(list)
+    for info in song_infos:
+        by_risk[info.get("risk")].append(info)
+
+    search_targets = []
+    for risk_level in reversed(range(1, MAX_RISK + 1)):
+        search_targets.extend(by_risk.get(risk_level, ()))
+        if len(search_targets) >= SEARCH_TARGET_LIMIT:
+            search_targets = search_targets[:SEARCH_TARGET_LIMIT]
+            break
+
+    return list(by_risk.get(0, ())), search_targets
+
+
 def search_unverified_songs(by_admin=False):
     is_quota_exceeded = False
 
     song_infos = fetch_song_infos_from_db()
     logging.info("검색 시작")
     not_searched = []
-    search_targets = []
-    risk_zero_songs = [info for info in song_infos if info.get("risk") == 0]
-
-    for risk_level in reversed(range(1, 29)):
-        search_targets.extend([info for info in song_infos if info.get("risk") == risk_level])
-        if len(search_targets) >= 12:
-            search_targets = search_targets[:12]
-            break
+    risk_zero_songs, search_targets = select_search_targets(song_infos)
 
     remaining_quotes = 25
 

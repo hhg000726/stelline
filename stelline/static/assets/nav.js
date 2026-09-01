@@ -29,6 +29,8 @@
         nodes.set(node.dataset.buttonKey, node);
       });
 
+      // 항목을 하나씩 옮기면 옮길 때마다 배치가 다시 계산된다. 조각에 모아 한 번에 되돌린다.
+      var fragment = document.createDocumentFragment();
       ordered.forEach(function (config) {
         // DB에 없는 키는 손대지 않는다. 화면에 새 항목을 먼저 넣어도 사라지지 않는다.
         var node = nodes.get(config.key);
@@ -36,8 +38,9 @@
         node.hidden = !config.visible;
         var labelNode = node.querySelector("[data-button-label]");
         if (labelNode && config.label) labelNode.textContent = config.label;
-        container.appendChild(node);
+        fragment.appendChild(node);
       });
+      container.appendChild(fragment);
     });
   }
 

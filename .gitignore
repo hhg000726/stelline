@@ -27,6 +27,8 @@ leaderboard.json
 songs_data.json
 recent_data.json
 last_search_time.txt
+# 마지막 검색 시각을 원자적으로 바꿔치기할 때 잠깐 생기는 파일
+last_search_time.txt.tmp
 record.json
 
 # Secrets and keys

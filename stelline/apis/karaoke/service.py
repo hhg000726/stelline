@@ -45,11 +45,10 @@ def _member_list(members, songs):
             }
             for row in members
         ]
-    names = []
+    # 어차피 마지막에 정렬하므로 순서를 지킬 필요가 없다. 리스트 검색(O(n^2)) 대신 집합을 쓴다.
+    names = set()
     for row in songs:
-        for name in _split_members(row["members"]):
-            if name not in names:
-                names.append(name)
+        names.update(_split_members(row["members"]))
     return [{"name": name, "unit": "", "formerUnits": []} for name in sorted(names)]
 
 

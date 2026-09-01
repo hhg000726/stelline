@@ -1,83 +1,118 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>관리자 로그인</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>관리자 로그인 · Stelline</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/assets/site.css">
+    <script src="/assets/theme.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            background-color: #EDF6FF;
-            color: #333;
-            margin: 0;
-            padding: 0;
-        }
-
-        h1 {
-            margin-top: 40px;
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        form {
-            margin-top: 30px;
+        /* 로그인 화면은 칸 하나뿐이라 화면 가운데에 세운다. 색은 site.css 토큰을 그대로 쓴다. */
+        .login-shell {
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px 16px;
         }
 
-        input {
-            margin: 10px;
-            padding: 12px;
-            font-size: 16px;
-            border-radius: 8px;
-            border: 1px solid #aaa;
-            width: 80%;
-            max-width: 300px;
+        .login-card {
+            width: min(100%, 360px);
+            padding: 26px 24px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-panel);
+            background: var(--surface-panel-solid);
+            box-shadow: var(--shadow-panel);
         }
 
-        button {
-            cursor: pointer;
-            width: 80%;
-            max-width: 300px;
-            padding: 12px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 8px;
-            margin: 15px auto;
-            display: block;
-            border: none;
-            outline: none;
-            color: white;
-            background: #8AB8F8;
-            transition: background 0.3s ease;
+        .login-brand {
+            display: inline-flex;
+            gap: 9px;
+            align-items: center;
+            margin-bottom: 16px;
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
         }
 
-        button:hover {
-            background: #5F94D6;
+        .login-card h1 {
+            margin: 0 0 4px;
+            font-size: 1.35rem;
+            letter-spacing: -0.03em;
         }
 
-        .flash {
-            margin: 20px auto 0;
-            color: #C0392B;
-            font-weight: bold;
+        .login-card > p {
+            margin: 0 0 18px;
+            color: var(--muted);
+            font-size: 0.88rem;
+        }
+
+        .login-card form {
+            display: grid;
+            gap: 10px;
+        }
+
+        .login-card label {
+            display: grid;
+            gap: 5px;
+            color: var(--text);
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 11px 12px;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-control);
+            background: var(--surface-input);
+            color: var(--text);
+            font: inherit;
+        }
+
+        .login-card button {
+            width: 100%;
+            margin-top: 4px;
+            padding: 11px 14px;
+        }
+
+        .login-flash {
+            margin: 0 0 14px;
+            padding: 10px 12px;
+            border-radius: var(--radius-control);
+            background: var(--danger-soft);
+            color: var(--danger);
+            font-size: 0.87rem;
+            font-weight: 700;
         }
     </style>
 </head>
 <body>
-    <h1>관리자 로그인</h1>
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for message in messages %}
-          <p class="flash">{{ message }}</p>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-    <form method="POST">
-        <input name="username" placeholder="아이디">
-        <input name="password" type="password" placeholder="비밀번호">
-        <button type="submit">로그인</button>
-    </form>
+    <main class="login-shell">
+        <div class="login-card">
+            <span class="login-brand"><img src="/favicon.svg" alt="" width="24" height="24">Stelline</span>
+            <h1>관리자 로그인</h1>
+            <p>콘텐츠 관리자 화면으로 들어가려면 로그인하세요.</p>
+
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  <p class="login-flash">{{ message }}</p>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <label>아이디
+                    <input name="username" autocomplete="username" autofocus>
+                </label>
+                <label>비밀번호
+                    <input name="password" type="password" autocomplete="current-password">
+                </label>
+                <button class="btn-primary" type="submit">로그인</button>
+            </form>
+        </div>
+    </main>
 </body>
 </html>

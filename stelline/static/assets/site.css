@@ -1,3 +1,9 @@
+/* Stelline 공통 디자인.
+ *
+ * 색은 아래 토큰 한 곳에서만 정한다. 화면별 CSS에는 색을 직접 적지 말고
+ * var(--surface) 처럼 토큰을 쓴다. 그래야 밝은 배색과 다크 모드가 함께 맞는다.
+ */
+
 :root {
   --background: #f3f7ff;
   --surface: #ffffff;
@@ -50,9 +56,12 @@
   --danger-solid: #b91c1c;
   --success-solid: #0f766e;
 
-  --radius-panel: 24px;
-  --radius-card: 20px;
-  --radius-control: 12px;
+  /* 모서리와 여백은 한 단계씩만 두어 화면마다 어긋나지 않게 한다. */
+  --radius-panel: 18px;
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --panel-pad: 18px;
+  --gap-page: 14px;
 
   font-family: Inter, "Noto Sans KR", Arial, sans-serif;
   color: var(--text);
@@ -62,7 +71,6 @@
 
 /* ---------- 다크 모드 ----------
  * theme.js가 <html data-theme="dark">를 붙이면 사이트 전체가 이 배색으로 바뀐다.
- * 노래방 모드와는 별개라, 어느 화면에서든 켜고 끌 수 있다.
  */
 :root[data-theme="dark"] {
   --background: #080d1a;
@@ -147,7 +155,73 @@ a { color: inherit; text-decoration: none; }
 .site-container {
   width: min(100%, 1180px);
   margin: 0 auto;
-  padding: 24px 16px 56px;
+  padding: 14px 16px 48px;
+}
+
+/* ---------- 사이트 머리말 ----------
+ * 모든 공개 화면이 같은 줄을 쓴다. 어느 화면에서든 다른 기능으로 바로 갈 수 있어야
+ * "메인으로 돌아갔다가 다시 들어가는" 왕복이 사라진다.
+ */
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gap-page);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-panel-solid);
+  box-shadow: var(--shadow-sm);
+}
+
+.site-header-brand {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding-left: 6px;
+  color: var(--text);
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.site-header-brand img { border-radius: 7px; }
+
+.site-nav {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.site-nav::-webkit-scrollbar { display: none; }
+
+.site-nav a {
+  flex-shrink: 0;
+  padding: 7px 13px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.site-nav a:hover {
+  background: var(--primary-tint);
+  color: var(--primary-strong);
+}
+
+.site-nav a[aria-current="page"] {
+  background: var(--primary-soft);
+  color: var(--primary-strong);
 }
 
 .site-brand {
@@ -155,27 +229,20 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   gap: 12px;
   margin: 0;
-  font-size: 1.9rem;
+  font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--text);
 }
 
-.site-brand img {
-  border-radius: 10px;
-}
+.site-brand img { border-radius: 10px; }
 
-.page-nav {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 18px;
-}
+/* ---------- 패널 ---------- */
 
 .page-shell,
 .section-panel,
 .hero,
 .congrats-hero,
-.notification-panel,
 .congrats-section {
   background: var(--surface-panel-solid);
   border: 1px solid var(--border);
@@ -193,30 +260,14 @@ a { color: inherit; text-decoration: none; }
 
 .page-shell,
 .congrats-hero {
-  padding: 30px 28px 24px;
+  padding: 18px 22px;
 }
 
 .page-header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-}
-
-.page-kicker,
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(59,130,246,0.15);
-  background: var(--primary-soft);
-  color: var(--primary-strong);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  gap: 6px;
 }
 
 .page-title,
@@ -224,9 +275,9 @@ a { color: inherit; text-decoration: none; }
 .congrats-hero h1 {
   margin: 0;
   color: var(--text);
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.1;
-  letter-spacing: -0.05em;
+  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
 }
 
 .page-subtitle,
@@ -239,28 +290,39 @@ a { color: inherit; text-decoration: none; }
 .method p {
   margin: 0;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.6;
+}
+
+.page-subtitle { font-size: 0.92rem; }
+
+.meta-text {
+  font-size: 0.82rem;
+  color: var(--muted-soft);
 }
 
 .section-panel {
-  margin-top: 18px;
-  padding: 22px 18px 18px;
+  margin-top: var(--gap-page);
+  padding: var(--panel-pad);
 }
 
-.congrats-section {
-  padding: 22px 18px 18px;
-}
+.congrats-section { padding: var(--panel-pad); }
 
 .congrats-hero {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: var(--gap-page);
 }
 
-/* 제목 묶음 + 우측 액션 버튼. search / congratulation 이 공유한다. */
+/* 제목 칸 안에 들어온 제보 양식은 위 여백을 겹쳐 두지 않는다. */
+.congrats-hero .report-panel { margin-top: 0; }
+
+/* 제목 묶음 + 우측 액션 버튼. 여러 화면이 공유한다. */
 .hero-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
 }
 
 .page-heading {
@@ -268,18 +330,7 @@ a { color: inherit; text-decoration: none; }
   flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  gap: 10px;
-}
-
-.notification-panel {
-  padding: 20px 22px;
-  margin-bottom: 18px;
-}
-
-.notification-panel h2 {
-  margin: 0 0 14px;
-  font-size: 1.05rem;
-  text-align: left;
+  gap: 5px;
 }
 
 .section-header {
@@ -287,8 +338,7 @@ a { color: inherit; text-decoration: none; }
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 18px;
-  padding: 0 6px;
+  margin-bottom: 12px;
 }
 
 .section-header h2,
@@ -298,6 +348,33 @@ a { color: inherit; text-decoration: none; }
   margin: 0;
   color: var(--text);
   text-align: left;
+}
+
+.section-header h2,
+.section-panel > h2 {
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+
+/* 제목 옆에 붙는 한 줄 설명. 제목 아래로 줄을 늘리지 않는다. */
+.section-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.section-title p {
+  font-size: 0.84rem;
+  color: var(--muted-soft);
+}
+
+.section-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
 }
 
 .status-text.is-error { color: var(--danger); }
@@ -333,18 +410,19 @@ a { color: inherit; text-decoration: none; }
 }
 
 .report-panel {
-  margin-top: 22px;
-  padding-top: 20px;
+  margin-top: 16px;
+  padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 
 .report-panel h2 {
-  margin: 0 0 6px;
-  font-size: 1.15rem;
+  margin: 0 0 4px;
+  font-size: 1rem;
 }
 
-.report-panel p {
-  margin-bottom: 14px;
+.report-panel > p {
+  margin-bottom: 10px;
+  font-size: 0.88rem;
 }
 
 .report-panel form {
@@ -354,14 +432,15 @@ a { color: inherit; text-decoration: none; }
 
 .report-panel label {
   color: var(--text);
+  font-size: 0.88rem;
   font-weight: 700;
 }
 
 .report-panel textarea {
   width: 100%;
   resize: vertical;
-  padding: 12px;
-  border: 1px solid var(--border);
+  padding: 11px 12px;
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   background: var(--surface-input);
   color: var(--text);
@@ -379,34 +458,29 @@ a { color: inherit; text-decoration: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 7px 12px;
+  padding: 5px 10px;
   border-radius: 999px;
   background: var(--primary-tint);
   color: var(--primary-strong);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .hero {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  align-items: center;
-  text-align: center;
-  width: min(100%, 56rem);
-  margin: 6px auto 0;
-  padding: 34px 28px 32px;
+  gap: 14px;
+  padding: 20px 22px;
 }
 
-.hero-actions,
 .notification-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 
-.hero-actions { justify-content: center; }
-.notification-actions { justify-content: flex-start; }
+/* ---------- 버튼 ---------- */
 
 button,
 .button,
@@ -415,11 +489,12 @@ button,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   border: 0;
   border-radius: var(--radius-control);
-  padding: 10px 16px;
+  padding: 9px 15px;
   font: inherit;
+  font-size: 0.9rem;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
@@ -455,8 +530,7 @@ a.btn-secondary:focus-visible,
 .btn-primary,
 button.btn-primary,
 .card button.btn-primary,
-.congrats-hero button.btn-primary,
-.notification-panel button.btn-primary {
+.congrats-hero button.btn-primary {
   background: var(--primary-hover);
   color: #fff;
   box-shadow: 0 6px 18px rgba(37,99,235,0.12);
@@ -465,8 +539,7 @@ button.btn-primary,
 .btn-primary:hover,
 button.btn-primary:hover,
 .card button.btn-primary:hover,
-.congrats-hero button.btn-primary:hover,
-.notification-panel button.btn-primary:hover {
+.congrats-hero button.btn-primary:hover {
   background: var(--primary-active);
   color: #fff;
 }
@@ -474,8 +547,7 @@ button.btn-primary:hover,
 .btn-secondary,
 button.btn-secondary,
 .card button.btn-secondary,
-.congrats-hero button.btn-secondary,
-.notification-panel button.btn-secondary {
+.congrats-hero button.btn-secondary {
   background: var(--surface-subtle);
   color: var(--text-strong);
   border: 1px solid var(--border-subtle);
@@ -485,10 +557,14 @@ button.btn-secondary,
 .btn-secondary:hover,
 button.btn-secondary:hover,
 .card button.btn-secondary:hover,
-.congrats-hero button.btn-secondary:hover,
-.notification-panel button.btn-secondary:hover {
+.congrats-hero button.btn-secondary:hover {
   background: var(--primary-tint-strong);
   color: var(--text-strong);
+}
+
+.btn-small {
+  padding: 6px 11px;
+  font-size: 0.82rem;
 }
 
 .btn-primary svg,
@@ -497,6 +573,41 @@ button svg {
   stroke: currentColor;
   fill: none;
 }
+
+/* ---------- 분절 선택(탭) ----------
+ * 값이 두세 개뿐인 선택은 목록을 여닫는 대신 한 줄에 나란히 둔다.
+ */
+
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+}
+
+.segmented button {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 13px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.segmented button:hover { transform: none; }
+
+.segmented button.is-on {
+  background: var(--surface);
+  color: var(--primary-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- 카드 ---------- */
 
 .card button {
   width: 100%;
@@ -508,15 +619,15 @@ button svg {
 .card button.btn-secondary {
   width: 100%;
   justify-content: center;
-  padding: 11px 14px;
+  padding: 9px 12px;
   border-radius: var(--radius-control);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
 }
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
   width: 100%;
 }
 
@@ -528,13 +639,13 @@ button svg {
   background: var(--surface-card);
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card:hover {
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card);
 }
 
 .card img {
@@ -556,18 +667,17 @@ button svg {
 
 .card-badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 8px;
+  left: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 64px;
-  padding: 7px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
   background: rgba(15,23,42,0.72);
   border: 1px solid rgba(255,255,255,0.14);
   color: var(--on-dark);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -576,22 +686,24 @@ button svg {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 11px 12px 12px;
 }
 
 .card h3 {
   margin: 0;
-  overflow-wrap: anywhere;
-  font-size: 1.05rem;
-  line-height: 1.4;
+  /* 한글은 단어 중간에서 끊으면 읽기 어렵다. 띄어쓰기에서만 줄을 바꾼다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  font-size: 0.95rem;
+  line-height: 1.35;
   letter-spacing: -0.02em;
   color: var(--text);
   text-align: left;
 }
 
 .card p {
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   text-align: left;
 }
 
@@ -599,8 +711,8 @@ button svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  font-size: 0.8rem;
+  gap: 8px;
+  font-size: 0.76rem;
   color: var(--muted-soft);
 }
 
@@ -610,52 +722,175 @@ button svg {
   gap: 6px;
 }
 
-.card .cta {
-  width: 100%;
-  margin-top: auto;
-}
-
 .card .btn-primary {
   width: 100%;
   justify-content: center;
-  padding: 11px 14px;
+  padding: 9px 12px;
   border-radius: var(--radius-control);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
 }
+
+/* 카드 하나가 통째로 하나의 동작일 때는 카드 자체를 버튼으로 쓴다.
+ * 별도의 CTA 버튼 줄이 사라져 카드가 짧아지고, 누를 곳도 넓어진다. */
+.card.is-link {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  border: 1px solid var(--border-card);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card.is-link:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-outline);
+  box-shadow: var(--shadow-card);
+}
+
+.card.is-link .info { gap: 6px; }
+
+.card.is-link .card-action {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: auto;
+  color: var(--primary-strong);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.card.is-link .card-action svg { stroke: currentColor; fill: none; }
+
+/* 썸네일 위에 얹는 재생 표시. 카드가 눌린다는 것을 알려 준다. */
+.thumb-play {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(15,23,42,0.72);
+  color: var(--on-dark);
+}
+
+.thumb-play svg { stroke: currentColor; fill: currentColor; }
+
+/* 훑어보기용 촘촘한 카드 격자. 한 줄에 더 많이 들어간다. */
+.card-grid.is-compact {
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 10px;
+}
+
+/* ---------- 메인 화면의 기능 카드 ----------
+ * 버튼만 늘어놓으면 "무엇을 하는 곳인지"가 안 보인다. 한 줄 설명을 함께 둔다.
+ */
+
+.nav-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.nav-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.nav-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-outline);
+  box-shadow: var(--shadow-card);
+}
+
+.nav-card-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+
+.nav-card-icon svg { stroke: currentColor; fill: none; }
+
+.nav-card-body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.nav-card-body strong {
+  font-size: 0.98rem;
+  letter-spacing: -0.02em;
+}
+
+.nav-card-body span {
+  color: var(--muted-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+/* ---------- 단계 안내(검색 정상화 방법) ---------- */
 
 .method,
 .stage {
-  width: min(100%, 920px);
-  margin: 18px auto;
-  padding: 20px 18px;
-  border-radius: 22px;
+  width: 100%;
+  border-radius: var(--radius-card);
   background: var(--surface-raised);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-raised);
+}
+
+.method {
+  margin: 14px 0 10px;
+  padding: 10px 14px;
+}
+
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
 }
 
 .stage {
-  display: grid;
-  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
-  gap: 18px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 10px;
+  box-shadow: var(--shadow-sm);
 }
 
-.step-media {
-  width: 100%;
-}
+.step-media { width: 100%; }
 
 .step-media img {
   width: 100%;
-  border-radius: 16px;
-  border: 1px solid rgba(148,163,184,0.2);
-  box-shadow: 0 10px 24px rgba(15,23,42,0.08);
+  height: 140px;
+  /* 화면 갈무리는 잘라내면 짚어 준 곳이 사라진다. 전체를 담고, 누르면 크게 본다. */
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-subtle);
 }
 
 .step-copy {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 
 .step-number {
@@ -663,56 +898,71 @@ button svg {
   align-items: center;
   justify-content: center;
   width: fit-content;
-  padding: 6px 10px;
+  padding: 3px 8px;
   border-radius: 999px;
   background: var(--primary-tint);
   color: var(--primary-strong);
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
 
-.stage h3 {
-  font-size: 1.12rem;
-}
+.stage h3 { font-size: 0.92rem; }
 
 .checklist,
 .info-list {
-  margin: 14px 0 0;
+  margin: 0;
   padding-left: 18px;
   color: var(--muted);
-  line-height: 1.8;
+  font-size: 0.9rem;
+  line-height: 1.7;
 }
+
+/* 여러 줄 안내는 두 칸으로 나눠 세로 길이를 줄인다. */
+.checklist {
+  columns: 2;
+  column-gap: 24px;
+}
+
+.checklist li { break-inside: avoid; }
 
 .map-shell {
   width: 100%;
-  height: 500px;
-  margin-top: 20px;
+  height: 100%;
+  min-height: 420px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 16px 32px rgba(15,23,42,0.04);
   overflow: hidden;
 }
 
 .info-stack {
   display: grid;
-  gap: 18px;
-  margin-top: 18px;
+  gap: var(--gap-page);
+  margin-top: var(--gap-page);
 }
 
 /* 그리드 gap 과 중복돼 간격이 두 배가 되지 않도록 한다. */
-.info-stack > .section-panel {
-  margin-top: 0;
+.info-stack > .section-panel { margin-top: 0; }
+
+/* 넓은 화면에서는 짧은 패널을 나란히 두어 아래로 길어지지 않게 한다. */
+@media (min-width: 900px) {
+  .info-stack.is-split {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .info-stack.is-split > .is-full { grid-column: 1 / -1; }
 }
 
 .empty-state {
   grid-column: 1 / -1;
   margin: 0;
-  padding: 18px 20px;
-  border-radius: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-control);
   background: var(--surface-mute);
   color: var(--muted);
+  font-size: 0.9rem;
   text-align: center;
 }
 
@@ -724,11 +974,11 @@ button svg {
 .stack-list,
 .button-grid {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .button-grid {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   justify-items: stretch;
   align-items: stretch;
 }
@@ -745,7 +995,7 @@ button svg {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 12px 16px;
+  padding: 10px 14px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   background: var(--surface-subtle);
@@ -773,26 +1023,30 @@ button svg {
   border-color: var(--primary-outline);
 }
 
-.toggle-button.is-open::after {
-  content: "▴";
+.toggle-button.is-open::after { content: "▴"; }
+
+/* 펼치기 전에도 읽히면 좋은 값(총공 시간·현재 순위)을 제목 오른쪽에 둔다. */
+.toggle-meta {
+  margin-left: auto;
+  padding-right: 12px;
+  color: var(--muted-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
-.list-item-content {
-  padding: 10px 8px 0;
-}
+.list-item-content { padding: 8px 0 2px; }
 
-.list-item-content[hidden] {
-  display: none;
-}
+.list-item-content[hidden] { display: none; }
 
 .list-item-body {
   display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-  border: 1px solid rgba(148,163,184,0.2);
-  border-radius: 16px;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
   background: var(--surface-inset);
   color: var(--muted);
+  font-size: 0.88rem;
   text-align: left;
 }
 
@@ -804,39 +1058,39 @@ button svg {
 
 .list-item-body strong {
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .list-item-body h3 {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .copy-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .copy-card {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 13px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
   background: var(--surface-card);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   text-align: left;
 }
 
 .copy-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 36px rgba(15,23,42,0.1);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card);
 }
 
 .copy-card-top {
@@ -848,12 +1102,12 @@ button svg {
 .copy-card-kicker {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(59,130,246,0.08);
+  background: var(--primary-soft);
   border: 1px solid rgba(59,130,246,0.14);
   color: var(--primary-strong);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -862,14 +1116,14 @@ button svg {
 .copy-text {
   margin: 0;
   color: var(--text);
-  line-height: 1.6;
-  font-size: 0.95rem;
+  line-height: 1.5;
+  font-size: 0.9rem;
   text-align: left;
 }
 
 .copy-text strong {
   display: block;
-  font-size: 1.02rem;
+  font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -877,17 +1131,17 @@ button svg {
 .tag-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tag-chip {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 4px 9px;
   border-radius: 999px;
   background: var(--primary-tint);
   color: var(--primary-strong);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 700;
 }
 
@@ -900,17 +1154,20 @@ button svg {
 .toggle-row {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: var(--muted);
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
+.toggle-row input { accent-color: var(--primary-strong); }
+
 aside footer,
 footer {
-  margin-top: 28px;
+  margin-top: 20px;
   padding: 0 8px;
-  color: var(--muted);
-  font-size: 0.94rem;
+  color: var(--muted-soft);
+  font-size: 0.82rem;
   line-height: 1.6;
   text-align: center;
 }
@@ -921,7 +1178,7 @@ table {
 }
 
 th, td {
-  padding: 12px 10px;
+  padding: 10px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
   text-align: center;
@@ -942,8 +1199,8 @@ tr:last-child td { border-bottom: 0; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   padding: 0;
   border: 1px solid var(--border-subtle);
   border-radius: 50%;
@@ -966,79 +1223,67 @@ tr:last-child td { border-bottom: 0; }
 @media (max-width: 720px) {
   .theme-toggle {
     right: 12px;
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
   }
 
   .site-container {
-    padding-left: 14px;
-    padding-right: 14px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .site-header {
+    border-radius: var(--radius-card);
+    padding: 8px 10px;
+  }
+
+  /* 좁은 화면에서 옆으로 밀어야만 보이는 메뉴는 있는 줄도 모른다. 줄을 바꿔 전부 보여 준다. */
+  .site-nav {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    overflow-x: visible;
+  }
+
+  .site-nav a { padding: 6px 11px; font-size: 0.84rem; }
+
+  .card-grid.is-compact {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
 
   .page-shell,
   .section-panel,
   .hero,
   .congrats-hero,
-  .notification-panel,
   .congrats-section {
-    border-radius: 18px;
+    border-radius: var(--radius-card);
   }
 
   .page-shell,
-  .congrats-hero {
-    padding: 22px 18px 18px;
-  }
-
+  .congrats-hero,
   .hero {
-    padding: 26px 18px 24px;
+    padding: 16px 14px;
   }
 
-  .site-brand {
-    font-size: 1.6rem;
+  .section-panel,
+  .congrats-section {
+    padding: 15px 14px;
   }
 
-  .page-header,
-  .section-header,
-  .notification-actions,
-  .hero-actions {
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-
-  .page-header,
-  .page-heading {
-    align-items: center;
-    text-align: center;
-  }
-
-  .section-header {
-    flex-direction: column;
-  }
-
-  .stage {
-    grid-template-columns: 1fr;
-  }
-
-  .card-grid {
-    grid-template-columns: 1fr;
-  }
+  .checklist { columns: 1; }
 
   .hero-heading {
     flex-direction: column;
+    gap: 12px;
   }
 
-  .report-toggle {
-    align-self: stretch;
+  .report-toggle { align-self: stretch; }
+
+  .section-header {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  .congrats-hero h1,
-  .congrats-hero p,
-  .notification-panel h2 {
-    text-align: center;
-  }
-
-  .notification-actions { justify-content: center; }
+  .section-actions { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1052,6 +1297,7 @@ tr:last-child td { border-bottom: 0; }
 
   .card:hover,
   .copy-card:hover,
+  .nav-card:hover,
   button:hover,
   .btn-primary:hover,
   .btn-secondary:hover,

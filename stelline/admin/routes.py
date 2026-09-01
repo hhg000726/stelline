@@ -16,16 +16,51 @@ from stelline.database.migrate import apply_migrations
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 # 운영자가 수정할 콘텐츠만 명시적으로 허용한다.
+#
+# 화면은 표를 `group` 별로 묶어 한 번에 한 묶음만 보여준다. 한 화면에 열한 개의
+# 표를 동시에 펼치면 무엇을 고쳐야 하는지 찾는 데만 시간이 걸린다.
 CONTENT_TABLES = {
-    "events": {"title": "이벤트·펀딩", "description": "메인 화면에 표시할 외부 이벤트 링크입니다.", "fields": ("title", "link", "expires_at")},
-    "twits": {"title": "트윗 안내", "description": "태그·키워드는 쉼표로 구분해 입력하세요.", "fields": ("title", "time", "tags", "keywords", "expires_at")},
-    "targets": {"title": "Bugs 순위 대상", "description": "Bugs 즐겨찾기 페이지 번호를 입력하면 순위를 주기적으로 표시합니다.", "fields": ("name", "title", "url_number", "expires_at")},
-    "offline": {"title": "오프라인 이벤트", "description": "주소를 입력하면 빈 지도 좌표가 자동으로 보완됩니다. 링크는 쉼표로 구분하세요.", "fields": ("name", "location_name", "address", "description", "start_date", "end_date", "latitude", "longitude", "always")},
-    "song_infos": {"title": "검색 점검 곡", "description": "YouTube 검색 노출을 확인할 곡입니다. risk는 비워 두거나 0으로 입력하세요.", "fields": ("query", "video_id", "risk")},
-    "song_reports": {"title": "누락 노래 제보", "description": "사용자가 검색 목록에 없다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
-    "view_reports": {"title": "조회수 알림 누락 제보", "description": "사용자가 조회수 알림에서 누락되었다고 제보한 내용을 확인하고 삭제합니다.", "fields": ("content",), "key_fields": ("id",)},
+    "events": {
+        "title": "이벤트·펀딩",
+        "group": "main",
+        "description": "메인 화면에 표시할 외부 이벤트 링크입니다.",
+        "fields": ("title", "link", "expires_at"),
+        "labels": {"title": "제목", "link": "링크", "expires_at": "만료 시각(비우면 계속 표시)"},
+        "list_fields": ("title", "link", "expires_at"),
+        "list_labels": {"expires_at": "만료 시각"},
+    },
+    "twits": {
+        "title": "트윗 안내",
+        "group": "main",
+        "description": "태그·키워드는 쉼표로 구분해 입력하세요.",
+        "fields": ("title", "time", "tags", "keywords", "expires_at"),
+        "labels": {"title": "제목", "time": "시간 안내", "tags": "태그(쉼표 구분)", "keywords": "키워드(쉼표 구분)", "expires_at": "만료 시각(비우면 계속 표시)"},
+        "list_fields": ("title", "time", "tags", "keywords", "expires_at"),
+        "list_labels": {"tags": "태그", "keywords": "키워드", "expires_at": "만료 시각"},
+    },
+    "targets": {
+        "title": "Bugs 순위 대상",
+        "group": "main",
+        "description": "Bugs 즐겨찾기 페이지 번호를 입력하면 순위를 주기적으로 표시합니다.",
+        "fields": ("name", "title", "url_number", "expires_at"),
+        "labels": {"name": "대상 이름", "title": "투표 제목", "url_number": "Bugs 페이지 번호", "expires_at": "만료 시각(비우면 계속 표시)"},
+        "list_fields": ("name", "title", "url_number", "expires_at"),
+        "list_labels": {"url_number": "페이지 번호", "expires_at": "만료 시각"},
+    },
+    "main_buttons": {
+        "title": "메인 화면 버튼",
+        "group": "main",
+        "description": "메인 화면 기능 버튼을 감추거나 다시 보이게 합니다. 표시 순서는 작을수록 앞에 옵니다. 버튼 키는 화면에 심어 둔 값이라 바꾸지 마세요.",
+        "fields": ("button_key", "label", "visible", "display_order"),
+        "labels": {"button_key": "버튼 키(수정 금지)", "label": "버튼 이름", "visible": "표시 여부", "display_order": "표시 순서(비우면 맨 뒤)"},
+        "list_fields": ("button_key", "label", "visible", "display_order"),
+        "list_labels": {"button_key": "버튼 키", "label": "버튼 이름", "visible": "표시", "display_order": "순서"},
+        "key_fields": ("button_key",),
+        "order_field": "display_order",
+    },
     "karaoke_songs": {
         "title": "노래방 번호",
+        "group": "karaoke",
         "description": "노래방 번호 페이지에 표시할 곡입니다. 번호가 없으면 비워 두고, 멤버는 쉼표로 구분하세요. 목록은 화면에서 랜덤·가나다순으로 보여 주므로 순서를 정할 필요가 없습니다.",
         "fields": ("title", "artist", "tj", "ky", "section", "category", "members", "title_alt"),
         "labels": {
@@ -36,24 +71,90 @@ CONTENT_TABLES = {
         "key_fields": ("id",),
         "bulk_import": True,
         "searchable": True,
-        # 곡이 수백 개라 목록을 넓게 펴고, 표에는 눈으로 훑을 열만 남긴다.
+        # 곡이 수백 개라 표에는 눈으로 훑을 열만 남긴다.
         # 나머지 값은 행을 클릭하면 수정 양식에 그대로 채워진다.
         "wide": True,
         "list_fields": ("title", "artist", "section", "category", "tj", "ky", "members"),
         # 표 머리글은 양식보다 짧아야 열이 좁아지지 않는다.
         "list_labels": {"artist": "가수", "tj": "TJ", "ky": "금영", "members": "참여 멤버"},
     },
-    "karaoke_members": {"title": "노래방 멤버 목록", "description": "노래방 페이지 멤버 필터의 순서와 유닛 묶음입니다. 졸업일을 넣으면 필터에서 졸업으로 묶이고, 유닛을 옮긴 멤버는 이전 유닛에 적어 두세요.", "fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"), "labels": {"name": "멤버 이름", "unit": "현재 소속 유닛", "former_units": "이전 유닛(쉼표 구분)", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "표시 순서(비우면 맨 뒤)"}, "order_field": "display_order"},
-    "karaoke_reports": {"title": "노래방 번호 제보", "description": "사용자가 남긴 노래방 번호 추가·정정 제보입니다.", "fields": ("content",), "key_fields": ("id",)},
-    "main_buttons": {
-        "title": "메인 화면 버튼",
-        "description": "메인 화면 상단 버튼을 감추거나 다시 보이게 합니다. 표시 순서는 작을수록 왼쪽에 옵니다. 버튼 키는 화면에 심어 둔 값이라 바꾸지 마세요.",
-        "fields": ("button_key", "label", "visible", "display_order"),
-        "labels": {"button_key": "버튼 키(수정 금지)", "label": "버튼 이름", "visible": "표시 여부", "display_order": "표시 순서(비우면 맨 뒤)"},
-        "key_fields": ("button_key",),
+    "karaoke_members": {
+        "title": "노래방 멤버 목록",
+        "group": "karaoke",
+        "description": "노래방 페이지 멤버 필터의 순서와 유닛 묶음입니다. 졸업일을 넣으면 필터에서 졸업으로 묶이고, 유닛을 옮긴 멤버는 이전 유닛에 적어 두세요.",
+        "fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"),
+        "labels": {"name": "멤버 이름", "unit": "현재 소속 유닛", "former_units": "이전 유닛(쉼표 구분)", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "표시 순서(비우면 맨 뒤)"},
+        "list_fields": ("name", "unit", "former_units", "debut_date", "graduated_at", "display_order"),
+        "list_labels": {"name": "이름", "unit": "유닛", "former_units": "이전 유닛", "debut_date": "데뷔일", "graduated_at": "졸업일", "display_order": "순서"},
         "order_field": "display_order",
     },
+    "song_infos": {
+        "title": "검색 점검 곡",
+        "group": "search",
+        "description": "YouTube 검색 노출을 확인할 곡입니다. 위험도는 비워 두거나 0으로 입력하세요.",
+        "fields": ("query", "video_id", "risk"),
+        "labels": {"query": "검색어", "video_id": "영상 ID", "risk": "위험도"},
+        "list_fields": ("query", "video_id", "risk"),
+        "searchable": True,
+    },
+    "offline": {
+        "title": "오프라인 이벤트",
+        "group": "offline",
+        "description": "주소를 입력하면 빈 지도 좌표가 자동으로 보완됩니다. 관련 링크는 쉼표로 구분하세요.",
+        "fields": ("name", "location_name", "address", "description", "start_date", "end_date", "latitude", "longitude", "always"),
+        "labels": {
+            "name": "행사 이름", "location_name": "장소 이름", "address": "주소",
+            "description": "관련 링크(쉼표 구분)", "start_date": "시작", "end_date": "종료",
+            "latitude": "위도", "longitude": "경도", "always": "상시 여부",
+        },
+        "list_fields": ("name", "location_name", "start_date", "end_date", "always"),
+        "list_labels": {"name": "행사", "location_name": "장소", "always": "상시"},
+    },
+    "song_reports": {
+        "title": "누락 노래 제보",
+        "group": "reports",
+        "description": "사용자가 검색 목록에 없다고 제보한 내용입니다.",
+        "fields": ("content",),
+        "labels": {"content": "제보 내용"},
+        "list_fields": ("created_at", "content"),
+        "list_labels": {"created_at": "받은 시각", "content": "제보 내용"},
+        "key_fields": ("id",),
+        # 제보는 사용자가 보내는 것이라, 관리자가 직접 넣을 일이 거의 없다.
+        "collapse_form": True,
+    },
+    "view_reports": {
+        "title": "조회수 알림 누락 제보",
+        "group": "reports",
+        "description": "사용자가 조회수 알림에서 누락되었다고 제보한 내용입니다.",
+        "fields": ("content",),
+        "labels": {"content": "제보 내용"},
+        "list_fields": ("created_at", "content"),
+        "list_labels": {"created_at": "받은 시각", "content": "제보 내용"},
+        "key_fields": ("id",),
+        "collapse_form": True,
+    },
+    "karaoke_reports": {
+        "title": "노래방 번호 제보",
+        "group": "reports",
+        "description": "사용자가 남긴 노래방 번호 추가·정정 제보입니다.",
+        "fields": ("content",),
+        "labels": {"content": "제보 내용"},
+        "list_fields": ("created_at", "content"),
+        "list_labels": {"created_at": "받은 시각", "content": "제보 내용"},
+        "key_fields": ("id",),
+        "collapse_form": True,
+    },
 }
+
+# 화면 위쪽 탭. 순서가 곧 탭 순서다.
+TABLE_GROUPS = (
+    ("main", "메인 화면"),
+    ("karaoke", "노래방"),
+    ("search", "검색 점검"),
+    ("offline", "오프라인"),
+    ("reports", "사용자 제보"),
+)
+
 READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "record_karaoke", "song_counts", "fcm_tokens")
 
 # 값이 정해져 있는 열은 직접 입력 대신 선택 목록으로 보여준다.
@@ -61,6 +162,7 @@ FIELD_CHOICES = {
     "section": (("group", "단체"), ("unit", "유닛"), ("collab", "콜라보"), ("gift", "기프트"), ("solo", "개인")),
     "category": (("original", "오리지널"), ("cover", "커버")),
     "visible": (("1", "표시"), ("0", "숨김")),
+    "always": (("0", "기간 있음"), ("1", "상시")),
 }
 
 
@@ -187,10 +289,22 @@ def admin_index():
         }
         for name, definition in CONTENT_TABLES.items()
     }
+    # 표를 묶음별로 나눠 화면에서 탭으로 전환한다.
+    groups = [
+        {
+            "key": key,
+            "label": label,
+            "forms": {name: form for name, form in forms.items() if form.get("group") == key},
+        }
+        for key, label in TABLE_GROUPS
+    ]
+    for group in groups:
+        group["count"] = sum(len(data.get(name, [])) for name in group["forms"])
     return render_template(
         "admin/index.html",
         data=data,
         forms=forms,
+        groups=[group for group in groups if group["forms"]],
         csrf_token=csrf_token(),
         serialize_row=serialize_row,
         development_mode=APP_ENV == "development",

@@ -85,65 +85,59 @@ function renderTable(data, tableId) {
     return;
   }
 
-  data.forEach((song, index) => {
-    const card = document.createElement("article");
-    card.className = "card";
+  data.forEach((song) => {
+    // 카드 전체가 "유튜브로 이동" 버튼이라 버튼 줄을 따로 두지 않는다.
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "card is-link";
 
     const thumbWrap = document.createElement("div");
     thumbWrap.className = "thumb-wrap";
 
+    // 배지에는 순번 대신 달성 기록을 넣는다. 목록에서 바로 읽히는 값이다.
     const badge = document.createElement("span");
     badge.className = "card-badge";
-    badge.textContent = `#${data.length - index}`;
+    badge.textContent = `${Math.floor(song.count / 100000)}0만`;
 
     const img = document.createElement("img");
     img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
-    img.alt = "영상 썸네일";
+    img.alt = "";
     img.loading = "lazy";
+
+    const play = document.createElement("span");
+    play.className = "thumb-play";
+    play.innerHTML = Stelline.icon("play");
 
     thumbWrap.appendChild(badge);
     thumbWrap.appendChild(img);
+    thumbWrap.appendChild(play);
     card.appendChild(thumbWrap);
 
     const info = document.createElement("div");
     info.className = "info";
 
+    const title = document.createElement("h3");
+    title.textContent = song.title || "조회수 달성";
+    info.appendChild(title);
+
     const meta = document.createElement("div");
     meta.className = "meta";
-
-    const reached = document.createElement("span");
-    reached.textContent = ``;
 
     const time = document.createElement("span");
     const diff = Date.now() - new Date(song.counted_time).getTime();
     const hours = Math.floor(diff / 3600000);
     time.textContent = hours > 0 ? `${hours}시간 전` : "방금 전";
 
-    meta.appendChild(reached);
+    const action = document.createElement("span");
+    action.className = "card-action";
+    action.textContent = "유튜브로 이동";
+
     meta.appendChild(time);
+    meta.appendChild(action);
     info.appendChild(meta);
 
-    const title = document.createElement("p");
-    title.textContent = song.title || "조회수 달성";
-    info.appendChild(title);
-
-    const summary = document.createElement("h3");
-    summary.textContent = `${Math.floor(song.count / 100000)}0만 달성`;
-    info.appendChild(summary);
-
-    const cta = document.createElement("div");
-    cta.className = "cta";
-
-    const button = document.createElement("button");
-    button.className = "btn-primary";
-    button.type = "button";
-    button.innerHTML = Stelline.icon("play") + " 유튜브로 이동";
-    button.onclick = () => handleButtonClick(song.video_id);
-
-    cta.appendChild(button);
-    info.appendChild(cta);
-
     card.appendChild(info);
+    card.onclick = () => handleButtonClick(song.video_id);
     container.appendChild(card);
   });
 }

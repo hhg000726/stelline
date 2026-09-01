@@ -23,6 +23,26 @@ const statusElement = document.getElementById('status');
 const enableButton = document.getElementById('enableNotificationsButton');
 const disableButton = document.getElementById('disableNotificationsButton');
 
+/* 제목 아래 안내 문구. 글자는 관리자 화면에서 고치는 값이라 여기서 적지 않는다.
+   (`assets/content.js` 가 채운다. 관리자가 비웠으면 hidden 이 붙어 계속 감춰진다.) */
+const promptElement = document.querySelector('[data-content-key="congratulation_notify_prompt"]');
+
+/* 알림 상태 줄. 알릴 것이 있을 때만 안내 문구 자리를 대신한다.
+   둘을 한 줄에 겹쳐 쓰면 상태가 안내 문구를 덮어써서 문구를 고칠 수가 없다. */
+function showStatus(message, tone) {
+    statusElement.textContent = message;
+    statusElement.className = tone ? `status-text ${tone}` : 'status-text';
+    statusElement.hidden = false;
+    if (promptElement) promptElement.classList.add('is-status-replaced');
+}
+
+/* 알릴 것이 없는 평소 상태. 상태 줄을 접고 안내 문구를 그대로 보여 준다. */
+function resetStatus() {
+    statusElement.textContent = '';
+    statusElement.hidden = true;
+    if (promptElement) promptElement.classList.remove('is-status-replaced');
+}
+
 // 초기 상태에서 버튼 비활성화 (스크립트 로드 시 바로 적용)
 enableButton.disabled = true;
 disableButton.disabled = true;
@@ -49,8 +69,7 @@ function registerServiceWorker() {
             })
             .catch((error) => {
                 console.error('Service Worker 등록 실패:', error);
-                statusElement.textContent = 'Service Worker 등록 실패. (HTTPS 및 경로 확인)';
-                statusElement.className = 'status-text is-error';
+                showStatus('Service Worker 등록 실패. (HTTPS 및 경로 확인)', 'is-error');
                 enableButton.disabled = true;
                 enableButton.textContent = '알림 지원 안됨';
                 disableButton.disabled = true;
@@ -58,8 +77,7 @@ function registerServiceWorker() {
             });
     } else {
         console.warn('이 브라우저는 Service Worker를 지원하지 않습니다.');
-        statusElement.textContent = '이 브라우저는 웹 푸시 알림을 지원하지 않습니다.';
-        statusElement.className = 'status-text is-error';
+        showStatus('이 브라우저는 웹 푸시 알림을 지원하지 않습니다.', 'is-error');
         enableButton.disabled = true;
         enableButton.textContent = '알림 지원 안됨';
         disableButton.disabled = true;
@@ -67,13 +85,10 @@ function registerServiceWorker() {
 }
 
 async function checkAndSetUIBasedOnToken() {
-    statusElement.className = 'status-text is-info';
-
     const permission = Notification.permission; // 브라우저 알림 권한 확인
 
     if (permission === 'denied') {
-        statusElement.textContent = '알림이 브라우저 설정에서 차단되었습니다. 새로고침 하거나 수동으로 설정해주세요.';
-        statusElement.className = 'status-text is-error';
+        showStatus('알림이 브라우저 설정에서 차단되었습니다. 새로고침 하거나 수동으로 설정해주세요.', 'is-error');
         enableButton.disabled = true;
         enableButton.textContent = '알림 차단됨';
         setButtonState(enableButton, 'is-blocked');
@@ -91,8 +106,7 @@ async function checkAndSetUIBasedOnToken() {
         }
     } catch (err) {
         console.error('FCM 토큰 가져오는 중 오류 발생 (checkAndSetUIBasedOnToken):', err);
-        statusElement.textContent = `알림 상태 확인 중 오류: ${err.message}`;
-        statusElement.className = 'status-text is-error';
+        showStatus(`알림 상태 확인 중 오류: ${err.message}`, 'is-error');
         // 토큰 가져오기 실패 시, 다시 '알림 허용하기'를 누를 수 있도록 허용
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
@@ -105,8 +119,7 @@ async function checkAndSetUIBasedOnToken() {
     // ⭐ 핵심 수정 부분 ⭐
     if (await currentTokenIsValid(currentToken)) {
         // 토큰이 존재하면 알림이 활성화된 것으로 간주
-        statusElement.textContent = '알림이 허용되었고, 토큰이 발급되었습니다.';
-        statusElement.className = 'status-text is-success';
+        showStatus('알림이 허용되었고, 토큰이 발급되었습니다.', 'is-success');
         enableButton.disabled = true;
         enableButton.textContent = '알림 허용됨';
         setButtonState(enableButton, 'is-active');
@@ -114,7 +127,7 @@ async function checkAndSetUIBasedOnToken() {
         disableButton.disabled = false;
         disableButton.textContent = '알림 취소하기';
     } else { // permission === 'default' (아직 묻지 않음) 또는 그 외 토큰 없는 경우
-        statusElement.textContent = '앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.';
+        resetStatus();
         enableButton.disabled = false;
         enableButton.textContent = '알림 허용하기';
         setButtonState(enableButton, null);
@@ -147,8 +160,7 @@ async function currentTokenIsValid(token) {
         }
     } catch (error) {
         console.error('서버 확인 실패:', error);
-        statusElement.textContent = `서버 확인 실패: ${error.message}`;
-        statusElement.className = 'status-text is-error';
+        showStatus(`서버 확인 실패: ${error.message}`, 'is-error');
     }
 
     return false;
@@ -165,15 +177,14 @@ function requestPermissionAndGetToken() {
     Notification.requestPermission().then((permission) => {
         if (permission === 'granted') {
             console.log('알림 권한 승인됨. 토큰 가져오기 시도...');
-            statusElement.textContent = '알림 권한이 승인되었습니다. 토큰 가져오는 중...';
-            statusElement.className = 'status-text is-info';
+            showStatus('알림 권한이 승인되었습니다. 토큰 가져오는 중...', 'is-info');
             enableButton.textContent = '토큰 가져오는 중...';
 
             // FCM 토큰 가져오기 (웹 푸시 구독 정보)
             messaging.getToken({ vapidKey: VAPID_KEY }).then((currentToken) => {
                 if (currentToken) {
                     console.log('웹 푸시 토큰:', currentToken);
-                    statusElement.textContent = `토큰 가져옴: ${currentToken.substring(0, 20)}... 서버 전송 중...`;
+                    showStatus(`토큰 가져옴: ${currentToken.substring(0, 20)}... 서버 전송 중...`, 'is-info');
                     enableButton.textContent = '토큰 서버 전송 중...';
 
                     // ⭐⭐⭐ [필수] 이 토큰을 당신의 백엔드 서버로 전송해야 합니다. ⭐⭐⭐
@@ -181,20 +192,17 @@ function requestPermissionAndGetToken() {
 
                 } else {
                     console.warn('푸시 알림 토큰을 가져올 수 없습니다. 알림 권한이 없거나 다른 문제일 수 있습니다.');
-                    statusElement.textContent = '토큰을 가져올 수 없습니다. 권한을 확인하세요.';
-                    statusElement.className = 'status-text is-error';
+                    showStatus('토큰을 가져올 수 없습니다. 권한을 확인하세요.', 'is-error');
                     checkAndSetUIBasedOnToken(); // 실패 시 UI 상태 재조정
                 }
             }).catch((err) => {
                 console.error('웹 푸시 토큰 가져오는 중 에러 발생:', err);
-                statusElement.textContent = `토큰 가져오기 실패: ${err.message}`;
-                statusElement.className = 'status-text is-error';
+                showStatus(`토큰 가져오기 실패: ${err.message}`, 'is-error');
                 checkAndSetUIBasedOnToken(); // 실패 시 UI 상태 재조정
             });
         } else {
             console.warn('알림 권한 거부됨.');
-            statusElement.textContent = '알림 권한이 거부되었습니다.';
-            statusElement.className = 'status-text is-error';
+            showStatus('알림 권한이 거부되었습니다.', 'is-error');
             checkAndSetUIBasedOnToken(); // 권한 거부 시 UI 상태 재조정
         }
     });
@@ -217,17 +225,14 @@ async function sendTokenToServer(token) {
 
         if (response.ok) {
             console.log('웹 푸시 토큰 서버 전송 성공');
-            statusElement.textContent = '토큰 서버 전송 성공! 이제 알림을 받을 수 있습니다.';
-            statusElement.className = 'status-text is-success';
+            showStatus('토큰 서버 전송 성공! 이제 알림을 받을 수 있습니다.', 'is-success');
         } else {
             console.error('서버 에러:', response.status, response.statusText);
-            statusElement.textContent = `서버 에러: ${response.status}`;
-            statusElement.className = 'status-text is-error';
+            showStatus(`서버 에러: ${response.status}`, 'is-error');
         }
     } catch (error) {
         console.error('서버 전송 실패:', error);
-        statusElement.textContent = `서버 전송 실패: ${error.message}`;
-        statusElement.className = 'status-text is-error';
+        showStatus(`서버 전송 실패: ${error.message}`, 'is-error');
     } finally {
         // 토큰 전송 결과에 따라 UI를 업데이트
         checkAndSetUIBasedOnToken();
@@ -241,8 +246,7 @@ async function unsubscribeNotifications() {
     disableButton.disabled = true;
     enableButton.disabled = true;
 
-    statusElement.textContent = '알림 구독을 해지하는 중...';
-    statusElement.className = 'status-text is-info';
+    showStatus('알림 구독을 해지하는 중...', 'is-info');
 
     try {
         const currentToken = await messaging.getToken({ vapidKey: VAPID_KEY }); // 현재 활성화된 토큰 가져오기
@@ -250,8 +254,7 @@ async function unsubscribeNotifications() {
             // 1. Firebase에서 구독 해지
             await messaging.deleteToken(currentToken);
             console.log('Firebase 구독 해지 성공');
-            statusElement.textContent = 'Firebase에서 구독이 해지되었습니다. 서버에 알리는 중...';
-            statusElement.className = 'status-text is-info';
+            showStatus('Firebase에서 구독이 해지되었습니다. 서버에 알리는 중...', 'is-info');
 
             // 2. 서버에서 토큰 삭제 (필수)
             const serverUrl = "/api/congratulation/unregister";
@@ -265,22 +268,18 @@ async function unsubscribeNotifications() {
 
             if (response.ok) {
                 console.log('웹 푸시 토큰 서버 삭제 성공');
-                statusElement.textContent = '알림 구독이 완전히 취소되었습니다.';
-                statusElement.className = 'status-text is-info';
+                showStatus('알림 구독이 완전히 취소되었습니다.', 'is-info');
             } else {
                 console.error('서버에서 토큰 삭제 실패:', response.status, response.statusText);
-                statusElement.textContent = `서버에서 토큰 삭제 실패: ${response.status}`;
-                statusElement.className = 'status-text is-error';
+                showStatus(`서버에서 토큰 삭제 실패: ${response.status}`, 'is-error');
             }
         } else {
             console.warn('구독 해지할 토큰이 없습니다. 이미 해지되었거나 알림이 허용되지 않았습니다.');
-            statusElement.textContent = '구독 해지할 토큰이 없습니다.';
-            statusElement.className = 'status-text is-info';
+            showStatus('구독 해지할 토큰이 없습니다.', 'is-info');
         }
     } catch (error) {
         console.error('알림 구독 해지 중 에러 발생:', error);
-        statusElement.textContent = `알림 구독 해지 실패: ${error.message}`;
-        statusElement.className = 'status-text is-error';
+        showStatus(`알림 구독 해지 실패: ${error.message}`, 'is-error');
     } finally {
         // 구독 해지 후 UI 상태 업데이트 (버튼 상태 재조정)
         checkAndSetUIBasedOnToken();

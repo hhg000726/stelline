@@ -137,4 +137,9 @@ MIGRATIONS = [
         # 코드에서 사라진 키의 행이 남아 있으면 나중에 이게 뭔지 알 수 없다.
         "DELETE FROM site_contents WHERE content_key = 'karaoke_footer_note'",
     ]),
+    ("013_drop_congratulation_hero_subtitle", [
+        # 조회수 축하 화면에 안내 문구를 새로 만드는 대신, 이미 있던 알림 안내 문구를
+        # 고칠 수 있게 바꿨다(`congratulation_notify_prompt`). 잠깐 있었던 키를 지운다.
+        "DELETE FROM site_contents WHERE content_key = 'congratulation_hero_subtitle'",
+    ]),
 ]

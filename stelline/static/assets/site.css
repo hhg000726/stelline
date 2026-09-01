@@ -394,6 +394,10 @@ a { color: inherit; text-decoration: none; }
 .status-text.is-success { color: var(--success); }
 .status-text.is-info { color: var(--muted); }
 
+/* 상태 줄이 할 말이 생기면 그 위의 안내 문구는 자리를 비켜 준다.
+   관리자가 문구를 아예 비운 경우에는 [hidden] 이 이겨서 계속 감춰진다. */
+.is-status-replaced { display: none; }
+
 .status-note {
   display: inline-block;
   margin-top: 6px;

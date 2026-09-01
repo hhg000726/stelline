@@ -198,9 +198,11 @@ CONTENT_ITEMS = {
     ),
 
     # ---------- 조회수 축하 ----------
-    "congratulation_hero_subtitle": _text(
-        "congratulation", "조회수 축하 소개 문구", "조회수 축하 제목 아래 한 줄입니다(알림 상태 줄 위).",
-        "스텔라이브 영상이 조회수 고비를 넘으면 알려 드립니다.", 80,
+    "congratulation_notify_prompt": _text(
+        "congratulation", "알림 안내 문구",
+        "조회수 축하 제목 아래 한 줄입니다. 알림을 아직 켜지 않은 사람에게 보이고,"
+        " 켜거나 막힌 뒤에는 그 자리에 상태가 대신 나옵니다.",
+        "앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.", 80,
     ),
     "congratulation_list_note": _text(
         "congratulation", "달성 목록 설명", "최근 24시간 이내 달성 제목 옆 한 줄입니다.",
@@ -232,7 +234,7 @@ CONTENT_ITEMS = {
 _PREVIEW_STYLES = {
     "subtitle": (
         "main_hero_subtitle", "search_hero_subtitle", "karaoke_hero_subtitle",
-        "congratulation_hero_subtitle", "offline_hero_subtitle",
+        "congratulation_notify_prompt", "offline_hero_subtitle",
     ),
     "heading": ("search_help_title",),
     "notice-title": ("main_notice_title", "search_notice_title"),

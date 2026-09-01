@@ -86,11 +86,19 @@ body {
 }
 
 .kara-toolbar-end .results-count {
+  min-width: 0;
   margin: 0;
+  padding: 0 2px;
   background: transparent;
   color: var(--muted);
   font-size: 0.82rem;
-  padding: 0 2px;
+  white-space: normal;
+}
+
+/* 결과 수가 길어져도 버튼 글자가 세로로 접히면 안 된다. */
+.kara-toolbar-end button {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .kara-toolbar-end button:disabled {
@@ -442,6 +450,14 @@ button.num-btn:active {
   cursor: default;
 }
 
+/* 남은 곡은 눌러서 이어 붙인다. 처음부터 수백 곡을 그리면
+ * 스크롤 막대가 실낱같이 얇아져 목록의 끝을 가늠할 수 없다. */
+.kara-more {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px 14px;
+}
+
 /* ---------- 부를 곡 목록 ---------- */
 
 .setlist-bar {
@@ -672,9 +688,7 @@ button.num-btn:active {
   }
 
   .kara-toolbar-end {
-    width: 100%;
-    margin-left: 0;
-    justify-content: space-between;
+    gap: 6px;
   }
 }
 

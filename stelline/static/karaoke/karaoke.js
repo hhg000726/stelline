@@ -34,8 +34,15 @@
         onlyFavorites: false,
     };
 
+    /* 곡이 수백 개라 한 번에 다 그리면 스크롤 막대가 실낱같이 얇아진다.
+     * 처음에는 이만큼만 그리고, 더 보고 싶을 때 같은 만큼씩 이어 붙인다.
+     * 좁은 화면은 한 곡이 세로로 두 배를 쓰므로 절반만 그린다. */
+    const NARROW = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
+    const PAGE_SIZE = NARROW ? 20 : 40;
+
     let songs = [];
     let members = [];
+    let shownCount = PAGE_SIZE;
     let favorites = new Set();
     let setlist = [];
     let visibleSongs = [];
@@ -198,6 +205,12 @@
     </article>`;
     }
 
+    /* 검색어·필터·정렬이 바뀌면 목록의 내용 자체가 달라지므로 다시 처음부터 그린다.
+     * 즐겨찾기처럼 목록이 그대로인 동작에서는 부르지 않는다(보던 자리가 접히면 안 된다). */
+    function resetPaging() {
+        shownCount = PAGE_SIZE;
+    }
+
     function renderList() {
         const { list, query } = applyFilters();
         visibleSongs = list;
@@ -205,16 +218,28 @@
         if (!songs.length) {
             el.songList.innerHTML = '<p class="empty-state">등록된 곡이 없습니다.</p>';
             el.resultCount.textContent = "";
+            el.loadMore.hidden = true;
             return;
         }
+
+        const page = list.slice(0, shownCount);
         if (!list.length) {
             el.songList.innerHTML = '<p class="empty-state">조건에 맞는 곡이 없습니다. 검색어나 필터를 바꿔보세요.</p>';
         } else {
-            el.songList.innerHTML = list.map((song) => songCard(song, query)).join("");
+            el.songList.innerHTML = page.map((song) => songCard(song, query)).join("");
         }
 
+        const remaining = list.length - page.length;
+        el.loadMore.hidden = remaining <= 0;
+        el.loadMore.textContent = `${remaining}곡 더 보기`;
+
+        // 다 그리지 못했을 때는 지금 몇 곡을 보고 있는지도 함께 알려 준다.
+        // 좁은 화면에서도 한 줄에 들어가도록 짧게 적는다.
         const numbered = list.filter(hasNumber).length;
-        el.resultCount.textContent = `${list.length}곡 (번호 있는 곡 ${numbered}곡 / 전체 ${songs.length}곡)`;
+        const parts = [remaining > 0 ? `${page.length}/${list.length}곡` : `${list.length}곡`];
+        parts.push(`번호 있는 곡 ${numbered}곡`);
+        if (list.length !== songs.length) parts.push(`전체 ${songs.length}곡`);
+        el.resultCount.textContent = parts.join(" · ");
         el.randomPick.disabled = list.length === 0;
     }
 
@@ -439,6 +464,7 @@
         // 저장해 둔 목록에서 지금은 사라진 곡은 정리한다.
         setlist = setlist.filter((key) => songByKey.has(key));
         renderChips();
+        resetPaging();
         renderList();
         renderSetlist();
     }
@@ -561,6 +587,7 @@
             window.clearTimeout(searchTimer);
             searchTimer = window.setTimeout(() => {
                 state.query = el.searchInput.value;
+                resetPaging();
                 renderList();
                 syncUrl();
             }, 120);
@@ -570,6 +597,7 @@
             el.searchClear.hidden = true;
             state.query = "";
             el.searchInput.focus();
+            resetPaging();
             renderList();
             syncUrl();
         });
@@ -579,6 +607,7 @@
                 state.machine = button.dataset.machine;
                 writeStore(STORAGE_KEYS.machine, state.machine);
                 syncMachineButtons();
+                resetPaging();
                 renderList();
                 renderSetlist();
                 syncUrl();
@@ -589,6 +618,7 @@
             state.sort = el.sortSelect.value;
             // 랜덤순을 다시 고르면 새로 섞어 준다.
             if (state.sort === "random") reshuffle();
+            resetPaging();
             renderList();
             syncUrl();
         });
@@ -602,6 +632,7 @@
             button.addEventListener("click", () => {
                 state.filterMode = button.dataset.match;
                 syncMatchButtons();
+                resetPaging();
                 renderList();
                 syncUrl();
             });
@@ -614,6 +645,7 @@
             if (group.has(chip.dataset.value)) group.delete(chip.dataset.value);
             else group.add(chip.dataset.value);
             syncChipStates();
+            resetPaging();
             renderList();
             syncUrl();
         });
@@ -621,12 +653,14 @@
         el.onlyNumbered.addEventListener("click", () => {
             state.onlyNumbered = !state.onlyNumbered;
             syncChipStates();
+            resetPaging();
             renderList();
             syncUrl();
         });
         el.onlyFavorites.addEventListener("click", () => {
             state.onlyFavorites = !state.onlyFavorites;
             syncChipStates();
+            resetPaging();
             renderList();
             syncUrl();
         });
@@ -638,6 +672,7 @@
             state.onlyNumbered = false;
             state.onlyFavorites = false;
             syncChipStates();
+            resetPaging();
             renderList();
             syncUrl();
         });
@@ -717,6 +752,11 @@
             renderList();
         });
 
+        el.loadMore.addEventListener("click", () => {
+            shownCount += PAGE_SIZE;
+            renderList();
+        });
+
         el.randomPick.addEventListener("click", showRandomPick);
         el.pickAgain.addEventListener("click", showRandomPick);
         el.pickClose.addEventListener("click", () => { el.pickDialog.hidden = true; });
@@ -781,6 +821,7 @@
         el.resultCount = document.getElementById("result-count");
         el.randomPick = document.getElementById("random-pick");
         el.songList = document.getElementById("song-list");
+        el.loadMore = document.getElementById("load-more");
         el.lastUpdated = document.getElementById("last-updated");
         el.offlineNote = document.getElementById("offline-note");
         el.setlistBar = document.getElementById("setlist-bar");

@@ -30,11 +30,11 @@
   <main class="site-container">
     <header class="site-header">
       <a class="site-header-brand" href="/"><img src="/favicon.svg" alt="" width="26" height="26"><span>Stelline</span></a>
-      <nav class="site-nav" aria-label="사이트 메뉴">
-        <a href="/search" aria-current="page">검색 안되는 노래</a>
-        <a href="/karaoke">노래방 번호</a>
-        <a href="/congratulation">조회수 축하</a>
-        <a href="/offline">오프라인 이벤트</a>
+      <nav class="site-nav" aria-label="사이트 메뉴" data-button-nav>
+        <a href="/search" data-button-key="search" aria-current="page">검색 안되는 노래</a>
+        <a href="/karaoke" data-button-key="karaoke">노래방 번호</a>
+        <a href="/congratulation" data-button-key="congratulation">조회수 축하</a>
+        <a href="/offline" data-button-key="offline">오프라인 이벤트</a>
       </nav>
     </header>
 
@@ -171,6 +171,7 @@
   </div>
 
   <script src="/assets/site.js"></script>
+  <script src="/assets/nav.js"></script>
   <script src="/search/search.js"></script>
 </body>
 

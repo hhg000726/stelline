@@ -123,6 +123,9 @@ CONTENT_ITEMS = {
         "search", "막힌 곡 목록 설명", "막힌 곡 목록 제목 옆 한 줄입니다.",
         "카드를 누르면 검색어가 복사되고 유튜브로 이동합니다.", 60,
     ),
+    "search_help_title": _text(
+        "search", "도와주는 방법 제목", "단계 안내 칸의 제목입니다.", "도와주는 방법", 20,
+    ),
     "search_help_note": _text(
         "search", "도와주는 방법 설명", "도와주는 방법 제목 옆 한 줄입니다.",
         "인기도 순으로 정렬해서 들으면 검색 노출에 도움이 됩니다.", 60,
@@ -193,14 +196,12 @@ CONTENT_ITEMS = {
         "karaoke", "노래방 화면 소개 문구", "노래방 번호 제목 아래 한 줄입니다.",
         "번호를 누르면 바로 복사됩니다.", 80,
     ),
-    "karaoke_footer_note": _text(
-        "karaoke", "노래방 화면 꼬리말", "이 화면만 다른 꼬리말을 씁니다(제보 안내가 들어 있습니다).",
-        "이 사이트는 개인이 운영하는 비영리 사이트입니다. 스텔라이브 공식과는 무관합니다.\n"
-        "노래방 번호는 실제와 다를 수 있으니 제보로 알려주세요.",
-        200, multiline=True,
-    ),
 
     # ---------- 조회수 축하 ----------
+    "congratulation_hero_subtitle": _text(
+        "congratulation", "조회수 축하 소개 문구", "조회수 축하 제목 아래 한 줄입니다(알림 상태 줄 위).",
+        "스텔라이브 영상이 조회수 고비를 넘으면 알려 드립니다.", 80,
+    ),
     "congratulation_list_note": _text(
         "congratulation", "달성 목록 설명", "최근 24시간 이내 달성 제목 옆 한 줄입니다.",
         "카드를 누르면 유튜브에서 영상을 볼 수 있습니다.", 60,
@@ -229,7 +230,11 @@ CONTENT_ITEMS = {
 # 항목마다 따로 적으면 정의가 길어지고, 여기 한 곳에 모아 두면 "이 문구가 화면 어디에
 # 어떤 크기로 나오는지"를 한눈에 볼 수 있다. 적지 않은 항목은 'note'로 본다.
 _PREVIEW_STYLES = {
-    "subtitle": ("main_hero_subtitle", "search_hero_subtitle", "karaoke_hero_subtitle", "offline_hero_subtitle"),
+    "subtitle": (
+        "main_hero_subtitle", "search_hero_subtitle", "karaoke_hero_subtitle",
+        "congratulation_hero_subtitle", "offline_hero_subtitle",
+    ),
+    "heading": ("search_help_title",),
     "notice-title": ("main_notice_title", "search_notice_title"),
     "notice-body": ("main_notice", "search_notice"),
     "list": ("search_help_list",),
@@ -239,7 +244,7 @@ _PREVIEW_STYLES = {
         "search_step_mobile_1_label", "search_step_mobile_2_label",
         "search_step_mobile_3_label", "search_step_mobile_4_label",
     ),
-    "footer": ("site_footer_note", "site_footer_contact", "karaoke_footer_note"),
+    "footer": ("site_footer_note", "site_footer_contact"),
 }
 
 for _style, _keys in _PREVIEW_STYLES.items():

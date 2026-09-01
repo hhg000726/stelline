@@ -132,4 +132,9 @@ MIGRATIONS = [
              updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
            ) CHARACTER SET utf8mb4""",
     ]),
+    ("012_drop_karaoke_footer_content", [
+        # 노래방 꼬리말은 공통 꼬리말과 사실상 같은 문구라 항목을 하나로 합쳤다.
+        # 코드에서 사라진 키의 행이 남아 있으면 나중에 이게 뭔지 알 수 없다.
+        "DELETE FROM site_contents WHERE content_key = 'karaoke_footer_note'",
+    ]),
 ]

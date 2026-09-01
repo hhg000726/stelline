@@ -2,21 +2,21 @@
 
 body {
   /* 하단 고정 목록 바에 마지막 곡이 가리지 않도록 여유를 둔다. */
-  padding-bottom: 96px;
+  padding-bottom: 84px;
 }
 
 /* ---------- 검색·도구 모음 ---------- */
 
 .kara-controls {
   /* page-shell의 좌우 여백만큼 넓혀야 스크롤되는 곡 목록이 옆으로 비쳐 보이지 않는다. */
-  --shell-padding: 28px;
+  --shell-padding: 22px;
   position: sticky;
   top: 0;
   z-index: 20;
   display: grid;
-  gap: 10px;
-  margin: 22px calc(var(--shell-padding) * -1) 14px;
-  padding: 12px var(--shell-padding);
+  gap: 8px;
+  margin: 14px calc(var(--shell-padding) * -1) 12px;
+  padding: 10px var(--shell-padding);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
 }
@@ -29,20 +29,20 @@ body {
 
 .kara-search-icon {
   position: absolute;
-  left: 14px;
+  left: 13px;
   color: var(--muted-soft);
   pointer-events: none;
 }
 
 .kara-search input {
   width: 100%;
-  padding: 13px 44px;
+  padding: 11px 42px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
 .kara-search input:focus-visible {
@@ -57,13 +57,14 @@ body {
 .kara-clear {
   position: absolute;
   right: 8px;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: var(--surface-subtle);
   color: var(--muted);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -73,6 +74,28 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+/* 결과 수와 랜덤 뽑기는 도구 모음 오른쪽 끝에 둔다.
+ * 줄을 하나 덜 쓰면서, 목록을 내려도 계속 따라온다. */
+.kara-toolbar-end {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.kara-toolbar-end .results-count {
+  margin: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  padding: 0 2px;
+}
+
+.kara-toolbar-end button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .machine-switch {
@@ -85,11 +108,12 @@ body {
 
 .machine-switch button {
   border: 0;
-  border-radius: 9px;
-  padding: 7px 14px;
+  border-radius: 8px;
+  padding: 6px 13px;
   background: transparent;
   color: var(--muted);
   font: inherit;
+  font-size: 0.86rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -105,18 +129,19 @@ body {
   gap: 6px;
   align-items: center;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .kara-sort select {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
-  padding: 8px 10px;
+  padding: 7px 9px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   cursor: pointer;
 }
 
@@ -126,12 +151,12 @@ body {
   align-items: center;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
-  padding: 9px 14px;
+  padding: 8px 13px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   cursor: pointer;
 }
 
@@ -146,12 +171,12 @@ body {
 }
 
 .kara-badge {
-  min-width: 20px;
+  min-width: 19px;
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--primary-hover);
   color: #fff;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   text-align: center;
 }
 
@@ -163,25 +188,30 @@ body {
 
 .kara-filters {
   display: grid;
-  gap: 14px;
-  padding: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px 18px;
+  padding: 12px 14px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-card);
   background: var(--surface-subtle);
 }
 
-/* 여러 조건을 고를 때 찾는 방법. 기기 선택 스위치와 같은 모양을 쓴다. */
+/* 멤버는 값이 많아 한 칸을 통째로 쓴다. */
+.kara-filter-group.is-wide {
+  grid-column: 1 / -1;
+}
+
 .kara-filter-hint {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--muted-soft);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
 .kara-filter-group h3 {
-  margin: 0 0 8px;
+  margin: 0 0 7px;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.74rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -189,22 +219,22 @@ body {
 .kara-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .kara-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   width: 100%;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .kara-chip-unit {
-  min-width: 74px;
+  min-width: 66px;
   color: var(--muted-soft);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -212,16 +242,17 @@ body {
 .kara-chip {
   border: 1px solid var(--border-subtle);
   border-radius: 999px;
-  padding: 6px 12px;
+  padding: 5px 11px;
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   cursor: pointer;
   transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
 
 .kara-chip:hover {
+  transform: none;
   border-color: var(--primary-outline);
   background: var(--primary-tint);
 }
@@ -237,50 +268,33 @@ body {
   color: var(--muted);
 }
 
-/* ---------- 요약 줄 ---------- */
-
-.kara-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  margin: 4px 0 12px;
-}
-
-.kara-summary .results-count {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.kara-summary-actions button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
 .kara-offline {
-  margin: 0 0 12px;
-  padding: 10px 12px;
+  margin: 0 0 10px;
+  padding: 9px 12px;
   border-radius: var(--radius-control);
   background: var(--primary-tint);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
 }
 
-/* ---------- 곡 목록 ---------- */
+/* ---------- 곡 목록 ----------
+ * 넓은 화면에서는 두 칸으로 늘어놓는다. 한 곡이 차지하는 가로 폭이 줄어
+ * 한 화면에서 볼 수 있는 곡 수가 두 배가 된다.
+ */
 
 .kara-list {
   display: grid;
+  /* min()이 없으면 좁은 화면에서 칸이 화면보다 넓어져 오른쪽이 잘린다. */
+  grid-template-columns: repeat(auto-fill, minmax(min(430px, 100%), 1fr));
   gap: 8px;
 }
 
 .song-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--border-card);
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -292,11 +306,12 @@ body {
 }
 
 .song-title {
-  margin: 0 0 4px;
-  font-size: 1rem;
+  margin: 0 0 3px;
+  font-size: 0.96rem;
   font-weight: 700;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
+  line-height: 1.3;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .song-title mark {
@@ -309,11 +324,11 @@ body {
 .song-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   margin: 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .song-artist {
@@ -321,26 +336,26 @@ body {
 }
 
 .song-tag {
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 999px;
   background: var(--primary-tint);
   color: var(--primary-strong);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
 }
 
 .song-numbers {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 .num-btn {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   align-items: center;
-  min-width: 74px;
-  padding: 8px 10px;
+  min-width: 68px;
+  padding: 6px 9px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   background: var(--surface-subtle);
@@ -361,25 +376,25 @@ button.num-btn:active {
 
 .num-label {
   color: var(--muted-soft);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.06em;
 }
 
 .num-value {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .num-btn.is-secondary {
-  min-width: 58px;
-  padding: 6px 8px;
+  min-width: 54px;
+  padding: 5px 7px;
   opacity: 0.62;
 }
 
 .num-btn.is-secondary .num-value {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .num-btn.is-empty {
@@ -390,7 +405,7 @@ button.num-btn:active {
 
 .num-btn.is-empty .num-value {
   color: var(--muted-soft);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 400;
 }
 
@@ -400,13 +415,14 @@ button.num-btn:active {
 }
 
 .icon-btn {
-  width: 34px;
-  height: 34px;
+  width: 31px;
+  height: 31px;
+  padding: 0;
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 0.95rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -448,7 +464,7 @@ button.num-btn:active {
 .setlist-summary {
   display: flex;
   width: 100%;
-  padding: 14px 0;
+  padding: 12px 0;
   align-items: center;
   justify-content: space-between;
   border: 0;
@@ -458,6 +474,8 @@ button.num-btn:active {
   font-weight: 700;
   cursor: pointer;
 }
+
+.setlist-summary:hover { transform: none; }
 
 .setlist-caret {
   transition: transform 0.16s ease;
@@ -471,15 +489,15 @@ button.num-btn:active {
   width: min(100%, 1180px);
   max-height: min(56vh, 420px);
   margin: 0 auto;
-  padding: 0 16px 16px;
+  padding: 0 16px 14px;
   overflow-y: auto;
 }
 
 .setlist-items {
   display: grid;
-  gap: 6px;
-  margin: 0 0 12px;
-  padding-left: 22px;
+  gap: 5px;
+  margin: 0 0 10px;
+  padding-left: 20px;
 }
 
 .setlist-item {
@@ -488,7 +506,7 @@ button.num-btn:active {
   gap: 8px;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   background: var(--surface);
@@ -504,12 +522,12 @@ button.num-btn:active {
 
 .setlist-name span {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .setlist-numbers {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: 0.83rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -538,8 +556,8 @@ button.num-btn:active {
 }
 
 .pick-card {
-  width: min(100%, 420px);
-  padding: 24px;
+  width: min(100%, 400px);
+  padding: 22px;
   border-radius: var(--radius-panel);
   background: var(--surface);
   box-shadow: var(--shadow-card-hover);
@@ -547,9 +565,9 @@ button.num-btn:active {
 }
 
 .pick-kicker {
-  margin: 0 0 6px;
+  margin: 0 0 5px;
   color: var(--primary-strong);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -557,21 +575,22 @@ button.num-btn:active {
 
 .pick-card h2 {
   margin: 0 0 4px;
-  font-size: 1.3rem;
-  overflow-wrap: anywhere;
+  font-size: 1.2rem;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .pick-artist {
-  margin: 0 0 16px;
+  margin: 0 0 14px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .pick-numbers {
   display: flex;
   gap: 8px;
   justify-content: center;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .pick-numbers .empty-state {
@@ -589,8 +608,8 @@ button.num-btn:active {
 
 .pick-collect button {
   flex: 1;
-  min-width: 140px;
-  font-size: 0.9rem;
+  min-width: 136px;
+  font-size: 0.86rem;
 }
 
 .pick-collect button.is-on,
@@ -612,14 +631,14 @@ button.num-btn:active {
 
 .kara-toast {
   position: fixed;
-  bottom: 96px;
+  bottom: 84px;
   left: 50%;
   z-index: 50;
-  padding: 11px 18px;
+  padding: 10px 17px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.92);
   color: #f8fafc;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   font-weight: 700;
   opacity: 0;
   transform: translate(-50%, 8px);
@@ -649,7 +668,13 @@ button.num-btn:active {
 /* site.css가 720px 이하에서 page-shell 좌우 여백을 줄이므로 sticky 폭도 맞춘다. */
 @media (max-width: 720px) {
   .kara-controls {
-    --shell-padding: 18px;
+    --shell-padding: 14px;
+  }
+
+  .kara-toolbar-end {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
   }
 }
 
@@ -659,7 +684,7 @@ button.num-btn:active {
     grid-template-areas:
       "main actions"
       "numbers numbers";
-    gap: 10px;
+    gap: 8px;
   }
 
   .song-main { grid-area: main; }

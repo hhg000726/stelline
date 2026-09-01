@@ -68,7 +68,9 @@ async function fetchBugs() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "toggle-button btn-secondary";
-      button.textContent = `벅스 ${name}${title ? ` · ${title}` : ""}`;
+      // 순위는 펼치지 않아도 보이는 편이 훨씬 쓸모 있다.
+      button.innerHTML = `<span>벅스 ${Stelline.escapeHtml(name)}${title ? ` · ${Stelline.escapeHtml(title)}` : ""}</span>`
+        + (data.rank ? `<span class="toggle-meta">현재 ${Number(data.rank)}위</span>` : "");
       button.setAttribute("aria-expanded", "false");
       button.addEventListener("click", () => toggleContent(contentId, button));
 
@@ -155,7 +157,10 @@ async function fetchTwits() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "toggle-button btn-secondary";
-      button.textContent = item.title || `트윗 안내 ${idx + 1}`;
+      // 총공 시간은 펼치기 전에도 보여야 "언제 하는지"를 바로 알 수 있다.
+      const time = String(item.time || "").trim();
+      button.innerHTML = `<span>${Stelline.escapeHtml(item.title || `트윗 안내 ${idx + 1}`)}</span>`
+        + `<span class="toggle-meta">${Stelline.escapeHtml(time || "임시 연기")}</span>`;
       button.setAttribute("aria-expanded", "false");
       button.addEventListener("click", () => toggleContent(btnId, button));
 
@@ -168,7 +173,6 @@ async function fetchTwits() {
         <div class="list-item-body">
           <p>태그와 키워드를 사용하여 트윗 작성</p>
           <p>태그 검색 후 다른 트윗 리트윗 & 좋아요 누르기</p>
-          <p>${item.time && item.time.trim() ? item.time : "임시 연기"}</p>
           <p>시간상 참여가 어려우신 분들은 예약 트윗을 활용해주세요.<br>같은 내용의 트윗은 중복 작성되지 않습니다.<br>하고 싶은 말 부분을 필수로 작성해주시기 바랍니다.</p>
           <h3>태그 & 키워드</h3>
         </div>
@@ -217,7 +221,7 @@ async function fetchTwits() {
 const BUTTON_CACHE_KEY = "stelline.main.buttons";
 
 function applyButtonConfig(buttons) {
-  const container = document.querySelector(".hero-actions");
+  const container = document.getElementById("main-nav");
   if (!container || !Array.isArray(buttons) || !buttons.length) return;
 
   const nodes = new Map();

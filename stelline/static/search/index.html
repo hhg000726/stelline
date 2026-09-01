@@ -28,23 +28,27 @@
 
 <body>
   <main class="site-container">
-    <nav class="page-nav">
-      <a href="../" class="btn-secondary">← 메인으로</a>
-    </nav>
+    <header class="site-header">
+      <a class="site-header-brand" href="/"><img src="/favicon.svg" alt="" width="26" height="26"><span>Stelline</span></a>
+      <nav class="site-nav" aria-label="사이트 메뉴">
+        <a href="/search" aria-current="page">검색 안되는 노래</a>
+        <a href="/karaoke">노래방 번호</a>
+        <a href="/congratulation">조회수 축하</a>
+        <a href="/offline">오프라인 이벤트</a>
+      </nav>
+    </header>
 
     <section class="page-shell">
       <div class="hero-heading">
         <div class="page-heading">
-          <div class="page-kicker">search tips</div>
           <h1 class="page-title">검색 안되는 노래</h1>
-          <p class="page-subtitle">(시크릿 모드 기준 3개 이내)</p>
-          <p id="last-updated" class="meta-text"></p>
+          <p class="page-subtitle">시크릿 모드에서 검색했을 때 3개 이내로만 뜨는 곡입니다. <span id="last-updated" class="meta-text"></span></p>
         </div>
-        <button id="report-toggle" class="btn-primary report-toggle" type="button">검색어 추가 제안</button>
+        <button id="report-toggle" class="btn-secondary report-toggle" type="button">검색어 추가 제안</button>
       </div>
       <div id="report-panel" class="report-panel" hidden>
         <h2>목록에 없는 검색어 추가를 제안해주세요</h2>
-        <p>페이지 하단 검색어 목록에 없는 검색어를 제안하거나, 추가했으면 하는 내용을 남겨주세요.</p>
+        <p>페이지 아래 검색어 목록에 없는 검색어를 제안하거나, 추가했으면 하는 내용을 남겨주세요.</p>
         <form id="report-form">
           <label for="report-content">제안 내용</label>
           <textarea id="report-content" maxlength="2000" rows="4" placeholder="노래 제목, 검색어 또는 추가 의견을 입력하세요" required></textarea>
@@ -57,17 +61,40 @@
       </div>
     </section>
 
+    <!-- 지금 막힌 곡과 최근에 막혔던 곡은 같은 종류의 목록이라, 두 칸을 따로 두는 대신
+         한 칸에서 탭으로 바꿔 본다. 화면이 절반으로 짧아지고 둘의 관계도 분명해진다. -->
     <section class="section-panel">
       <div class="section-header">
-        <h2>현재 차단된 검색어</h2>
+        <div class="section-title">
+          <h2>막힌 곡 목록</h2>
+          <p>카드를 누르면 검색어가 복사되고 유튜브로 이동합니다.</p>
+        </div>
+        <div class="section-actions">
+          <div class="segmented" id="song-tabs" role="tablist" aria-label="곡 목록 종류">
+            <button type="button" role="tab" data-tab="current" class="is-on" aria-selected="true">지금 막힘 <span data-count="current"></span></button>
+            <button type="button" role="tab" data-tab="recent" aria-selected="false">최근 7일 <span data-count="recent"></span></button>
+          </div>
+        </div>
       </div>
-      <div id="songCards" class="card-grid"><p class="empty-state">불러오는 중…</p></div>
+      <div id="songCards" class="card-grid is-compact" data-panel="current"><p class="empty-state">불러오는 중…</p></div>
+      <div id="recentCards" class="card-grid is-compact" data-panel="recent" hidden><p class="empty-state">불러오는 중…</p></div>
     </section>
 
+    <!-- 참고 메시지와 정상화 방법은 둘 다 "어떻게 도우면 되는지"를 말한다. 한 칸으로 합친다. -->
     <section class="section-panel">
       <div class="section-header">
-        <h2>참고 메시지</h2>
+        <div class="section-title">
+          <h2>도와주는 방법</h2>
+          <p>인기도 순으로 정렬해서 들으면 검색 노출에 도움이 됩니다.</p>
+        </div>
+        <div class="section-actions">
+          <div class="segmented" id="method-tabs" role="tablist" aria-label="기기 종류">
+            <button type="button" role="tab" data-tab="pc" class="is-on" aria-selected="true">PC</button>
+            <button type="button" role="tab" data-tab="mobile" aria-selected="false">모바일</button>
+          </div>
+        </div>
       </div>
+
       <ul class="checklist">
         <li>오리지널 곡은 본 채널 뮤비로 봐주세요.</li>
         <li>기억날 때마다 한 번씩 검색하고, 인기도 순으로 정렬 후 들어주세요.</li>
@@ -75,105 +102,76 @@
         <li>한 번 막힌 영상이 계속 막히는 현상이 반복되고 있습니다.</li>
         <li>한 번 막혔던 영상도 생각날 때 한 번만 부탁드립니다.</li>
       </ul>
+
+      <div class="step-grid" data-panel="pc">
+        <div class="stage">
+          <div class="step-media"><img src="/search/1.PNG" alt="유튜브 검색 결과에서 필터 버튼 위치" loading="lazy"></div>
+          <div class="step-copy"><span class="step-number">STEP 1</span><h3>필터 클릭</h3></div>
+        </div>
+        <div class="stage">
+          <div class="step-media"><img src="/search/2.PNG" alt="필터 창에서 우선순위 인기도 순 위치" loading="lazy"></div>
+          <div class="step-copy"><span class="step-number">STEP 2</span><h3>우선순위 · 인기도 순 클릭</h3></div>
+        </div>
+        <div class="stage">
+          <div class="step-media"><img src="/search/3.PNG" alt="정렬된 검색 결과에서 영상 재생" loading="lazy"></div>
+          <div class="step-copy"><span class="step-number">STEP 3</span><h3>노래 듣기</h3></div>
+        </div>
+      </div>
+
+      <div class="step-grid" data-panel="mobile" hidden>
+        <div class="stage">
+          <div class="step-media"><img src="/search/1.jpg" alt="모바일 검색 화면 오른쪽 위 점 세 개 위치" loading="lazy"></div>
+          <div class="step-copy"><span class="step-number">STEP 1</span><h3>점 세 개 클릭</h3></div>
+        </div>
+        <div class="stage">
+          <div class="step-media"><img src="/search/2.jpg" alt="메뉴에서 검색필터 위치" loading="lazy"></div>
+          <div class="step-copy"><span class="step-number">STEP 2</span><h3>검색필터 클릭</h3></div>
+        </div>
+        <div class="stage">
+          <div class="step-media"><img src="/search/3.jpg" alt="검색 필터에서 우선순위 인기도 순 위치" loading="lazy"></div>
+          <div class="step-copy"><span class="step-number">STEP 3</span><h3>우선순위 · 인기도 순 클릭</h3></div>
+        </div>
+        <div class="stage">
+          <div class="step-media"><img src="/search/4.jpg" alt="정렬된 모바일 검색 결과" loading="lazy"></div>
+          <div class="step-copy"><span class="step-number">STEP 4</span><h3>노래 듣기</h3></div>
+        </div>
+      </div>
+      <p class="list-note step-hint">그림을 누르면 크게 볼 수 있습니다.</p>
     </section>
 
     <section class="section-panel">
       <div class="section-header">
-        <h2>7일 이내에 막혔던 곡들</h2>
-      </div>
-      <div id="recentCards" class="card-grid"><p class="empty-state">불러오는 중…</p></div>
-    </section>
-
-    <section class="section-panel">
-      <div class="section-header">
-        <h2>정상화 방법</h2>
-      </div>
-
-      <div class="method">
-        <h2>PC 기준</h2>
-      </div>
-      <div class="stage">
-        <div class="step-media"><img src="/search/1.PNG" class="resize-img"></div>
-        <div class="step-copy">
-          <span class="step-number">STEP 1</span>
-          <h3>필터 클릭</h3>
+        <div class="section-title">
+          <h2>검색어 리스트</h2>
+          <p>최근에 막혔던 곡 + 랜덤 25곡을 6시간마다 검색하고 있습니다.</p>
         </div>
-      </div>
-      <div class="stage">
-        <div class="step-media"><img src="/search/2.PNG" class="resize-img"></div>
-        <div class="step-copy">
-          <span class="step-number">STEP 2</span>
-          <h3>우선순위 - 인기도 순 클릭</h3>
-        </div>
-      </div>
-      <div class="stage">
-        <div class="step-media"><img src="/search/3.PNG" class="resize-img"></div>
-        <div class="step-copy">
-          <span class="step-number">STEP 3</span>
-          <h3>노래 듣기</h3>
+        <div class="section-actions">
+          <span id="query-count" class="results-count">0개</span>
+          <label class="query-search" for="query-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M10.5 3a7.5 7.5 0 0 1 5.88 12.8l4.42 4.42 1.41-1.41-4.42-4.42A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
+            </svg>
+            <input id="query-search" type="search" placeholder="검색어 찾기" aria-label="검색어 목록 필터" autocomplete="off">
+          </label>
         </div>
       </div>
 
-      <div class="method">
-        <h2>모바일 기준</h2>
-      </div>
-      <div class="stage">
-        <div class="step-media"><img src="/search/1.jpg" class="resize-img"></div>
-        <div class="step-copy">
-          <span class="step-number">STEP 1</span>
-          <h3>점 세 개 클릭</h3>
-        </div>
-      </div>
-      <div class="stage">
-        <div class="step-media"><img src="/search/2.jpg" class="resize-img"></div>
-        <div class="step-copy">
-          <span class="step-number">STEP 2</span>
-          <h3>검색필터 클릭</h3>
-        </div>
-      </div>
-      <div class="stage">
-        <div class="step-media"><img src="/search/3.jpg" class="resize-img"></div>
-        <div class="step-copy">
-          <span class="step-number">STEP 3</span>
-          <h3>우선순위 - 인기도 순 클릭</h3>
-        </div>
-      </div>
-      <div class="stage">
-        <div class="step-media"><img src="/search/4.jpg" class="resize-img"></div>
-        <div class="step-copy">
-          <span class="step-number">STEP 4</span>
-          <h3>노래 듣기</h3>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-panel">
-      <div class="section-header">
-        <h2>검색어 리스트</h2>
-        <span id="query-count" class="results-count">0개</span>
-      </div>
-
-      <div class="query-filter-wrap">
-        <label class="query-search" for="query-search">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10.5 3a7.5 7.5 0 0 1 5.88 12.8l4.42 4.42 1.41-1.41-4.42-4.42A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
-          </svg>
-          <input id="query-search" type="search" placeholder="검색어를 입력하세요" aria-label="검색어 목록 필터" autocomplete="off">
-        </label>
-      </div>
-
-      <p class="list-note">최근에 검색이 안된 노래들 + 랜덤으로 25곡을 채워 6시간마다 검색하고 있습니다.</p>
       <ul id="query-list" class="info-list"></ul>
     </section>
 
     <footer>
-      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다.<br>이 사이트는 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
+      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다. 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
       <p>문의: pastel525600@gmail.com</p>
     </footer>
-
-    <script src="/assets/site.js"></script>
-    <script src="/search/search.js"></script>
   </main>
+
+  <div id="image-viewer" class="image-viewer" hidden>
+    <button type="button" class="image-viewer-close" aria-label="닫기">×</button>
+    <img id="image-viewer-target" src="" alt="">
+  </div>
+
+  <script src="/assets/site.js"></script>
+  <script src="/search/search.js"></script>
 </body>
 
 </html>

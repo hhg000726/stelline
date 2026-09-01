@@ -25,28 +25,40 @@
 
 <body>
   <main class="site-container">
-    <nav class="page-nav">
-      <a href="../" class="btn-secondary">← 메인으로</a>
-    </nav>
+    <header class="site-header">
+      <a class="site-header-brand" href="/"><img src="/favicon.svg" alt="" width="26" height="26"><span>Stelline</span></a>
+      <nav class="site-nav" aria-label="사이트 메뉴">
+        <a href="/search">검색 안되는 노래</a>
+        <a href="/karaoke">노래방 번호</a>
+        <a href="/congratulation">조회수 축하</a>
+        <a href="/offline" aria-current="page">오프라인 이벤트</a>
+      </nav>
+    </header>
 
+    <!-- 지도만 두면 표시된 행사가 몇 개인지, 어디에 있는지 훑어볼 수 없다.
+         목록과 지도를 나란히 두고 서로 연결한다. -->
     <section class="page-shell">
-      <div class="page-header">
-        <div class="page-kicker">offline event</div>
-        <h1 class="page-title">진행 중인 오프라인 이벤트</h1>
-        <p class="page-subtitle">근처 행사와 일정 정보를 한눈에 확인해 보세요.</p>
+      <div class="hero-heading">
+        <div class="page-heading">
+          <h1 class="page-title">진행 중인 오프라인 이벤트</h1>
+          <p class="page-subtitle">목록에서 고르면 지도에서 그 장소로 이동합니다. <span id="event-count" class="meta-text"></span></p>
+        </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="showFutureEvents">
+          아직 시작되지 않은 이벤트도 보기
+        </label>
       </div>
     </section>
 
-    <section class="section-panel">
-      <label class="toggle-row">
-        <input type="checkbox" id="showFutureEvents" />
-        아직 시작되지 않은 이벤트도 보기
-      </label>
+    <section class="section-panel offline-layout">
+      <div class="offline-list" id="event-list" aria-live="polite">
+        <p class="empty-state">불러오는 중…</p>
+      </div>
       <div id="map" class="map-shell"></div>
     </section>
 
     <footer>
-      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다.<br>이 사이트는 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
+      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다. 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
       <p>문의: pastel525600@gmail.com</p>
     </footer>
 

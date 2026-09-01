@@ -72,11 +72,28 @@ class KaraokeListViewTest(unittest.TestCase):
         self.assertIn('>단체</td>', html)
         self.assertIn('>커버</td>', html)
 
-    def test_karaoke_table_marks_empty_cells_and_spans_the_full_width(self):
+    def test_karaoke_table_marks_empty_cells_and_scrolls_in_place(self):
         html = self._render()
         self.assertIn('class="is-empty"', html)   # 금영 번호가 비었음을 눈에 띄게
-        self.assertIn('section.wide', html)       # 넓은 칸 스타일
-        self.assertIn('data-table="karaoke_songs" class="wide"', html)
+        self.assertIn('data-table="karaoke_songs"', html)
+        # 곡이 수백 개라 표는 제자리에서 스크롤되고 머리글이 붙박이여야 한다.
+        self.assertIn('table-scroll', html)
+        self.assertIn('data-table-filter', html)
+
+    def test_tables_are_split_into_tabs(self):
+        """표 열한 개를 한 화면에 펼치면 찾는 데만 시간이 걸린다. 묶음별로 나눠 보여준다."""
+        html = self._render()
+        self.assertIn('data-group="karaoke"', html)          # 탭 버튼
+        self.assertIn('data-group-panel="karaoke"', html)     # 탭이 여는 칸
+        self.assertIn('data-group-panel="reports"', html)
+        self.assertIn('stelline.admin.group', html)           # 고른 탭을 기억한다
+
+    def test_form_labels_are_written_in_korean(self):
+        """열 이름을 그대로 보여 주면 무엇을 넣는 칸인지 알기 어렵다."""
+        html = self._render()
+        self.assertIn('<label>영상 ID', html)
+        self.assertIn('<label>검색어', html)
+        self.assertIn('<label>만료 시각(비우면 계속 표시)', html)
 
     def test_karaoke_row_still_carries_every_value_for_the_edit_form(self):
         """표에서 뺀 열도 행을 누르면 양식에 채워져야 한다."""

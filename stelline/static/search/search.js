@@ -1,6 +1,60 @@
 let allQueries = [];
 let queryFilterBound = false;
 
+/* 같은 칸 안에서 목록을 바꿔 보여 주는 탭.
+ * data-panel 값이 눌린 탭의 data-tab 과 같은 요소만 남긴다. */
+function attachTabs(groupId) {
+    const group = document.getElementById(groupId);
+    if (!group) return;
+
+    const buttons = Array.from(group.querySelectorAll("[data-tab]"));
+    const panels = Array.from(document.querySelectorAll("[data-panel]"))
+        .filter(panel => buttons.some(button => button.dataset.tab === panel.dataset.panel));
+
+    buttons.forEach(button => {
+        button.addEventListener("click", () => {
+            buttons.forEach(other => {
+                const active = other === button;
+                other.classList.toggle("is-on", active);
+                other.setAttribute("aria-selected", String(active));
+            });
+            panels.forEach(panel => {
+                panel.hidden = panel.dataset.panel !== button.dataset.tab;
+            });
+        });
+    });
+}
+
+/* 안내 그림은 작게 늘어놓고, 누르면 원래 크기로 크게 본다. */
+function attachImageViewer() {
+    const viewer = document.getElementById("image-viewer");
+    if (!viewer) return;
+    const target = document.getElementById("image-viewer-target");
+    const close = () => { viewer.hidden = true; };
+
+    document.querySelectorAll(".step-media img").forEach(image => {
+        image.tabIndex = 0;
+        image.setAttribute("role", "button");
+        const open = () => {
+            target.src = image.src;
+            target.alt = image.alt || "";
+            viewer.hidden = false;
+        };
+        image.addEventListener("click", open);
+        image.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                open();
+            }
+        });
+    });
+
+    viewer.addEventListener("click", close);
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") close();
+    });
+}
+
 function attachReportForm() {
     const toggle = document.getElementById("report-toggle");
     const panel = document.getElementById("report-panel");
@@ -52,19 +106,23 @@ function attachReportForm() {
     });
 }
 
+function setLastUpdated(searchedTime) {
+    const node = document.getElementById("last-updated");
+    if (!node) return;
+    if (searchedTime === 0) {
+        node.textContent = "마지막 검색 시도: 없음";
+    } else if (typeof searchedTime === "string") {
+        node.textContent = searchedTime;
+    } else {
+        node.textContent = "마지막 검색 시도: " + new Date(searchedTime * 1000).toLocaleString();
+    }
+}
+
 async function fetchSongs() {
     try {
         const response = await Stelline.api('search/not_searched');
         const data = await response.json();
-        if (data.searched_time === 0) {
-            document.getElementById("last-updated").innerText = "마지막 검색 시도 시간: 없음"
-        }
-        else if (typeof(data.searched_time) === "string") {
-            document.getElementById("last-updated").innerText = data.searched_time
-        }
-        else {
-            document.getElementById("last-updated").innerText = "마지막 검색 시도 시간: " + new Date(data.searched_time * 1000).toLocaleString()
-        }
+        setLastUpdated(data.searched_time);
         populateTable(data.all_songs, data.recent);
     } catch (error) {
         console.error('Error fetching songs:', error);
@@ -157,12 +215,19 @@ function shuffleArray(array) {
     }
 }
 
+function setTabCount(name, value) {
+    const node = document.querySelector(`[data-count="${name}"]`);
+    if (node) node.textContent = value;
+}
+
 function populateTable(songs, recent) {
     shuffleArray(songs);
     shuffleArray(recent);
 
     renderCards(songs, "songCards");
     renderCards(recent, "recentCards");
+    setTabCount("current", songs.length);
+    setTabCount("recent", recent.length);
 }
 
 function renderCards(data, containerId) {
@@ -170,12 +235,26 @@ function renderCards(data, containerId) {
     container.innerHTML = ""; // 기존 제거
 
     data.forEach(song => {
-        const card = document.createElement("div");
-        card.className = "card";
+        // 카드 전체가 "복사 & 이동" 버튼이라 별도의 버튼 줄이 필요 없다.
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "card is-link";
+        card.title = `${song.query} 복사하고 유튜브로 이동`;
+
+        const thumb = document.createElement("div");
+        thumb.className = "thumb-wrap";
 
         const img = document.createElement("img");
         img.src = `https://img.youtube.com/vi/${song.video_id}/0.jpg`;
-        card.appendChild(img);
+        img.alt = "";
+        img.loading = "lazy";
+        thumb.appendChild(img);
+
+        const play = document.createElement("span");
+        play.className = "thumb-play";
+        play.innerHTML = Stelline.icon("play");
+        thumb.appendChild(play);
+        card.appendChild(thumb);
 
         const info = document.createElement("div");
         info.className = "info";
@@ -184,21 +263,22 @@ function renderCards(data, containerId) {
         title.textContent = song.query;
         info.appendChild(title);
 
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "btn-primary";
-        button.innerHTML = Stelline.icon("play") + " 복사 & 이동";
-        button.onclick = () => handleButtonClick(song.query);
-        info.appendChild(button);
+        const action = document.createElement("span");
+        action.className = "card-action";
+        action.textContent = "복사 & 이동";
+        info.appendChild(action);
 
         card.appendChild(info);
+        card.onclick = () => handleButtonClick(song.query);
         container.appendChild(card);
     });
 
     if (data.length === 0) {
         const message = document.createElement("p");
         message.className = "empty-state";
-        message.textContent = "검색 안되는 노래가 없습니다.";
+        message.textContent = containerId === "recentCards"
+            ? "최근 7일 이내에 막혔던 곡이 없습니다."
+            : "검색 안되는 노래가 없습니다.";
         container.appendChild(message);
     }
 }
@@ -218,5 +298,10 @@ function handleButtonClick(query) {
 
 document.addEventListener("DOMContentLoaded", fetchSongs);
 document.addEventListener("DOMContentLoaded", attachReportForm);
+document.addEventListener("DOMContentLoaded", () => {
+    attachTabs("song-tabs");
+    attachTabs("method-tabs");
+    attachImageViewer();
+});
 fetchQueries();
 attachQueryFilter();

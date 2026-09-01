@@ -1,129 +1,355 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Stelline 관리자</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script src="/assets/theme.js"></script>
   <style>
-    :root { --primary: #2563eb; --primary-strong: #1d4ed8; --text: #111827; --muted: #475569; --border: #d5e1f2; --danger: #b23a48;
-      font-family: Inter, "Noto Sans KR", Arial, sans-serif; color: var(--text); background: #edf6ff; } body { margin: 0 auto; padding: 24px; max-width: 1200px; }
-    header, .actions { display: flex; gap: 16px; align-items: center; justify-content: space-between; margin-bottom: 24px; } h1, h2, h3 { margin-top: 0; }
-    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); } section, details { background: white; border: 1px solid #d5e1f2; border-radius: 10px; padding: 18px; box-shadow: 0 1px 4px #9cb5d333; }
-    .hint { color: var(--muted); font-size: .9rem; } .fields { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); } label { display: grid; gap: 4px; font-size: .9rem; font-weight: bold; }
-    input, select, textarea { min-width: 0; border: 1px solid #b9c7d8; border-radius: 5px; padding: 8px; font: inherit; } textarea { width: 100%; resize: vertical; }
-    button, .button { border: 0; border-radius: 5px; background: var(--primary); color: white; cursor: pointer; padding: 9px 13px; text-decoration: none; font-size: .9rem; }
-    button:hover, .button:hover { background: var(--primary-strong); } :focus-visible { outline: 2px solid var(--primary-strong); outline-offset: 2px; }
-    button.danger { background: var(--danger); } button.secondary { background: #64748b; } .flash { border-radius: 6px; padding: 10px; margin: 10px 0; background: #dff4e8; } .flash.error { background: #ffe5e7; }
-    details { margin-top: 14px; overflow-x: auto; } summary { cursor: pointer; font-weight: bold; } table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: .85rem; }
-    th, td { padding: 7px; border: 1px solid #d5e1f2; text-align: left; vertical-align: top; word-break: break-word; } th { background: #f1f6fc; } form.inline { display: inline; } .readonly { opacity: .82; }
-    tr[data-row] { cursor: pointer; } tr[data-row]:hover td { background: #f1f6fc; } tr[data-row] td:first-child::before { content: "✎ "; color: var(--primary); }
-    tr[data-row].is-editing td { background: #fff5d6; }
-    tr[data-row].is-copying td { background: #e0f2fe; }
-    td.row-actions { white-space: nowrap; } td.row-actions button { margin-right: 4px; }
-    .edit-hint.is-copy { color: #0369a1; }
-    .form-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .edit-hint { color: #b45309; font-weight: bold; font-size: .85rem; }
-    .filter-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; } .filter-row input { flex: 1; }
-    .bulk { background: #f8fbff; } .bulk form { margin-bottom: 14px; } .bulk .checkbox { display: flex; gap: 6px; align-items: center; font-weight: normal; margin: 8px 0; }
-    /* 곡 목록처럼 열과 행이 많은 표는 칸을 가로로 다 쓰고, 머리글을 붙박이로 둔다. */
-    section.wide { grid-column: 1 / -1; }
-    .table-scroll { max-height: 60vh; overflow: auto; margin-top: 12px; }
-    .table-scroll table { margin-top: 0; }
-    .table-scroll thead th { position: sticky; top: 0; z-index: 1; white-space: nowrap; }
-    /* 한 곡이 한 줄을 차지해야 수백 곡을 눈으로 훑을 수 있다. 잘린 값은 칸에 마우스를 올리면 다 보인다. */
-    .table-scroll td { max-width: 20ch; padding: 5px 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .table-scroll td:first-child { max-width: 28ch; }
-    .table-scroll button { padding: 3px 8px; font-size: .78rem; }
-    tbody tr:nth-child(even) { background: #fafcff; }
-    td.is-empty { color: #94a3b8; } td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    @media (max-width: 600px) { body { padding: 14px; } header { align-items: flex-start; flex-direction: column; } .fields { grid-template-columns: 1fr; } }
+    /* 공개 화면과 같은 색·모서리 토큰을 쓰고, 관리자에만 필요한 것만 여기서 정한다. */
+    body { padding-bottom: 40px; }
+
+    .admin-shell { width: min(100%, 1280px); margin: 0 auto; padding: 14px 16px 40px; }
+
+    .admin-bar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 -16px 14px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-panel-solid);
+      backdrop-filter: blur(10px);
+    }
+
+    .admin-bar h1 { margin: 0; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .admin-bar-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .admin-bar-actions form { margin: 0; }
+
+    /* 표 묶음 전환 탭. 한 번에 한 묶음만 보여 준다. */
+    .admin-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .admin-tab {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      padding: 8px 14px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+      box-shadow: none;
+    }
+
+    .admin-tab:hover { transform: none; background: var(--primary-tint); color: var(--primary-strong); }
+
+    .admin-tab.is-on {
+      border-color: transparent;
+      background: var(--primary-hover);
+      color: #fff;
+    }
+
+    .admin-tab .tab-count {
+      padding: 1px 7px;
+      border-radius: 999px;
+      background: var(--surface-mute);
+      color: inherit;
+      font-size: 0.74rem;
+    }
+
+    .admin-tab.is-on .tab-count { background: rgba(255,255,255,0.24); }
+
+    .admin-group { display: grid; gap: 14px; }
+
+    .admin-card {
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-panel);
+      background: var(--surface-panel-solid);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .admin-card > header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+
+    .admin-card h2 { margin: 0; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .admin-card .count { color: var(--primary-strong); font-size: 0.82rem; font-weight: 700; }
+    .hint { margin: 0; color: var(--muted-soft); font-size: 0.82rem; line-height: 1.55; }
+
+    .flash {
+      margin: 0 0 10px;
+      padding: 10px 13px;
+      border-radius: var(--radius-control);
+      background: var(--success-soft);
+      color: var(--success);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .flash.error { background: var(--danger-soft); color: var(--danger); }
+
+    /* ---------- 양식 ---------- */
+
+    .fields {
+      display: grid;
+      gap: 9px 12px;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    }
+
+    label { display: grid; gap: 4px; color: var(--text); font-size: 0.8rem; font-weight: 700; }
+
+    input, select, textarea {
+      min-width: 0;
+      padding: 8px 10px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-control);
+      background: var(--surface-input);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+    }
+
+    textarea { width: 100%; resize: vertical; }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin: 12px 0 0;
+    }
+
+    /* 삭제는 되돌릴 수 없지만, 모든 줄에서 빨갛게 소리치면 표가 읽히지 않는다.
+       위험하다는 것만 색으로 알리고 무게는 낮춘다. */
+    button.danger { background: var(--danger-soft); color: var(--danger); border: 1px solid transparent; box-shadow: none; }
+    button.danger:hover { background: var(--danger-solid); color: #fff; }
+    button.secondary { background: var(--surface-subtle); color: var(--text-strong); border: 1px solid var(--border-subtle); box-shadow: none; }
+    button.secondary:hover { background: var(--primary-tint-strong); }
+
+    .edit-hint { color: #b45309; font-weight: 700; font-size: .82rem; }
+    .edit-hint.is-copy { color: var(--primary-strong); }
+    :root[data-theme="dark"] .edit-hint { color: #fbbf24; }
+
+    details.form-box, details.bulk {
+      margin: 0;
+      padding: 12px 14px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--surface-inset);
+    }
+
+    details.form-box[open], details.bulk[open] { padding-bottom: 14px; }
+    summary { cursor: pointer; font-size: 0.88rem; font-weight: 700; }
+    details.bulk { margin-top: 12px; }
+    details.bulk form { margin: 12px 0 0; }
+    .checkbox { display: flex; gap: 7px; align-items: center; margin: 9px 0; font-weight: 400; font-size: 0.85rem; }
+
+    /* ---------- 표 ---------- */
+
+    .table-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin: 14px 0 8px;
+    }
+
+    .table-head .hint { margin: 0; }
+    .filter-row { display: flex; gap: 8px; align-items: center; }
+    .filter-row input { width: 220px; }
+
+    .table-scroll {
+      max-height: 62vh;
+      overflow: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--surface);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+
+    th, td {
+      padding: 7px 9px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+      vertical-align: middle;
+      word-break: break-word;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--surface-subtle);
+      color: var(--muted);
+      font-size: .78rem;
+      letter-spacing: .02em;
+      white-space: nowrap;
+    }
+
+    /* 한 항목이 한 줄을 차지해야 수백 개를 눈으로 훑을 수 있다.
+       잘린 값은 칸에 마우스를 올리면 다 보인다. */
+    tbody td { max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    tbody td:first-child { max-width: 30ch; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:nth-child(even) { background: var(--surface-mute); }
+
+    tr[data-row] { cursor: pointer; }
+    tr[data-row]:hover td { background: var(--primary-tint); }
+    tr[data-row] td:first-child::before { content: "✎ "; color: var(--primary-strong); }
+    tr[data-row].is-editing td { background: var(--highlight); color: var(--highlight-text); }
+    tr[data-row].is-copying td { background: var(--primary-tint-strong); }
+
+    td.row-actions { width: 1%; white-space: nowrap; }
+    td.row-actions button { padding: 3px 9px; font-size: .76rem; }
+    td.row-actions form { display: inline; margin-left: 4px; }
+    /* 제보 내용처럼 읽어야 하는 값은 한 줄로 자르지 않고 칸을 넓게 쓴다. */
+    tbody td.wrap { width: 100%; max-width: none; white-space: normal; }
+    td.is-empty { color: var(--muted-soft); }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .readonly { margin-top: 14px; opacity: .9; }
+    .readonly h3 { margin: 14px 0 6px; font-size: .92rem; }
+    .readonly .table-scroll { max-height: 40vh; }
+
+    @media (max-width: 720px) {
+      .admin-shell { padding-left: 12px; padding-right: 12px; }
+      /* 좁은 화면에서는 머리말이 세 줄이 된다. 붙박이로 두면 화면을 너무 많이 먹는다. */
+      .admin-bar { position: static; margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; }
+      .admin-card { padding: 14px; border-radius: var(--radius-card); }
+      .filter-row input { width: 100%; }
+    }
   </style>
 </head>
 <body>
-  <header><div><h1>콘텐츠 관리자</h1><p class="hint">새 데이터는 아래 전용 양식에서 관리합니다. 표에서 행을 클릭하면 같은 양식이 수정 모드로 바뀝니다. 통계 데이터는 읽기 전용입니다.</p></div><a class="button" href="{{ url_for('auth.logout') }}">로그아웃</a></header>
-  {% for category, message in get_flashed_messages(with_categories=true) %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
-  <div class="actions">
-    <strong>운영 데이터</strong>
-    <div style="display:flex; gap:12px; align-items:center;">
-      {% if development_mode %}
-      <form method="post" action="{{ url_for('admin.import_snapshot_from_admin_html') }}" onsubmit="return confirm('개발 DB를 관리자 HTML 스냅샷으로 다시 적재할까요?')">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit">개발 DB 재시드</button>
-      </form>
-      {% endif %}
-      <button id="forceSearchBtn" type="button">검색 점검 즉시 실행</button>
-    </div>
-  </div>
-  <main class="grid">
-    {% for table_name, form in forms.items() %}
-    <section data-table="{{ table_name }}"{% if form.wide %} class="wide"{% endif %}>
-      <h2>{{ form.title }}</h2>
-      <p class="hint">{{ form.description }} 아래 표에서 행을 클릭하면 양식에 값이 채워지고 <strong>수정</strong> 모드가 됩니다.</p>
-      <form data-admin-form method="post"
-            action="{{ url_for('admin.add_row', table_name=table_name) }}"
-            data-add-action="{{ url_for('admin.add_row', table_name=table_name) }}"
-            data-update-action="{{ url_for('admin.update_row', table_name=table_name) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <input type="hidden" name="row_token" data-row-token value="">
-        <div class="fields">
-          {% for input in form.inputs %}
-          <label>{{ input.label }}
-            {% if input.choices %}
-            <select name="{{ input.name }}">{% for value, label in input.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
-            {% else %}
-            <input name="{{ input.name }}" type="{{ input.type }}" {% if input.type == 'number' %}step="any"{% endif %}>
-            {% endif %}
-          </label>
-          {% endfor %}
-        </div>
-        <p class="form-actions">
-          <button type="submit" data-submit-label>추가</button>
-          <button type="button" class="secondary" data-cancel-edit hidden>새 항목 추가로 돌아가기</button>
-          <span class="edit-hint" data-edit-hint hidden></span>
-        </p>
-      </form>
-
-      {% if form.bulk_import %}
-      <details class="bulk">
-        <summary>여러 곡 한 번에 등록하기</summary>
-        <p class="hint">곡명과 가수가 같은 곡은 새로 만들지 않고 기존 곡의 값을 덮어씁니다.</p>
-        <form method="post" action="{{ url_for('admin.import_karaoke_songs') }}" onsubmit="return confirm('기본 노래방 목록을 가져올까요?')">
+  <div class="admin-shell">
+    <header class="admin-bar">
+      <h1>Stelline 콘텐츠 관리자</h1>
+      <div class="admin-bar-actions">
+        {% if development_mode %}
+        <form method="post" action="{{ url_for('admin.import_snapshot_from_admin_html') }}" onsubmit="return confirm('개발 DB를 관리자 HTML 스냅샷으로 다시 적재할까요?')">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="source" value="seed">
-          <label class="checkbox"><input type="checkbox" name="replace"> 기존 곡을 모두 지우고 새로 넣기</label>
-          <button type="submit">기본 목록 가져오기</button>
+          <button class="secondary" type="submit">개발 DB 재시드</button>
         </form>
-        <form method="post" action="{{ url_for('admin.import_karaoke_songs') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <input type="hidden" name="source" value="paste">
-          <label>표 붙여넣기 (탭 또는 쉼표로 구분)
-            <textarea name="bulk_text" rows="7" placeholder="곡명&#9;가수&#9;TJ&#9;KY&#10;괴수의 꽃노래 (怪獣の花唄)&#9;아이리 칸나&#9;68705&#9;-"></textarea>
-          </label>
-          <p class="hint">첫 줄에 <code>곡명 가수 TJ KY</code> 같은 머리글을 넣으면 순서를 바꿔도 됩니다. 머리글이 없으면 곡명·가수·TJ·KY 순서로 읽습니다. 번호가 없으면 <code>-</code> 또는 빈 칸으로 두세요.</p>
-          <label class="checkbox"><input type="checkbox" name="replace"> 기존 곡을 모두 지우고 새로 넣기</label>
-          <button type="submit">붙여넣은 표 등록</button>
-        </form>
-      </details>
-      {% endif %}
+        {% endif %}
+        <button id="forceSearchBtn" class="secondary" type="button">검색 점검 즉시 실행</button>
+        <a class="btn-primary" href="{{ url_for('auth.logout') }}">로그아웃</a>
+      </div>
+    </header>
 
+    {% for category, message in get_flashed_messages(with_categories=true) %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
+
+    <p class="hint" style="margin-bottom:12px">표에서 <strong>행을 클릭하면</strong> 위 양식에 값이 채워지고 수정 모드가 됩니다. <strong>복제</strong>는 같은 값을 새 항목으로 채워 넣습니다. 통계 데이터는 읽기 전용입니다.</p>
+
+    <nav class="admin-tabs" id="admin-tabs" aria-label="관리 항목">
+      {% for group in groups %}
+      <button type="button" class="admin-tab{% if loop.first %} is-on{% endif %}" data-group="{{ group.key }}">{{ group.label }} <span class="tab-count">{{ group.count }}</span></button>
+      {% endfor %}
+      <button type="button" class="admin-tab" data-group="stats">읽기 전용 통계</button>
+    </nav>
+
+    {% for group in groups %}
+    <main class="admin-group" data-group-panel="{{ group.key }}"{% if not loop.first %} hidden{% endif %}>
+      {% for table_name, form in group.forms.items() %}
       {% set rows = data.get(table_name, []) %}
-      <details>
-        <summary>등록된 항목 {{ rows|length }}개 보기</summary>
+      <section class="admin-card" data-table="{{ table_name }}">
+        <header>
+          <h2>{{ form.title }}</h2>
+          <span class="count">{{ rows|length }}개</span>
+          <p class="hint">{{ form.description }}</p>
+        </header>
+
+        {% if form.collapse_form %}<details class="form-box" data-form-box>
+        <summary>직접 추가·수정하기</summary>{% endif %}
+        <form data-admin-form method="post"
+              action="{{ url_for('admin.add_row', table_name=table_name) }}"
+              data-add-action="{{ url_for('admin.add_row', table_name=table_name) }}"
+              data-update-action="{{ url_for('admin.update_row', table_name=table_name) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="row_token" data-row-token value="">
+          <div class="fields">
+            {% for input in form.inputs %}
+            <label>{{ input.label }}
+              {% if input.choices %}
+              <select name="{{ input.name }}">{% for value, label in input.choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+              {% else %}
+              <input name="{{ input.name }}" type="{{ input.type }}" {% if input.type == 'number' %}step="any"{% endif %}>
+              {% endif %}
+            </label>
+            {% endfor %}
+          </div>
+          <p class="form-actions">
+            <button class="btn-primary" type="submit" data-submit-label>추가</button>
+            <button type="button" class="secondary" data-cancel-edit hidden>새 항목 추가로 돌아가기</button>
+            <span class="edit-hint" data-edit-hint hidden></span>
+          </p>
+        </form>
+        {% if form.collapse_form %}</details>{% endif %}
+
+        {% if form.bulk_import %}
+        <details class="bulk">
+          <summary>여러 곡 한 번에 등록하기</summary>
+          <p class="hint">곡명과 가수가 같은 곡은 새로 만들지 않고 기존 곡의 값을 덮어씁니다.</p>
+          <form method="post" action="{{ url_for('admin.import_karaoke_songs') }}" onsubmit="return confirm('기본 노래방 목록을 가져올까요?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="source" value="seed">
+            <label class="checkbox"><input type="checkbox" name="replace"> 기존 곡을 모두 지우고 새로 넣기</label>
+            <button class="secondary" type="submit">기본 목록 가져오기</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.import_karaoke_songs') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="source" value="paste">
+            <label>표 붙여넣기 (탭 또는 쉼표로 구분)
+              <textarea name="bulk_text" rows="6" placeholder="곡명&#9;가수&#9;TJ&#9;KY&#10;괴수의 꽃노래 (怪獣の花唄)&#9;아이리 칸나&#9;68705&#9;-"></textarea>
+            </label>
+            <p class="hint">첫 줄에 <code>곡명 가수 TJ KY</code> 같은 머리글을 넣으면 순서를 바꿔도 됩니다. 머리글이 없으면 곡명·가수·TJ·KY 순서로 읽습니다. 번호가 없으면 <code>-</code> 또는 빈 칸으로 두세요.</p>
+            <label class="checkbox"><input type="checkbox" name="replace"> 기존 곡을 모두 지우고 새로 넣기</label>
+            <button class="secondary" type="submit">붙여넣은 표 등록</button>
+          </form>
+        </details>
+        {% endif %}
+
+        {% if form.searchable and rows %}
+        <div class="table-head">
+          <span class="filter-row"><input type="search" data-table-filter placeholder="목록에서 검색"><span class="hint" data-filter-count></span></span>
+        </div>
+        {% endif %}
+
         {% if rows %}
-        {% if form.searchable %}<div class="filter-row"><input type="search" data-table-filter placeholder="목록에서 검색"><span class="hint" data-filter-count></span></div>{% endif %}
-        <div class="table-scroll">
+        <div class="table-scroll" style="margin-top:12px">
         <table>
           <thead><tr>{% if form.columns %}{% for column in form.columns %}<th>{{ column.label }}</th>{% endfor %}{% else %}{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}{% endif %}<th>관리</th></tr></thead>
           <tbody>
             {% for row in rows %}
             <tr data-row='{{ row | tojson | safe }}' data-row-token="{{ serialize_row(row) }}">
               {% if form.columns %}
-              {% for column in form.columns %}{% set value = row.get(column.name) %}{% set shown = column.choices.get(value|string, value) if value not in (None, '') else '' %}<td class="{% if not shown %}is-empty{% elif column.name in ('tj', 'ky') %}num{% endif %}"{% if shown %} title="{{ shown }}"{% endif %}>{{ shown or '—' }}</td>{% endfor %}
+              {% for column in form.columns %}{% set value = row.get(column.name) %}{% set shown = column.choices.get(value|string, value) if value not in (None, '') else '' %}<td class="{% if not shown %}is-empty{% elif column.name in ('tj', 'ky') %}num{% endif %}{% if column.name == 'content' %} wrap{% endif %}"{% if shown %} title="{{ shown }}"{% endif %}>{{ shown or '—' }}</td>{% endfor %}
               {% else %}
               {% for value in row.values() %}<td>{{ value }}</td>{% endfor %}
               {% endif %}
               <td class="row-actions">
                 <button type="button" class="secondary" data-copy-row>복제</button>
-                <form class="inline" method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')">
+                <form method="post" action="{{ url_for('admin.delete_row', table_name=table_name) }}" onsubmit="return confirm('이 항목을 삭제할까요?')">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                   <input type="hidden" name="row_token" value="{{ serialize_row(row) }}">
                   <button class="danger" type="submit">삭제</button>
@@ -134,12 +360,29 @@
           </tbody>
         </table>
         </div>
-        {% if form.columns %}<p class="hint">표에는 훑어보기 좋은 열만 보여줍니다. 행을 클릭하면 나머지 값까지 위 양식에 채워집니다.</p>{% endif %}
         {% else %}<p class="hint">등록된 항목이 없습니다.</p>{% endif %}
-      </details>
-    </section>{% endfor %}
-  </main>
-  <details class="readonly"><summary>읽기 전용 운영 통계</summary>{% for table_name, rows in data.items() if table_name not in forms %}<h3>{{ table_name }} ({{ rows|length }})</h3>{% if rows %}<table><thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr></thead><tbody>{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody></table>{% endif %}{% endfor %}</details>
+      </section>
+      {% endfor %}
+    </main>
+    {% endfor %}
+
+    <main class="admin-group" data-group-panel="stats" hidden>
+      {% for table_name, rows in data.items() if table_name not in forms %}
+      <section class="admin-card readonly">
+        <header><h2>{{ table_name }}</h2><span class="count">{{ rows|length }}개</span></header>
+        {% if rows %}
+        <div class="table-scroll">
+          <table>
+            <thead><tr>{% for key in rows[0].keys() %}<th>{{ key }}</th>{% endfor %}</tr></thead>
+            <tbody>{% for row in rows %}<tr>{% for value in row.values() %}<td>{{ value }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+          </table>
+        </div>
+        {% else %}<p class="hint">기록이 없습니다.</p>{% endif %}
+      </section>
+      {% endfor %}
+    </main>
+  </div>
+
   <script>
     function normalizeDateTimeInput(value) {
       if (value === null || value === undefined) return '';
@@ -212,7 +455,11 @@
         }
         if (field.type === 'datetime-local') field.value = normalizeDateTimeInput(value);
         else if (field.type === 'date') field.value = normalizeDateInput(value);
+        else if (field.tagName === 'SELECT' && typeof value === 'boolean') field.value = value ? '1' : '0';
         else field.value = String(value);
+
+        // 목록에 없는 값을 넣으면 선택 칸이 빈 채로 남아 무엇이 고를지 알 수 없다.
+        if (field.tagName === 'SELECT' && field.selectedIndex < 0) field.selectedIndex = 0;
       });
 
       // 안내 문구에는 양식의 첫 입력값(제목·이름 등)을 쓴다. data-row는 키가 정렬돼 있어 순서를 믿을 수 없다.
@@ -235,6 +482,9 @@
 
       section.querySelectorAll('tr.is-editing, tr.is-copying')
         .forEach((other) => other.classList.remove('is-editing', 'is-copying'));
+      // 접어 둔 양식은 값을 채우기 전에 펼쳐야 보인다.
+      const box = form.closest('[data-form-box]');
+      if (box) box.open = true;
       return { form, label: fillForm(form, rowData) };
     }
 
@@ -299,7 +549,8 @@
 
     // 곡 목록처럼 행이 많은 표는 화면에서 바로 걸러 볼 수 있게 한다.
     document.querySelectorAll('[data-table-filter]').forEach((input) => {
-      const table = input.closest('details').querySelector('table');
+      const section = input.closest('section');
+      const table = section.querySelector('table');
       const counter = input.parentElement.querySelector('[data-filter-count]');
       const total = table.querySelectorAll('tbody tr').length;
       input.addEventListener('input', () => {
@@ -313,6 +564,28 @@
         counter.textContent = keyword ? `${total}개 중 ${shown}개` : '';
       });
     });
+
+    /* 표 묶음 전환. 고른 묶음은 브라우저에 남겨 두어, 저장 후 되돌아와도 같은 자리에서 이어서 작업한다. */
+    (function () {
+      const STORAGE_KEY = 'stelline.admin.group';
+      const tabs = Array.from(document.querySelectorAll('.admin-tab'));
+      const panels = Array.from(document.querySelectorAll('[data-group-panel]'));
+      if (!tabs.length) return;
+
+      function show(key) {
+        const known = tabs.some((tab) => tab.dataset.group === key);
+        const target = known ? key : tabs[0].dataset.group;
+        tabs.forEach((tab) => tab.classList.toggle('is-on', tab.dataset.group === target));
+        panels.forEach((panel) => { panel.hidden = panel.dataset.groupPanel !== target; });
+        try { window.localStorage.setItem(STORAGE_KEY, target); } catch (error) { /* 저장이 막혀도 화면은 그대로 쓴다. */ }
+      }
+
+      tabs.forEach((tab) => tab.addEventListener('click', () => show(tab.dataset.group)));
+
+      let saved = null;
+      try { saved = window.localStorage.getItem(STORAGE_KEY); } catch (error) { saved = null; }
+      if (saved) show(saved);
+    })();
 
     document.getElementById('forceSearchBtn').addEventListener('click', async () => { if (!confirm('지금 검색 점검을 시작할까요?')) return; try { const response = await fetch('/api/search/force_search'); if (!response.ok) throw new Error(); alert('검색 점검을 시작했습니다.'); } catch { alert('실행하지 못했습니다.'); } });
   </script>

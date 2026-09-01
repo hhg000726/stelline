@@ -28,19 +28,23 @@
 
 <body>
   <main class="site-container">
-    <nav class="page-nav">
-      <a href="../" class="btn-secondary">← 메인으로</a>
-    </nav>
+    <header class="site-header">
+      <a class="site-header-brand" href="/"><img src="/favicon.svg" alt="" width="26" height="26"><span>Stelline</span></a>
+      <nav class="site-nav" aria-label="사이트 메뉴">
+        <a href="/search">검색 안되는 노래</a>
+        <a href="/karaoke" aria-current="page">노래방 번호</a>
+        <a href="/congratulation">조회수 축하</a>
+        <a href="/offline">오프라인 이벤트</a>
+      </nav>
+    </header>
 
     <section class="page-shell">
       <div class="hero-heading">
         <div class="page-heading">
-          <div class="page-kicker">karaoke</div>
           <h1 class="page-title">노래방 번호</h1>
-          <p class="page-subtitle">번호를 누르면 바로 복사됩니다.</p>
-          <p id="last-updated" class="meta-text"></p>
+          <p class="page-subtitle">번호를 누르면 바로 복사됩니다. <span id="last-updated" class="meta-text"></span></p>
         </div>
-        <button id="report-toggle" class="btn-primary report-toggle" type="button">번호 제보</button>
+        <button id="report-toggle" class="btn-secondary report-toggle" type="button">번호 제보</button>
       </div>
 
       <div id="report-panel" class="report-panel" hidden>
@@ -77,9 +81,17 @@
             </select>
           </label>
           <button id="filter-toggle" class="kara-chip-button" type="button" aria-expanded="false">필터 <span id="filter-count" class="kara-badge" hidden>0</span></button>
+          <div class="kara-toolbar-end">
+            <p id="result-count" class="results-count">불러오는 중…</p>
+            <button id="random-pick" class="btn-secondary btn-small" type="button">🎲 랜덤 한 곡</button>
+          </div>
         </div>
 
         <div id="filter-panel" class="kara-filters" hidden>
+          <div class="kara-filter-group is-wide">
+            <h3>멤버</h3>
+            <div id="member-chips" class="kara-chips"></div>
+          </div>
           <div class="kara-filter-group">
             <h3>여러 개 고를 때</h3>
             <div id="match-switch" class="machine-switch" role="group" aria-label="여러 조건을 고를 때 찾는 방법">
@@ -87,10 +99,6 @@
               <button type="button" data-match="and">모두</button>
             </div>
             <p class="kara-filter-hint">멤버를 여러 명 고를 때 적용됩니다. 구분·종류는 곡마다 하나뿐이라 늘 “하나라도”로 찾습니다.</p>
-          </div>
-          <div class="kara-filter-group">
-            <h3>멤버</h3>
-            <div id="member-chips" class="kara-chips"></div>
           </div>
           <div class="kara-filter-group">
             <h3>구분</h3>
@@ -111,20 +119,13 @@
         </div>
       </div>
 
-      <div class="kara-summary">
-        <p id="result-count" class="results-count">불러오는 중…</p>
-        <div class="kara-summary-actions">
-          <button id="random-pick" class="btn-secondary" type="button">랜덤 한 곡</button>
-        </div>
-      </div>
-
       <p id="offline-note" class="kara-offline" hidden>지금은 저장해 둔 목록을 보여주고 있습니다. 연결되면 자동으로 새로 고쳐집니다.</p>
 
       <div id="song-list" class="kara-list" aria-live="polite"></div>
     </section>
 
     <footer>
-      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다.<br>이 사이트는 스텔라이브 공식과는 무관합니다.<br>노래방 번호는 실제와 다를 수 있으니 제보로 알려주세요.</p>
+      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다. 스텔라이브 공식과는 무관합니다.<br>노래방 번호는 실제와 다를 수 있으니 제보로 알려주세요.</p>
       <p>문의: pastel525600@gmail.com</p>
     </footer>
   </main>

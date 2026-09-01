@@ -5,6 +5,7 @@ from stelline.apis.main import main_bp
 from stelline.apis.congratulation import congratulation_bp
 from stelline.apis.offline import offline_bp
 from stelline.apis.karaoke import karaoke_bp
+from stelline.apis.content import content_bp
 
 api_bp = Blueprint("api", __name__)
 
@@ -15,3 +16,4 @@ api_bp.register_blueprint(main_bp, url_prefix="/main")
 api_bp.register_blueprint(congratulation_bp, url_prefix="/congratulation")
 api_bp.register_blueprint(offline_bp, url_prefix="/offline")
 api_bp.register_blueprint(karaoke_bp, url_prefix="/karaoke")
+api_bp.register_blueprint(content_bp, url_prefix="/content")

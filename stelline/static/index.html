@@ -32,7 +32,17 @@
           <img src="/favicon.svg" alt="" width="36" height="36">
           <span>Stelline</span>
         </h1>
-        <p class="page-subtitle">스텔라이브를 좋아해서 만든 비공식 팬 사이트입니다.</p>
+        <p class="page-subtitle" data-content-key="main_hero_subtitle">스텔라이브를 좋아해서 만든 비공식 팬 사이트입니다.</p>
+      </div>
+
+      <!-- 관리자 화면(사이트 문구·그림)에서 채우는 공지. 제목·내용·그림이 모두 비어 있으면
+           이 칸 자체가 사라지므로, 기본 상태에서는 아무 자리도 차지하지 않는다. -->
+      <div class="site-notice" data-content-block hidden>
+        <div class="site-notice-body" data-content-block hidden>
+          <h2 class="site-notice-title" data-content-key="main_notice_title" hidden></h2>
+          <p class="site-notice-text" data-content-key="main_notice" hidden></p>
+        </div>
+        <img class="site-notice-image" data-content-key="main_notice_image" alt="" loading="lazy" hidden>
       </div>
 
       <!-- 버튼만 늘어놓으면 무엇을 하는 곳인지 안 보여서, 한 줄 설명을 함께 둔다.
@@ -76,7 +86,7 @@
         <div class="section-header">
           <div class="section-title">
             <h2>트윗 안내</h2>
-            <p>총공 시간에 맞춰 태그와 키워드를 복사해 트윗합니다.</p>
+            <p data-content-key="main_twits_note">총공 시간에 맞춰 태그와 키워드를 복사해 트윗합니다.</p>
           </div>
         </div>
         <div id="twitContainer" class="stack-list"><p class="empty-state">불러오는 중…</p></div>
@@ -86,7 +96,7 @@
         <div class="section-header">
           <div class="section-title">
             <h2>이벤트·펀딩</h2>
-            <p>진행 중인 외부 이벤트로 이동합니다.</p>
+            <p data-content-key="main_events_note">진행 중인 외부 이벤트로 이동합니다.</p>
           </div>
         </div>
         <div id="button-container" class="button-grid"><p class="empty-state">불러오는 중…</p></div>
@@ -96,7 +106,7 @@
         <div class="section-header">
           <div class="section-title">
             <h2>벅스 순위</h2>
-            <p>즐겨찾기 투표 현황입니다.</p>
+            <p data-content-key="main_bugs_note">즐겨찾기 투표 현황입니다.</p>
           </div>
         </div>
         <div id="bugs" class="stack-list"><p class="empty-state">불러오는 중…</p></div>
@@ -104,13 +114,14 @@
     </section>
 
     <footer>
-      <p>이 사이트는 개인이 운영하는 비영리 사이트입니다. 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
-      <p>문의: pastel525600@gmail.com</p>
+      <p data-content-key="site_footer_note">이 사이트는 개인이 운영하는 비영리 사이트입니다. 스텔라이브 공식과는 무관합니다.<br>문제가 되는 콘텐츠가 있다면 연락 주시면 조치하겠습니다.</p>
+      <p data-content-key="site_footer_contact">문의: pastel525600@gmail.com</p>
     </footer>
   </main>
 
   <script src="/assets/site.js"></script>
   <script src="/assets/nav.js"></script>
+  <script src="/assets/content.js"></script>
   <script src="/index.js"></script>
 </body>
 

@@ -114,4 +114,22 @@ MIGRATIONS = [
         drop_column_if_present("karaoke_songs", "note"),
         drop_column_if_present("karaoke_songs", "sort_order"),
     ]),
+    ("011_site_contents", [
+        # 화면에 박아 둔 문구·그림 중 관리자가 바꾼 것만 담는다.
+        # 행이 없으면 stelline/content/registry.py 의 기본값이 그대로 쓰이므로,
+        # 이 표가 비어 있어도(또는 조회에 실패해도) 화면은 지금과 똑같이 보인다.
+        #
+        # cleared=1 은 "관리자가 일부러 비웠다"는 뜻이고, 그 자리는 화면에서 사라진다.
+        # 그림은 파일이 아니라 여기에 넣는다. 컨테이너를 다시 올려도 남아 있어야 하기 때문이다.
+        """CREATE TABLE IF NOT EXISTS site_contents (
+             content_key VARCHAR(64) PRIMARY KEY,
+             cleared BOOLEAN NOT NULL DEFAULT FALSE,
+             text_value TEXT NULL,
+             image_data MEDIUMBLOB NULL,
+             image_mime VARCHAR(32) NULL,
+             image_width INT NULL,
+             image_height INT NULL,
+             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+           ) CHARACTER SET utf8mb4""",
+    ]),
 ]

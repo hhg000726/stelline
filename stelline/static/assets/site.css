@@ -696,7 +696,8 @@ button svg {
   font-variant-numeric: tabular-nums;
 }
 
-/* 큰 고비를 넘긴 기록은 한눈에 구분된다. 100만은 파랑, 1000만은 금색이다. */
+/* 100만·1000만 단위로 딱 떨어진 기록만 한눈에 구분된다. 100만 단위는 파랑, 1000만 단위는 금색이다.
+   (120만·2500만처럼 중간에 걸친 기록은 기본 배지를 그대로 쓴다.) */
 .card-badge.is-million,
 .card-badge.is-ten-million {
   top: 7px;

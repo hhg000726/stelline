@@ -42,8 +42,9 @@
       <div class="hero-heading">
         <div class="page-heading">
           <h1>조회수 축하</h1>
-          <p class="page-subtitle" data-content-key="congratulation_hero_subtitle">스텔라이브 영상이 조회수 고비를 넘으면 알려 드립니다.</p>
-          <p id="status">앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.</p>
+          <!-- 안내 문구는 관리자 화면에서 고친다. 아래 상태 줄은 알릴 것이 생겼을 때만 나온다. -->
+          <p class="page-subtitle" data-content-key="congratulation_notify_prompt">앱 설치 없이 알림을 받으려면 버튼을 클릭하세요.</p>
+          <p id="status" class="status-text" role="status" hidden></p>
         </div>
         <button id="report-toggle" class="btn-secondary report-toggle" type="button">누락된 노래 제보</button>
       </div>

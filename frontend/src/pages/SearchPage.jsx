@@ -20,6 +20,7 @@ import { SiteNotice } from "../components/SiteNotice";
 import { useToast } from "../context/ToastContext";
 import { api } from "../lib/api";
 import { copyText } from "../lib/clipboard";
+import { openExternal } from "../lib/openExternal";
 import { usePageMeta } from "../lib/usePageMeta";
 import { StepGrid } from "./search/StepGrid";
 import "../styles/search.css";
@@ -127,8 +128,13 @@ export default function SearchPage() {
         toast("복사하지 못했어요. 검색어를 직접 선택해 복사해 주세요.");
         return;
       }
-      // 복사에 성공하면 곧바로 유튜브로 넘어간다. 넘어가는 것 자체가 알림 역할을 한다.
-      window.location.href = "https://www.youtube.com/";
+      // 보던 목록은 그대로 두고 새 탭만 연다. 여기서 넘어가 버리면 여러 검색어를
+      // 이어서 눌러 볼 수 없다. 화면이 그대로이니 무슨 일이 있었는지는 말풍선으로 알린다.
+      if (openExternal("https://www.youtube.com/")) {
+        toast("복사했어요. 새 탭에서 유튜브를 열었습니다.");
+      } else {
+        toast("복사했어요. 새 탭이 열리지 않았다면 팝업 차단을 확인해 주세요.");
+      }
     },
     [toast],
   );
@@ -301,7 +307,7 @@ export default function SearchPage() {
   );
 }
 
-/* 카드 전체가 "복사 & 이동" 버튼이라 별도의 버튼 줄이 필요 없다. */
+/* 카드 전체가 "복사 & 새 탭" 버튼이라 별도의 버튼 줄이 필요 없다. */
 function SongCards({ songs, emptyText, onSelect, ...panelProps }) {
   return (
     <div className="card-grid is-compact" {...panelProps}>
@@ -310,7 +316,7 @@ function SongCards({ songs, emptyText, onSelect, ...panelProps }) {
           key={`${song.video_id}-${song.query}`}
           type="button"
           className="card is-link"
-          title={`${song.query} 복사하고 유튜브로 이동`}
+          title={`${song.query} 복사하고 유튜브를 새 탭에서 열기`}
           onClick={() => onSelect(song.query)}
         >
           <div className="thumb-wrap">
@@ -321,7 +327,7 @@ function SongCards({ songs, emptyText, onSelect, ...panelProps }) {
           </div>
           <div className="info">
             <h3>{song.query}</h3>
-            <span className="card-action">복사 &amp; 이동</span>
+            <span className="card-action">복사 &amp; 새 탭</span>
           </div>
         </button>
       ))}

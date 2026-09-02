@@ -1,7 +1,7 @@
 /* 트윗 안내.
  *
  * 총공 시간은 펼치기 전에도 보여야 "언제 하는지"를 바로 알 수 있다.
- * 복사 & 이동은 예전 index.js 의 copyText 와 같은 순서로 움직인다.
+ * 복사 & 새 탭은 예전 index.js 의 copyText 와 같은 순서로 움직인다.
  */
 import { useEffect, useState } from "react";
 
@@ -12,6 +12,7 @@ import { SectionPanel } from "../../components/SectionPanel";
 import { useToast } from "../../context/ToastContext";
 import { api } from "../../lib/api";
 import { copyText } from "../../lib/clipboard";
+import { openExternal } from "../../lib/openExternal";
 import { toArray } from "../../lib/toArray";
 
 function splitList(value) {
@@ -57,12 +58,13 @@ export function TwitsPanel() {
       return;
     }
 
-    // 새 창 열기가 막히면(팝업 차단) 아무 일도 없는 것처럼 보인다. 그때는 이 창에서 넘어간다.
-    const opened = window.open("https://x.com/", "_blank", "noopener,noreferrer");
-    if (opened) {
+    // 보던 화면은 그대로 두고 새 탭만 연다.
+    // (이 창에서 넘어가 버리면 읽던 안내가 사라진다. 복사는 이미 끝나 있으니
+    //  주소창에 직접 붙여 넣을 수도 있다.)
+    if (openExternal("https://x.com/")) {
       toast("복사했어요. 새 탭에서 X를 열었습니다.");
     } else {
-      window.location.href = "https://x.com/";
+      toast("복사했어요. 새 탭이 열리지 않았다면 팝업 차단을 확인해 주세요.");
     }
   }
 
@@ -128,7 +130,7 @@ export function TwitsPanel() {
                               className="btn-primary copy-button"
                               onClick={() => onCopy(value)}
                             >
-                              복사 &amp; 이동
+                              복사 &amp; 새 탭
                             </button>
                           </div>
                         );

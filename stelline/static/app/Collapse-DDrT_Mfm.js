@@ -1,1 +1,0 @@
-import{j as e}from"./index-KmqaMCYh.js";function r({id:o,open:s,className:a,children:i}){const l=["collapse",s?"is-open":"",a].filter(Boolean).join(" ");return e.jsx("div",{id:o,className:l,inert:s?void 0:"",children:e.jsx("div",{className:"collapse-inner",children:i})})}export{r as C};

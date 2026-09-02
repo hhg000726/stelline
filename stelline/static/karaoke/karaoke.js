@@ -360,43 +360,11 @@
 
     /* ---------- 클립보드·토스트 ---------- */
 
-    let toastTimer = null;
-
-    function showToast(message) {
-        el.toast.textContent = message;
-        el.toast.hidden = false;
-        el.toast.classList.add("is-visible");
-        window.clearTimeout(toastTimer);
-        toastTimer = window.setTimeout(() => {
-            el.toast.classList.remove("is-visible");
-            toastTimer = window.setTimeout(() => { el.toast.hidden = true; }, 200);
-        }, 1800);
-    }
-
-    async function copyText(text) {
-        try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(text);
-                return true;
-            }
-        } catch (error) {
-            /* 아래 대체 방법으로 넘어간다. */
-        }
-        try {
-            const helper = document.createElement("textarea");
-            helper.value = text;
-            helper.setAttribute("readonly", "");
-            helper.style.position = "fixed";
-            helper.style.opacity = "0";
-            document.body.appendChild(helper);
-            helper.select();
-            const copied = document.execCommand("copy");
-            document.body.removeChild(helper);
-            return copied;
-        } catch (error) {
-            return false;
-        }
-    }
+    /* 말풍선과 복사는 이 화면에만 있던 것을 assets/site.js 로 옮겼다.
+     * 메인·검색 화면에도 같은 것이 필요한데, 화면마다 따로 두면 사라지는 시간이나
+     * 복사 실패 처리가 조금씩 어긋난다. 여기서는 그 공용 함수를 그대로 쓴다. */
+    const showToast = window.Stelline.toast;
+    const copyText = window.Stelline.copyText;
 
     function recordCopy() {
         try {
@@ -835,7 +803,6 @@
         el.setlistCopy = document.getElementById("setlist-copy");
         el.setlistShare = document.getElementById("setlist-share");
         el.setlistClear = document.getElementById("setlist-clear");
-        el.toast = document.getElementById("toast");
         el.pickDialog = document.getElementById("pick-dialog");
         el.pickTitle = document.getElementById("pick-title");
         el.pickArtist = document.getElementById("pick-artist");
@@ -847,6 +814,10 @@
     }
 
     function restorePreferences() {
+        // 좁은 화면에서는 긴 안내가 괄호 한가운데서 잘려 고장난 것처럼 보인다.
+        // 같은 내용을 짧게 줄여 끝까지 읽히게 한다(낭독기가 읽는 aria-label은 그대로다).
+        if (NARROW) el.searchInput.placeholder = "곡명·가수·번호·초성 검색";
+
         favorites = new Set(readStore(STORAGE_KEYS.favorites, []));
         setlist = readStore(STORAGE_KEYS.setlist, []).filter((key) => typeof key === "string");
         const savedMachine = readStore(STORAGE_KEYS.machine, "both");

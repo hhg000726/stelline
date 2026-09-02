@@ -5,12 +5,13 @@
   gap: 12px;
 }
 
+/* 넓은 화면에서는 목록과 지도를 나란히 두므로 목록만 따로 스크롤한다.
+ * 좁은 화면에서는 위아래로 놓이는데, 거기서까지 안쪽 스크롤을 두면 페이지를 내리려다
+ * 목록 안에 갇힌다. 그래서 높이 제한은 아래 넓은 화면 규칙에서만 건다. */
 .offline-list {
   display: grid;
   gap: 8px;
   align-content: start;
-  max-height: 520px;
-  overflow-y: auto;
 }
 
 .event-card {
@@ -23,11 +24,34 @@
   background: var(--surface);
   box-shadow: var(--shadow-sm);
   color: var(--text);
-  font: inherit;
   text-align: left;
-  cursor: pointer;
   transition: border-color 0.16s ease, background 0.16s ease;
 }
+
+/* 지도로 옮기는 부분만 버튼이다. 관련 링크는 이 버튼 바깥에 있다(버튼 안의 링크는
+ * 표준에서 허용하지 않는다). 칸 전체가 눌리는 것처럼 보이도록 배경 없이 펼쳐 둔다. */
+.event-card-main {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  /* <button>은 안쪽 내용을 통째로 가운데에 모아 둔다. text-align 만으로는 줄 안의 글자만
+   * 왼쪽에 붙고 칸 자체는 가운데에 남아, 짧은 줄이 들쭉날쭉 가운데로 몰린다.
+   * (.card.is-link 가 justify-content 를 따로 정해 둔 것도 같은 이유다.) */
+  justify-content: stretch;
+}
+
+button.event-card-main { cursor: pointer; }
+
+/* 카드 바탕이 이미 눌린 느낌을 주므로 안쪽 버튼은 따로 들리지 않게 한다. */
+button.event-card-main:hover { transform: none; }
 
 .event-card:hover,
 .event-card.is-on {
@@ -87,13 +111,39 @@
 
 .map-info a { color: #1d4ed8; text-decoration: underline; }
 
+/* 지도를 못 띄웠을 때. 빈 상자만 남으면 고장인지 로딩인지 알 수 없다. */
+.map-shell.is-unavailable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 20px;
+  /* 지도 쪽이 인증 실패 그림을 이 칸의 인라인 style 로 직접 깔아 버린다.
+   * (게다가 http 주소라 https 화면에서는 막힌다.) 인라인보다 세게 덮어써야 한다. */
+  background: var(--surface-subtle) !important;
+}
+
+/* 지도 쪽이 뒤늦게 그려 넣는 제 오류 화면은 감추고 우리 안내만 남긴다. */
+.map-shell.is-unavailable > :not(.map-fallback) { display: none; }
+
+.map-fallback {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
 @media (min-width: 900px) {
   .offline-layout {
     grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
     align-items: stretch;
   }
 
-  .offline-list { max-height: 520px; }
+  .offline-list {
+    max-height: 520px;
+    overflow-y: auto;
+  }
 
   .map-shell { min-height: 520px; }
 }

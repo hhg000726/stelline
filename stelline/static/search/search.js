@@ -2,27 +2,68 @@ let allQueries = [];
 let queryFilterBound = false;
 
 /* 같은 칸 안에서 목록을 바꿔 보여 주는 탭.
- * data-panel 값이 눌린 탭의 data-tab 과 같은 요소만 남긴다. */
+ * data-panel 값이 눌린 탭의 data-tab 과 같은 요소만 남긴다.
+ *
+ * role="tab" 을 붙여 둔 이상 탭처럼 움직여야 한다. 그래서 여기서
+ * 탭과 칸을 aria 로 이어 주고, 좌우 화살표로도 옮겨 다닐 수 있게 한다.
+ * (화살표가 없으면 화면 낭독기 사용자는 탭이라 안내받고도 넘길 수가 없다.) */
 function attachTabs(groupId) {
     const group = document.getElementById(groupId);
-    if (!group) return;
+    if (!group) return null;
 
     const buttons = Array.from(group.querySelectorAll("[data-tab]"));
     const panels = Array.from(document.querySelectorAll("[data-panel]"))
         .filter(panel => buttons.some(button => button.dataset.tab === panel.dataset.panel));
 
-    buttons.forEach(button => {
-        button.addEventListener("click", () => {
-            buttons.forEach(other => {
-                const active = other === button;
-                other.classList.toggle("is-on", active);
-                other.setAttribute("aria-selected", String(active));
-            });
-            panels.forEach(panel => {
-                panel.hidden = panel.dataset.panel !== button.dataset.tab;
-            });
+    const panelFor = (name) => panels.find(panel => panel.dataset.panel === name);
+
+    buttons.forEach((button, index) => {
+        const panel = panelFor(button.dataset.tab);
+        if (panel) {
+            if (!button.id) button.id = `${groupId}-tab-${button.dataset.tab}`;
+            if (!panel.id) panel.id = `${groupId}-panel-${button.dataset.tab}`;
+            button.setAttribute("aria-controls", panel.id);
+            panel.setAttribute("role", "tabpanel");
+            panel.setAttribute("aria-labelledby", button.id);
+        }
+        // 탭 묶음은 통째로 한 번만 Tab 키에 걸린다. 그 안에서는 화살표로 옮긴다.
+        button.tabIndex = button.classList.contains("is-on") ? 0 : -1;
+        button.addEventListener("click", () => select(button));
+        button.addEventListener("keydown", (event) => {
+            const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+            if (!step) return;
+            event.preventDefault();
+            const next = buttons[(index + step + buttons.length) % buttons.length];
+            select(next);
+            next.focus();
         });
     });
+
+    function select(button) {
+        buttons.forEach(other => {
+            const active = other === button;
+            other.classList.toggle("is-on", active);
+            other.setAttribute("aria-selected", String(active));
+            other.tabIndex = active ? 0 : -1;
+        });
+        panels.forEach(panel => {
+            panel.hidden = panel.dataset.panel !== button.dataset.tab;
+        });
+    }
+
+    // 처음 열린 탭을 밖에서 정할 수 있게 고르는 함수를 돌려준다.
+    return function selectByName(name) {
+        const target = buttons.find(button => button.dataset.tab === name);
+        if (target) select(target);
+    };
+}
+
+/* 안내 그림은 PC와 모바일 두 벌이 있다. 휴대폰으로 들어온 사람에게 PC 화면부터
+ * 보여 주면, 자기 화면과 다른 그림을 보고 한 번 더 눌러야 한다. */
+function defaultMethodTab() {
+    const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+    const narrow = window.matchMedia && window.matchMedia("(max-width: 720px)").matches;
+    return coarsePointer || narrow ? "mobile" : "pc";
 }
 
 /* 안내 그림은 작게 늘어놓고, 누르면 원래 크기로 크게 본다. */
@@ -290,24 +331,30 @@ function renderCards(data, containerId) {
     }
 }
 
-function handleButtonClick(query) {
+async function handleButtonClick(query) {
     // API 요청
     Stelline.api("search/record", {
         method: "GET",
         headers: { "Content-Type": "application/json" }
     }).catch(error => console.error("API 요청 중 오류 발생:", error));
 
-    // 클립보드 복사 + 유튜브 이동
-    navigator.clipboard.writeText(query).then(() => {
-        window.location.href = "https://www.youtube.com/";
-    });
+    // 예전에는 복사가 막히면 .then 이 실행되지 않아 눌러도 아무 일이 없었다.
+    // 붙여 넣을 것이 없는 채로 유튜브에 보내 봐야 소용없으니, 그대로 두고 까닭을 알린다.
+    if (!await Stelline.copyText(query)) {
+        Stelline.toast("복사하지 못했어요. 검색어를 직접 선택해 복사해 주세요.");
+        return;
+    }
+    // 복사에 성공하면 곧바로 유튜브로 넘어간다. 떠나는 길에 말풍선을 띄워 봐야
+    // 한 번 깜빡이고 사라질 뿐이라, 여기서는 넘어가는 것 자체가 알림 역할을 한다.
+    window.location.href = "https://www.youtube.com/";
 }
 
 document.addEventListener("DOMContentLoaded", fetchSongs);
 document.addEventListener("DOMContentLoaded", attachReportForm);
 document.addEventListener("DOMContentLoaded", () => {
     attachTabs("song-tabs");
-    attachTabs("method-tabs");
+    const selectMethodTab = attachTabs("method-tabs");
+    if (selectMethodTab) selectMethodTab(defaultMethodTab());
     attachImageViewer();
 });
 fetchQueries();

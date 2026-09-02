@@ -72,6 +72,8 @@ export default function CongratulationPage() {
 
   // 상태 줄이 나올 때는 안내 문구가 그 자리를 비켜 준다(예전 is-status-replaced 와 같다).
   const statusShown = Boolean(notifications.status.text || notifications.extraNote);
+  // 셀 것이 없으면 0이다. "오늘 최고 기록 0만"을 내걸지 않도록 여기서 걸러 둔다.
+  const topRecord = topMilestone(records.items);
 
   return (
     <>
@@ -85,11 +87,11 @@ export default function CongratulationPage() {
               <p className={`page-subtitle${statusShown ? " is-status-replaced" : ""}`}>{prompt.value}</p>
             )}
             {/* 오늘 나온 가장 큰 기록. 목록을 훑기 전에 "오늘 무슨 일이 있었는지"를 한 줄로 알려 준다. */}
-            {records.status === "ready" && records.items.length > 0 && (
+            {records.status === "ready" && topRecord > 0 && (
               <div className="page-meta">
                 <span className="meta-pill is-key">
                   <span>오늘 최고 기록</span>
-                  <strong>{topMilestone(records.items).toLocaleString("ko-KR")}만</strong>
+                  <strong>{topRecord.toLocaleString("ko-KR")}만</strong>
                 </span>
               </div>
             )}

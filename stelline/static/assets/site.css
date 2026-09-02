@@ -1207,7 +1207,9 @@ button svg {
   font-weight: 600;
 }
 
-.list-item-content { padding: 8px 0 2px; }
+/* 아래 여백은 넉넉히 둔다. 이 칸은 접히느라 넘치는 부분을 잘라내므로(collapse-inner),
+ * 여백이 없으면 안에 있는 복사 카드가 손이 닿아 떠오를 때 그림자가 밑에서 잘린다. */
+.list-item-content { padding: 8px 0 10px; }
 
 .list-item-content[hidden] { display: none; }
 

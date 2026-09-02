@@ -160,7 +160,11 @@ a { color: inherit; text-decoration: none; }
 .site-container {
   width: min(100%, 1180px);
   margin: 0 auto;
-  padding: 14px 16px 48px;
+  /* 아래에 붙는 고정 바(노래방의 '부를 곡')가 마지막 줄을 가리지 않게 그만큼 비워 둔다.
+   * 바가 제 높이를 --floating-offset 으로 알려 주므로, 바가 없는 화면에서는 0이다.
+   * (예전에는 노래방 CSS 가 body 에 84px 를 박아 두었는데, 한 문서 안에서 화면만
+   *  바꾸는 지금은 그 CSS 가 계속 남아 다른 화면에도 빈 자리가 따라다녔다.) */
+  padding: 14px 16px calc(48px + var(--floating-offset, 0px));
 }
 
 /* ---------- 사이트 머리말 ----------
@@ -484,12 +488,24 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
 }
 
+/* 첫 화면의 제목 칸.
+ *
+ * 다른 화면과 같은 흰 상자만 두면 "여기가 시작"이라는 느낌이 없다. 오른쪽 위에
+ * 아주 옅은 빛무리 하나만 깔아, 들어오는 자리라는 인상을 준다. 색은 이미 쓰던
+ * 강조 토큰 그대로라 밝은 배색과 다크 모드가 함께 맞는다.
+ */
 .hero {
   display: flex;
   flex-direction: column;
   gap: 14px;
   padding: 20px 22px;
+  /* 위(.page-shell, .hero, .congrats-hero)에서 정한 바탕색 위에 빛무리를 한 겹 얹는다.
+   * 겹쳐 그리는 요소를 따로 두면 그 칸을 잘라내야(overflow: hidden) 하고, 그러면 안에 있는
+   * 기능 카드가 손이 닿아 떠오를 때 그림자가 함께 잘린다. */
+  background-image: radial-gradient(420px 300px at 88% -30%, var(--primary-soft), transparent 70%);
 }
+
+.hero .site-brand { font-size: clamp(1.6rem, 3vw, 2rem); }
 
 .notification-actions {
   display: flex;
@@ -880,12 +896,17 @@ button svg {
 .nav-card-body strong {
   font-size: 0.98rem;
   letter-spacing: -0.02em;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .nav-card-body span {
   color: var(--muted-soft);
   font-size: 0.82rem;
   line-height: 1.45;
+  /* 한글은 낱말 중간에서도 줄이 바뀐다. 두 줄이 될 때 "곡 목록"이 갈라지지 않게 한다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* ---------- 단계 안내(검색 정상화 방법) ---------- */
@@ -1096,13 +1117,50 @@ button svg {
 }
 
 /* 옆 칸의 펼치기 줄(▾)과 생김새가 비슷해서, 눌렀을 때 어디로 가는지 알기 어렵다.
- * 바깥으로 나가는 줄에는 화살표를 붙여 구분한다. */
-.button-grid > button::after {
+ * 바깥으로 나가는 줄에는 화살표를 붙여 구분한다.
+ * (나가는 자리가 <button> 에서 <a> 로 바뀐 뒤로 이 표시가 한동안 사라져 있었다.
+ *  주소가 있는 링크에만 붙여, 주소가 빠진 줄과도 눈으로 구분되게 한다.) */
+.button-grid > button::after,
+.button-grid > a[href]::after {
   content: "↗";
+  align-self: flex-start;
   margin-left: auto;
   padding-left: 10px;
   color: var(--primary-strong);
   font-size: 0.85rem;
+  transition: transform 0.16s ease;
+}
+
+.button-grid > button:hover::after,
+.button-grid > a[href]:hover::after {
+  transform: translate(2px, -2px);
+}
+
+/* 주소가 빠진 줄. 눌리는 것처럼 보였다가 아무 일도 안 하면 고장으로 읽힌다.
+ * 눌리지 않는 안내 칸으로 두고, 왜 눌리지 않는지 한 마디로 밝힌다. */
+.button-grid > a:not([href]) {
+  /* 이름이 길면 "링크 없음"과 한 줄에서 서로를 밀어낸다. 줄을 바꿔 둘 다 끝까지 읽히게 한다. */
+  flex-wrap: wrap;
+  border-style: dashed;
+  box-shadow: none;
+  color: var(--muted);
+  cursor: default;
+}
+
+.button-grid > a:not([href]):hover {
+  transform: none;
+  background: var(--surface-subtle);
+  color: var(--muted);
+}
+
+.button-grid > a:not([href])::after {
+  content: "링크 없음";
+  margin-left: auto;
+  padding-left: 10px;
+  color: var(--muted-soft);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .toggle-button {
@@ -1266,17 +1324,6 @@ button svg {
   margin-top: auto;
 }
 
-.toggle-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.toggle-row input { accent-color: var(--primary-strong); }
-
 aside footer,
 footer {
   margin-top: 20px;
@@ -1365,6 +1412,176 @@ tr:last-child td { border-bottom: 0; }
   transform: translate(-50%, 0);
 }
 
+/* ---------- 제목 아래 값 줄 ----------
+ * "마지막 갱신"이나 "몇 건" 같은 값을 설명 문장 뒤에 이어 붙이면, 문장인지 값인지
+ * 구분되지 않아 둘 다 안 읽힌다. 이름표를 붙인 칩으로 따로 세워 훑어보게 한다.
+ */
+.page-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.meta-pill {
+  display: inline-flex;
+  gap: 7px;
+  align-items: baseline;
+  padding: 4px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-inset);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.meta-pill > span {
+  color: var(--muted-soft);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.meta-pill > strong {
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* 값이 좋은 소식일 때(진행 중인 행사가 있다 등)는 눈에 띄게 둔다. */
+.meta-pill.is-key {
+  border-color: var(--primary-outline);
+  background: var(--primary-tint);
+}
+
+.meta-pill.is-key > span,
+.meta-pill.is-key > strong { color: var(--primary-strong); }
+
+/* ---------- 켜고 끄는 스위치 ----------
+ * 기본 체크상자는 글자 옆에서 크기도 색도 따로 논다. 무엇이 켜져 있는지 멀리서
+ * 알아보게, 누르는 자리를 통째로 하나의 칩으로 만든다.
+ */
+.switch-row {
+  /* 감춰 둔 체크상자가 이 칸 안에 머물게 한다. 자리를 잡아 주지 않으면 Tab 으로 옮겨 갔을 때
+     브라우저가 문서 저 위의 엉뚱한 자리로 화면을 끌고 간다. */
+  position: relative;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 13px 7px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.switch-row:hover {
+  border-color: var(--primary-outline);
+  background: var(--primary-tint);
+}
+
+/* 체크상자 자체는 감추지 않는다. 감추면 Tab 키로 닿지 못한다.
+   자리만 스위치 뒤로 보내고, 초점 테두리는 스위치가 대신 그린다. */
+.switch-row input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface-thumb);
+  transition: background 0.18s ease;
+}
+
+.switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.switch-row input:checked ~ .switch-track { background: var(--primary-hover); }
+.switch-row input:checked ~ .switch-track::after { transform: translateX(14px); }
+
+.switch-row:has(input:checked) {
+  border-color: var(--primary-outline);
+  background: var(--primary-tint);
+  color: var(--primary-strong);
+}
+
+.switch-row:has(input:focus-visible) {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 2px;
+}
+
+/* ---------- 기능 카드의 화살표 ----------
+ * 카드가 눌러서 옮겨 가는 자리임을 알린다. 평소에는 흐리게 두고, 손이 닿으면
+ * 가려던 쪽으로 한 걸음 나간다.
+ */
+.nav-card-go {
+  align-self: center;
+  margin-left: auto;
+  color: var(--muted-soft);
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.nav-card:hover .nav-card-go,
+.nav-card:focus-visible .nav-card-go {
+  transform: translateX(3px);
+  color: var(--primary-strong);
+}
+
+.nav-card:hover .nav-card-icon {
+  background: var(--primary-hover);
+  color: var(--on-dark);
+}
+
+.nav-card-icon { transition: background 0.18s ease, color 0.18s ease; }
+
+/* ---------- 가장 드문 기록 ----------
+ * 1000만 단위는 몇 달에 한 번 나온다. 목록에서 그 한 장이 먼저 눈에 들어오도록
+ * 아주 느린 빛을 한 번 흘려 보낸다(멈춰 있는 배지와 구분만 되면 된다).
+ */
+.card-badge.is-ten-million {
+  position: absolute;
+  overflow: hidden;
+}
+
+.card-badge.is-ten-million::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent);
+  animation: badge-sheen 3.4s ease-in-out infinite;
+}
+
+@keyframes badge-sheen {
+  from { transform: translateX(-260%); }
+  60%, to { transform: translateX(360%); }
+}
+
 @media (max-width: 720px) {
   .theme-toggle {
     right: 12px;
@@ -1435,6 +1652,14 @@ tr:last-child td { border-bottom: 0; }
   }
 
   .section-actions { width: 100%; }
+
+  /* 좁은 화면에서 스위치가 제목 줄 오른쪽에 끼면 글자가 잘린다. 한 줄을 통째로 쓴다. */
+  .switch-row {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .meta-pill { font-size: 0.76rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

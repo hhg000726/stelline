@@ -7,15 +7,113 @@
 /* ---------- 화면 전환 ----------
  * 예전에는 링크를 누를 때마다 문서가 통째로 다시 로드되어 흰 화면이 한 번 번쩍였다.
  * 이제는 필요한 부분만 다시 그리므로, 짧은 페이드로 바뀌었다는 것만 알린다.
+ *
+ * 화면 전체를 한 덩어리로 밀어 올리면 "무언가 바뀌었다"까지만 전해진다. 칸을 위에서부터
+ * 아주 조금씩 늦춰 올리면 읽는 순서(제목 → 목록 → 참고)가 그대로 눈에 들어온다.
  */
 .route-view {
-  animation: route-enter 0.22s ease both;
+  animation: route-enter 0.18s ease both;
 }
 
 @keyframes route-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .route-view > .hero,
+  .route-view > .page-shell,
+  .route-view > .congrats-hero,
+  .route-view > .section-panel,
+  .route-view > .congrats-section,
+  .route-view > .info-stack > .section-panel {
+    animation: panel-rise 0.34s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  /* 늦추는 폭은 세 단계까지만 둔다. 칸이 다섯 개인 화면에서 마지막 칸이
+     반 박자 뒤에 올라오면 느리다는 인상만 남는다. */
+  .route-view > :nth-child(2) { animation-delay: 0.05s; }
+  .route-view > :nth-child(3) { animation-delay: 0.1s; }
+  .route-view > :nth-child(n + 4) { animation-delay: 0.13s; }
+  .route-view > .info-stack > :nth-child(2) { animation-delay: 0.09s; }
+  .route-view > .info-stack > :nth-child(3) { animation-delay: 0.14s; }
+}
+
+@keyframes panel-rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- 목록이 도착할 때 ----------
+ * 값이 오는 순간 카드 수십 장이 한 프레임에 통째로 나타나면, 무엇이 새로 온 것인지
+ * 알 수 없이 화면만 한 번 바뀐다. 앞의 몇 장만 차례로 들어오게 해 "지금 채워졌다"를
+ * 알린다. 그다음부터는 다 같이 나타난다(끝까지 늦추면 기다리는 시간이 된다).
+ *
+ * 곡 목록(.kara-list)은 일부러 뺐다. 글자를 칠 때마다 목록이 다시 골라지는 자리라,
+ * 한 글자마다 수십 줄이 새로 날아 들어오면 읽기를 방해한다.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  :is(.card-grid, .nav-card-grid, .copy-grid, .offline-list, .step-grid, .stack-list, .button-grid) > * {
+    animation: item-rise 0.3s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  :is(.card-grid, .nav-card-grid, .copy-grid, .offline-list, .step-grid, .stack-list, .button-grid) > :nth-child(2) { animation-delay: 0.03s; }
+  :is(.card-grid, .nav-card-grid, .copy-grid, .offline-list, .step-grid, .stack-list, .button-grid) > :nth-child(3) { animation-delay: 0.06s; }
+  :is(.card-grid, .nav-card-grid, .copy-grid, .offline-list, .step-grid, .stack-list, .button-grid) > :nth-child(4) { animation-delay: 0.09s; }
+  :is(.card-grid, .nav-card-grid, .copy-grid, .offline-list, .step-grid, .stack-list, .button-grid) > :nth-child(5) { animation-delay: 0.12s; }
+  :is(.card-grid, .nav-card-grid, .copy-grid, .offline-list, .step-grid, .stack-list, .button-grid) > :nth-child(6) { animation-delay: 0.15s; }
+  :is(.card-grid, .nav-card-grid, .copy-grid, .offline-list, .step-grid, .stack-list, .button-grid) > :nth-child(n + 7) { animation-delay: 0.17s; }
+}
+
+@keyframes item-rise {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- 여닫는 칸 ----------
+ * 높이를 0fr ↔ 1fr 로 옮겨 밀어 올린다. 내용 높이를 미리 재지 않아도 되고,
+ * 접힌 동안에는 실제로 높이가 0이라 아래 내용이 밀려 있지도 않다.
+ */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.26s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.2s ease;
+}
+
+.collapse.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapse-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---------- 탭 ----------
+ * 같은 자리에서 내용만 바뀌므로, 짧은 페이드가 없으면 글자가 순간이동한 것처럼 보인다.
+ */
+[role="tabpanel"]:not([hidden]) {
+  animation: tab-fade 0.2s ease both;
+}
+
+@keyframes tab-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -173,4 +271,81 @@ button[disabled],
 .not-found {
   padding: 40px 16px;
   text-align: center;
+}
+
+/* ---------- 겹쳐 뜨는 창 ----------
+ * 배경이 그대로인 채 창만 나타나면 어디서 왔는지 알 수 없다. 배경을 먼저 덮고
+ * 창이 아주 살짝 올라오게 해, 이 화면 위에 얹힌 것임을 알린다.
+ * (그림 크게 보기는 아래 viewer-pop 을 이미 쓰고 있어 배경만 더한다.)
+ */
+.pick-dialog,
+.image-viewer {
+  animation: overlay-in 0.16s ease both;
+}
+
+.pick-card {
+  animation: dialog-in 0.22s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 아래에서 올라오는 '부를 곡' 바. 곡을 처음 담은 순간 화면 아래가 갑자기 잘려
+ * 보이지 않도록, 올라오는 동작으로 어디서 생긴 칸인지 알린다. */
+.setlist-bar {
+  animation: bar-rise 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@keyframes bar-rise {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+/* ---------- 누른 느낌 ----------
+ * 손가락으로 누르는 화면에서는 hover 가 없다. 눌리는 동안 아주 조금 들어가야
+ * "닿았다"가 전해진다. (site.css 의 :active 규칙을 이어받아 덮어쓴다.)
+ */
+button:active,
+.button:active,
+.btn-primary:active,
+.btn-secondary:active,
+.card.is-link:active,
+.nav-card:active,
+.copy-card:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* 카드 전체가 하나의 동작인 자리. 누르는 동안 살짝 눌렸다가 돌아온다. */
+.card.is-link,
+.nav-card {
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse {
+    transition: none;
+  }
+
+  button:active,
+  .button:active,
+  .btn-primary:active,
+  .btn-secondary:active,
+  .card.is-link:active,
+  .nav-card:active,
+  .copy-card:active {
+    transform: none;
+  }
 }

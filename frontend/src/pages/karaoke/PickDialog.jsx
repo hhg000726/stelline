@@ -3,19 +3,21 @@
  * 뽑은 곡이 이미 담겨 있으면 버튼을 눌린 상태로 두어 두 번 담기지 않게 한다.
  * 바깥을 누르거나 Esc 로 닫는다.
  */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
+import { useModal } from "../../lib/useModal";
 import { MACHINE_LABELS } from "./constants";
 
 export function PickDialog({ song, isFavorite, inSetlist, onCopy, onFavorite, onSetlist, onAgain, onClose }) {
+  const card = useRef(null);
+
+  useModal(Boolean(song), onClose);
+
+  /* 뽑을 때마다 창 자체에 초점을 준다. 다시 뽑기를 눌러 곡이 바뀌면 낭독기가 새 곡을
+     읽어 주고, 키보드만 쓰는 사람도 창 안에서 계속 움직일 수 있다. */
   useEffect(() => {
-    if (!song) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [song, onClose]);
+    if (song) card.current?.focus();
+  }, [song]);
 
   if (!song) return null;
 
@@ -31,7 +33,7 @@ export function PickDialog({ song, isFavorite, inSetlist, onCopy, onFavorite, on
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className="pick-card" role="dialog" aria-modal="true" aria-labelledby="pick-title">
+      <div className="pick-card" role="dialog" aria-modal="true" aria-labelledby="pick-title" ref={card} tabIndex={-1}>
         <p className="pick-kicker">오늘의 한 곡</p>
         <h2 id="pick-title">{song.title}</h2>
         <p id="pick-artist" className="pick-artist">

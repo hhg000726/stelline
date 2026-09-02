@@ -54,6 +54,10 @@ export default function MainPage() {
                 <strong data-button-label>{item.label}</strong>
                 <span>{item.description}</span>
               </span>
+              {/* 눌러서 옮겨 가는 자리임을 알리는 표시. 글로 읽을 것은 없으므로 낭독기에서는 뺀다. */}
+              <span className="nav-card-go" aria-hidden="true">
+                →
+              </span>
             </Link>
           ))}
         </div>

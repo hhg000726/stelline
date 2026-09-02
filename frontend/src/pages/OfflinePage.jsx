@@ -19,17 +19,23 @@ import "../styles/offline.css";
 
 const NAVER_MAPS = "https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=f7tppyljgr";
 
+/* 날짜만 있는 값이라 시각은 보지 않는다. 서버는 자정(GMT)으로 내려주므로 UTC 로 읽는다.
+ * 현지 시간으로 읽으면 시차만큼 하루가 밀려 9월 1일 행사가 8월 31일로 보인다.
+ * (예전에는 '미정' 판정만 현지 시간으로 읽어, 두 기준이 한 칸 안에서 엇갈렸다.) */
+const UNDECIDED_YEAR = 3000;
+
+function isUndecided(dateStr) {
+  return new Date(dateStr).getUTCFullYear() >= UNDECIDED_YEAR;
+}
+
 function formatDate(dateStr) {
   const date = new Date(dateStr);
-  const year = date.getUTCFullYear();
-  if (year >= 3000) return "(미정)";
-  return `${year}.${date.getUTCMonth() + 1}.${date.getUTCDate()}`;
+  if (isUndecided(dateStr)) return "(미정)";
+  return `${date.getUTCFullYear()}.${date.getUTCMonth() + 1}.${date.getUTCDate()}`;
 }
 
 function formatDateRange(startStr, endStr) {
-  const start = new Date(startStr);
-  const end = new Date(endStr);
-  if (start.getFullYear() >= 3000 && end.getFullYear() >= 3000) return "(미정)";
+  if (isUndecided(startStr) && isUndecided(endStr)) return "(미정)";
 
   const startFormatted = formatDate(startStr);
   const endFormatted = formatDate(endStr);
@@ -229,20 +235,27 @@ export default function OfflinePage() {
         <div className="hero-heading">
           <div className="page-heading">
             <h1 className="page-title">진행 중인 오프라인 이벤트</h1>
-            <p className="page-subtitle">
-              <ContentText contentKey="offline_hero_subtitle" as="span" />{" "}
-              <span id="event-count" className="meta-text">
-                {events.status === "ready" ? `${visible.length}건` : ""}
-              </span>
-            </p>
+            <ContentText contentKey="offline_hero_subtitle" className="page-subtitle" />
+            {/* 몇 건인지가 이 화면에서 가장 먼저 궁금한 값이다. 문장 끝에 붙이지 않고 따로 세운다. */}
+            <div className="page-meta">
+              {events.status === "ready" && (
+                <span id="event-count" className="meta-pill is-key">
+                  <span>{showFuture ? "예정 포함" : "진행 중"}</span>
+                  <strong>{visible.length}건</strong>
+                </span>
+              )}
+            </div>
           </div>
-          <label className="toggle-row">
+          {/* 기본 체크상자는 글자 옆에서 크기도 색도 따로 논다. 켜졌는지 멀리서도
+              보이도록 누르는 자리를 통째로 하나의 스위치로 둔다. */}
+          <label className="switch-row">
             <input
               type="checkbox"
               id="showFutureEvents"
               checked={showFuture}
               onChange={(event) => setShowFuture(event.target.checked)}
             />
+            <span className="switch-track" aria-hidden="true" />
             아직 시작되지 않은 이벤트도 보기
           </label>
         </div>

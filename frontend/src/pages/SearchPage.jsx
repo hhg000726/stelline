@@ -54,10 +54,12 @@ function shuffled(list) {
   return array;
 }
 
+/* 제목 아래 값 줄에 넣을 "마지막 검색 시도"의 값 부분.
+ * 이름표는 화면에서 따로 그리므로 여기서는 값만 만든다. */
 function lastUpdatedText(searchedTime) {
-  if (searchedTime === 0) return "마지막 검색 시도: 없음";
+  if (searchedTime === 0) return "없음";
   if (typeof searchedTime === "string") return searchedTime;
-  return `마지막 검색 시도: ${new Date(searchedTime * 1000).toLocaleString()}`;
+  return new Date(searchedTime * 1000).toLocaleString();
 }
 
 export default function SearchPage() {
@@ -142,12 +144,17 @@ export default function SearchPage() {
         <div className="hero-heading">
           <div className="page-heading">
             <h1 className="page-title">검색 안되는 노래</h1>
-            <p className="page-subtitle">
-              <ContentText contentKey="search_hero_subtitle" as="span" />{" "}
-              <span id="last-updated" className="meta-text">
-                {songs.updated}
-              </span>
-            </p>
+            <ContentText contentKey="search_hero_subtitle" className="page-subtitle" />
+            {/* 설명 문장 뒤에 시각을 이어 붙이면 어디까지가 문장인지 알 수 없다.
+                이름표를 붙여 따로 세운다. */}
+            <div className="page-meta">
+              {songs.status === "ready" && (
+                <span id="last-updated" className="meta-pill">
+                  <span>마지막 검색 시도</span>
+                  <strong>{songs.updated}</strong>
+                </span>
+              )}
+            </div>
           </div>
           <ReportPanel
             endpoint="search/reports"

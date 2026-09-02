@@ -1,10 +1,5 @@
 /* 노래방 번호 페이지 전용 스타일. 색·간격 값은 site.css의 토큰을 그대로 쓴다. */
 
-body {
-  /* 하단 고정 목록 바에 마지막 곡이 가리지 않도록 여유를 둔다. */
-  padding-bottom: 84px;
-}
-
 /* ---------- 검색·도구 모음 ---------- */
 
 .kara-controls {
@@ -14,7 +9,9 @@ body {
   top: 0;
   z-index: 20;
   display: grid;
-  gap: 8px;
+  /* 접힌 필터 칸도 자리를 차지하는 한 칸이라, grid gap 을 두면 필터를 열지 않아도
+   * 도구 모음 아래에 빈 줄이 남는다. 간격은 칸마다 직접 준다. */
+  gap: 0;
   margin: 14px calc(var(--shell-padding) * -1) 12px;
   padding: 10px var(--shell-padding);
   border-bottom: 1px solid var(--border-subtle);
@@ -74,6 +71,7 @@ body {
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  margin-top: 8px;
 }
 
 /* 결과 수와 랜덤 뽑기는 도구 모음 오른쪽 끝에 둔다.
@@ -195,6 +193,8 @@ body {
 /* ---------- 필터 ---------- */
 
 .kara-filters {
+  /* 여백은 접히는 칸 '안쪽'에 둔다. 바깥에 두면 접었을 때도 그만큼 남는다. */
+  margin-top: 8px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 12px 18px;

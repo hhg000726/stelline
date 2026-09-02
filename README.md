@@ -112,6 +112,23 @@ npm run build    # 고칠 때마다
 
 운영에서 `AUTO_CREATE_SCHEMA`는 항상 `false`로 유지하세요.
 
+### nginx 운영 설정
+
+공개 화면은 React SPA이므로 `/search` 같은 주소도 Flask가 `index.html`을 내려줘야
+합니다. `deploy/nginx/stelline.conf`는 `/search`와 `/search/`만 nginx의 정적 디렉터리
+검사보다 먼저 Flask(기본 포트 `5000`)로 전달하고, 나머지 실제 정적 파일은 nginx가
+그대로 제공합니다. HTTPS 인증서는 Certbot 경로를 사용합니다.
+
+`main` 브랜치 배포 때 GitHub Actions가 이 설정을 서버에 설치하고 nginx를 검사·reload하므로
+별도 수동 설정이 필요하지 않습니다. 배포 서버에서 실행 중인 계정은 비밀번호 없이
+`install`, `ln`, `rm`, `nginx -t`, `systemctl reload nginx`를 `sudo`로 실행할 수 있어야
+합니다.
+
+기존 nginx 설정에서 `root .../stelline/static`와 `try_files $uri $uri/ ...`를 사용하면
+`static/search/`가 디렉터리로 먼저 선택되어 `/search`에서 403이 발생할 수 있습니다.
+배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, HTTPS 인증서
+파일(`/etc/letsencrypt/live/stelline.xyz/`)과 Flask의 `5000` 포트가 서버에 있어야 합니다.
+
 ## 관리자 HTML로 개발 데이터 채우기
 
 운영 관리자 페이지에서 저장한 HTML 파일은 개발 DB의 데이터 스냅샷으로 사용할 수 있습니다. 이는 역마이그레이션이 아니라 개발용 시드 데이터 import입니다.

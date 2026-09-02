@@ -2,7 +2,7 @@ import requests
 import re
 
 BASE = "http://127.0.0.1:5000"
-PAGES = ["/", "/search", "/congratulation", "/offline"]
+PAGES = ["/", "/search", "/karaoke", "/congratulation", "/offline"]
 TIMEOUT = 5
 
 attr_re = re.compile(r'(?:src|href)=["\']([^"\']+)["\']', re.IGNORECASE)

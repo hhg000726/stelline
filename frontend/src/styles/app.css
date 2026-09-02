@@ -1,0 +1,176 @@
+/* React 전환에서 새로 생긴 것들.
+ *
+ * 색은 하나도 새로 만들지 않는다. 전부 site.css 의 토큰(var(--...))을 그대로 쓴다.
+ * 여기 있는 것은 움직임과 빈자리(스켈레톤)뿐이다.
+ */
+
+/* ---------- 화면 전환 ----------
+ * 예전에는 링크를 누를 때마다 문서가 통째로 다시 로드되어 흰 화면이 한 번 번쩍였다.
+ * 이제는 필요한 부분만 다시 그리므로, 짧은 페이드로 바뀌었다는 것만 알린다.
+ */
+.route-view {
+  animation: route-enter 0.22s ease both;
+}
+
+@keyframes route-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- 상단 로딩 막대 ----------
+ * 화면 묶음을 아직 받아오는 중이라는 표시. 얼마나 남았는지는 알 수 없으므로
+ * 왼쪽에서 오른쪽으로 흐르는 띠만 보여 준다.
+ */
+.route-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  height: 3px;
+  overflow: hidden;
+  background: var(--primary-soft);
+}
+
+.route-progress::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 38%;
+  border-radius: 999px;
+  background: var(--primary);
+  animation: route-progress-slide 1.1s ease-in-out infinite;
+}
+
+@keyframes route-progress-slide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(320%); }
+}
+
+/* ---------- 스켈레톤 ----------
+ * "불러오는 중…" 한 줄만 두면 무엇이 들어올 자리인지 알 수 없어 화면이 한 번 튄다.
+ * 들어올 모양과 같은 크기의 빈칸을 미리 깔아 둔다.
+ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-control);
+  background: var(--surface-mute);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--surface-soft), transparent);
+  animation: skeleton-sweep 1.3s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
+.skeleton-card {
+  height: 168px;
+  border-radius: var(--radius-card);
+}
+
+.skeleton-line {
+  height: 13px;
+  margin: 8px 0;
+}
+
+.skeleton-row {
+  height: 62px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-card);
+}
+
+.skeleton-page {
+  padding: 4px 2px;
+}
+
+/* ---------- 누르는 동안 ----------
+ * 보내는 중인 버튼은 눌린 티가 나야 두 번 누르지 않는다.
+ */
+button[disabled],
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: spinner-turn 0.7s linear infinite;
+}
+
+@keyframes spinner-turn {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- 입력 확인 ----------
+ * 보내기를 누른 다음에야 "비었다"고 알려 주면 한 번 헛걸음한다.
+ * 글자를 치는 동안 남은 글자 수와 문제를 함께 보여 준다.
+ */
+.field-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -4px;
+  color: var(--muted-soft);
+  font-size: 0.78rem;
+}
+
+.field-note .is-over {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.report-panel textarea.is-invalid {
+  border-color: var(--danger);
+}
+
+/* 제보 결과 줄. 성공과 실패를 글자색으로 구분한다(site.css 의 상태 토큰 그대로). */
+.report-actions .is-error { color: var(--danger); }
+.report-actions .is-success { color: var(--success); }
+
+/* ---------- 그림 크게 보기 ----------
+ * 예전에는 검색 화면 CSS 안에만 있었다. 여닫는 동작이 React 로 옮겨오면서
+ * 나타날 때의 짧은 확대만 여기에 더한다.
+ */
+.image-viewer img {
+  animation: viewer-pop 0.18s ease both;
+}
+
+@keyframes viewer-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------- 찾을 수 없는 주소 ---------- */
+.not-found {
+  padding: 40px 16px;
+  text-align: center;
+}

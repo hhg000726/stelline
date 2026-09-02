@@ -30,36 +30,29 @@ def payload_too_large(error):
 
 # 화면 경로는 고정이라 요청마다 다시 조립할 이유가 없다.
 STATIC_ROOT = Path(app.static_folder)
-PAGE_DIRS = {name: str(STATIC_ROOT / name) for name in ("search", "congratulation", "offline", "karaoke")}
+
+# 공개 화면은 React 한 벌(SPA)이다. 어느 주소로 들어와도 같은 문서를 내려주고,
+# 그 안에서 화면을 고르는 일은 브라우저가 한다. 주소 자체는 예전 그대로라서
+# 링크를 그대로 눌러도, 새로 고쳐도, 뒤로 가기를 해도 같은 화면이 나온다.
+#
+# 목록은 여기 한 곳에만 적는다. 화면을 늘릴 때 라우트를 따로 만들지 않아도 되고,
+# 빠뜨려서 어떤 주소만 404가 되는 일도 없다.
+PAGE_ROUTES = ("search", "congratulation", "offline", "karaoke")
+
+
+def send_app_shell():
+    return send_from_directory(app.static_folder, "index.html")
 
 
 @app.route("/")
 def index():
-    return send_from_directory(app.static_folder, "index.html")
+    return send_app_shell()
 
 
-@app.route("/search")
-@app.route("/search/")
-def search_page():
-    return send_from_directory(PAGE_DIRS["search"], "index.html")
-
-
-@app.route("/congratulation")
-@app.route("/congratulation/")
-def congratulation_page():
-    return send_from_directory(PAGE_DIRS["congratulation"], "index.html")
-
-
-@app.route("/offline")
-@app.route("/offline/")
-def offline_page():
-    return send_from_directory(PAGE_DIRS["offline"], "index.html")
-
-
-@app.route("/karaoke")
-@app.route("/karaoke/")
-def karaoke_page():
-    return send_from_directory(PAGE_DIRS["karaoke"], "index.html")
+for _name in PAGE_ROUTES:
+    # 끝의 빗금이 있든 없든 같은 문서를 내려준다(예전 동작 그대로다).
+    app.add_url_rule(f"/{_name}", endpoint=f"{_name}_page", view_func=send_app_shell)
+    app.add_url_rule(f"/{_name}/", endpoint=f"{_name}_page_slash", view_func=send_app_shell)
 
 app.register_blueprint(api_bp, url_prefix="/api")
 app.register_blueprint(admin_bp, url_prefix="/admin")
@@ -68,12 +61,13 @@ app.register_blueprint(auth_bp, url_prefix="/auth")
 
 @app.route("/<path:filename>")
 def serve_static(filename):
+    """파비콘·안내 그림·빌드 결과물처럼 실제로 있는 파일만 내려준다.
+
+    없는 주소는 그대로 404다. 화면 주소는 위에서 이미 다 잡아 두었으므로,
+    여기서 SPA 문서를 대신 내려주면 오타 난 주소까지 200으로 답하게 된다.
+    """
     target = STATIC_ROOT / filename
-    # 디렉터리 검사를 먼저 한다. 뒤에 두면 exists()에서 이미 걸려 index.html을
-    # 내려 줄 기회가 사라진다(디렉터리는 파일이 아니라 그대로 404가 된다).
-    if target.is_dir() and (target / "index.html").exists():
-        return send_from_directory(str(target), "index.html")
-    if target.exists():
+    if target.is_file():
         return send_from_directory(str(STATIC_ROOT), filename)
     return "Not Found", 404
 

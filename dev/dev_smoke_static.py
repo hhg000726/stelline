@@ -1,12 +1,14 @@
 import requests
 
 BASE = "http://127.0.0.1:5000"
+# 공개 화면은 React 한 벌(SPA)이라, 화면별 .js/.css 는 빌드된 /app 아래로 들어갔다.
+# 그 주소는 빌드마다 바뀌므로 문서에서 읽어 확인한다(아래 dev_check_pages.py 가 한다).
+# 여기서는 빌드와 무관하게 늘 같은 자리에 있어야 하는 것만 본다.
 ASSETS = [
+    # 서버가 그리는 관리자·로그인 화면이 함께 쓰는 공용 배색과 다크 모드
     "/assets/site.css",
-    "/assets/site.js",
+    "/assets/theme.js",
     "/firebase-messaging-sw.js",
-    "/search/style.css",
-    "/search/search.js",
     "/search/1.PNG",
     "/search/2.PNG",
     "/search/3.PNG",
@@ -14,8 +16,8 @@ ASSETS = [
     "/search/2.jpg",
     "/search/3.jpg",
     "/search/4.jpg",
-    "/congratulation/congratulation.js",
-    "/congratulation/app.js",
+    "/favicon.svg",
+    "/og-image.png",
 ]
 
 for path in ASSETS:

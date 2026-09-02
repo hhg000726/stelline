@@ -36,6 +36,12 @@ record.json
 *.key
 *.crt
 
+# 프론트엔드 빌드 도구
+# (빌드 결과물 stelline/static/app 과 index.html 은 저장소에 커밋한다.
+#  배포 서버에 Node 를 두지 않기 위해서다.)
+frontend/node_modules/
+frontend/dist/
+
 # IDE / OS
 .vscode/
 .idea/

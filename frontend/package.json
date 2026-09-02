@@ -1,0 +1,21 @@
+{
+  "name": "stelline-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Stelline 공개 화면 React SPA. 빌드 결과물은 stelline/static 아래로 나간다.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  }
+}

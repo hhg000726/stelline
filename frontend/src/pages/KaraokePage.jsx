@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { ContentText } from "../components/ContentText";
 import { EmptyState } from "../components/EmptyState";
+import { Icon } from "../components/Icon";
 import { SkeletonRows } from "../components/Loading";
 import { ReportPanel } from "../components/ReportPanel";
 import { useToast } from "../context/ToastContext";
@@ -307,12 +308,23 @@ export default function KaraokePage() {
         <div className="hero-heading">
           <div className="page-heading">
             <h1 className="page-title">노래방 번호</h1>
-            <p className="page-subtitle">
-              <ContentText contentKey="karaoke_hero_subtitle" as="span" />{" "}
-              <span id="last-updated" className="meta-text">
-                {data.updatedAt ? `마지막 갱신: ${data.updatedAt}` : ""}
-              </span>
-            </p>
+            <ContentText contentKey="karaoke_hero_subtitle" className="page-subtitle" />
+            {/* 담아 둔 곡 수와 마지막 갱신은 화면을 열자마자 확인하는 값이라,
+                설명 문장에 섞지 않고 이름표를 붙여 따로 세운다. */}
+            <div className="page-meta">
+              {favorites.size > 0 && (
+                <span className="meta-pill is-key">
+                  <span>즐겨찾기</span>
+                  <strong>{favorites.size}곡</strong>
+                </span>
+              )}
+              {data.updatedAt && (
+                <span id="last-updated" className="meta-pill">
+                  <span>마지막 갱신</span>
+                  <strong>{data.updatedAt}</strong>
+                </span>
+              )}
+            </div>
           </div>
           <ReportPanel
             endpoint="karaoke/reports"
@@ -427,7 +439,7 @@ export default function KaraokePage() {
                 disabled={list.length === 0}
                 onClick={showRandomPick}
               >
-                🎲 랜덤 한 곡
+                <Icon name="shuffle" /> 랜덤 한 곡
               </button>
             </div>
           </div>

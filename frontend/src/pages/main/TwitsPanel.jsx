@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 
+import { Collapse } from "../../components/Collapse";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonRows } from "../../components/Loading";
 import { SectionPanel } from "../../components/SectionPanel";
@@ -90,49 +91,51 @@ export function TwitsPanel() {
                   <span>{item.title || `트윗 안내 ${index + 1}`}</span>
                   <span className="toggle-meta">{time || "임시 연기"}</span>
                 </button>
-                <div id={panelId} className="list-item-content" hidden={!open}>
-                  <div className="list-item-body">
-                    <p>태그와 키워드를 사용하여 트윗 작성</p>
-                    <p>태그 검색 후 다른 트윗 리트윗 &amp; 좋아요 누르기</p>
-                    <p>
-                      시간상 참여가 어려우신 분들은 예약 트윗을 활용해주세요.
-                      <br />
-                      같은 내용의 트윗은 중복 작성되지 않습니다.
-                      <br />
-                      하고 싶은 말 부분을 필수로 작성해주시기 바랍니다.
-                    </p>
-                    <h3>태그 &amp; 키워드</h3>
-                  </div>
-                  <div className="copy-grid">
-                    {keywords.map((keyword, keywordIndex) => {
-                      const value = [keyword, ...tags.map((tag) => `#${tag}`)].join("\n");
-                      return (
-                        <div className="copy-card" key={`${keywordIndex}-${keyword}`}>
-                          <div className="copy-card-top">
-                            <div className="copy-card-kicker">키워드</div>
+                <Collapse id={panelId} open={open}>
+                  <div className="list-item-content">
+                    <div className="list-item-body">
+                      <p>태그와 키워드를 사용하여 트윗 작성</p>
+                      <p>태그 검색 후 다른 트윗 리트윗 &amp; 좋아요 누르기</p>
+                      <p>
+                        시간상 참여가 어려우신 분들은 예약 트윗을 활용해주세요.
+                        <br />
+                        같은 내용의 트윗은 중복 작성되지 않습니다.
+                        <br />
+                        하고 싶은 말 부분을 필수로 작성해주시기 바랍니다.
+                      </p>
+                      <h3>태그 &amp; 키워드</h3>
+                    </div>
+                    <div className="copy-grid">
+                      {keywords.map((keyword, keywordIndex) => {
+                        const value = [keyword, ...tags.map((tag) => `#${tag}`)].join("\n");
+                        return (
+                          <div className="copy-card" key={`${keywordIndex}-${keyword}`}>
+                            <div className="copy-card-top">
+                              <div className="copy-card-kicker">키워드</div>
+                            </div>
+                            <p className="copy-text">
+                              <strong>{keyword}</strong>
+                            </p>
+                            <div className="tag-list">
+                              {tags.map((tag) => (
+                                <span className="tag-chip" key={tag}>
+                                  #{tag}
+                                </span>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              className="btn-primary copy-button"
+                              onClick={() => onCopy(value)}
+                            >
+                              복사 &amp; 이동
+                            </button>
                           </div>
-                          <p className="copy-text">
-                            <strong>{keyword}</strong>
-                          </p>
-                          <div className="tag-list">
-                            {tags.map((tag) => (
-                              <span className="tag-chip" key={tag}>
-                                #{tag}
-                              </span>
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            className="btn-primary copy-button"
-                            onClick={() => onCopy(value)}
-                          >
-                            복사 &amp; 이동
-                          </button>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                </Collapse>
               </div>
             );
           })}

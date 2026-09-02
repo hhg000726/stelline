@@ -5,6 +5,7 @@
  */
 import { useEffect, useState } from "react";
 
+import { Collapse } from "../../components/Collapse";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonRows } from "../../components/Loading";
 import { SectionPanel } from "../../components/SectionPanel";
@@ -76,23 +77,25 @@ export function BugsPanel() {
                   </span>
                   {entry.rank ? <span className="toggle-meta">현재 {Number(entry.rank)}위</span> : null}
                 </button>
-                <div id={contentId} className="list-item-content" hidden={!open}>
-                  <div className="list-item-body">
-                    <strong>현재 {Number(entry.rank) || 0}위</strong>
-                    {gap ? <p>{gap}</p> : null}
-                    <p>매일 계정마다 하트 100개를 무료로 줍니다</p>
-                    <p>계정은 같은 번호로 3개까지 만들 수 있습니다</p>
-                    <p>광고를 시청하여 하트를 얻을 수도 있습니다</p>
-                    <a
-                      className="btn-secondary"
-                      href={`https://favorite.bugs.co.kr/${encodeURIComponent(entry.url_number || "")}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      벅스 바로가기
-                    </a>
+                <Collapse id={contentId} open={open}>
+                  <div className="list-item-content">
+                    <div className="list-item-body">
+                      <strong>현재 {Number(entry.rank) || 0}위</strong>
+                      {gap ? <p>{gap}</p> : null}
+                      <p>매일 계정마다 하트 100개를 무료로 줍니다</p>
+                      <p>계정은 같은 번호로 3개까지 만들 수 있습니다</p>
+                      <p>광고를 시청하여 하트를 얻을 수도 있습니다</p>
+                      <a
+                        className="btn-secondary"
+                        href={`https://favorite.bugs.co.kr/${encodeURIComponent(entry.url_number || "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        벅스 바로가기
+                      </a>
+                    </div>
                   </div>
-                </div>
+                </Collapse>
               </div>
             );
           })}

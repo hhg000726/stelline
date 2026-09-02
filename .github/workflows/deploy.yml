@@ -108,7 +108,7 @@ jobs:
         USER: ${{ secrets.EC2_USER }}
       run: |
         scp deploy/nginx/stelline.conf $USER@$HOST:/tmp/stelline.conf
-        ssh $USER@$HOST 'sudo install -m 644 /tmp/stelline.conf /etc/nginx/sites-available/stelline && sudo mv /etc/nginx/sites-enabled/default /tmp/stelline-nginx-default && sudo ln -s /etc/nginx/sites-available/stelline /etc/nginx/sites-enabled/default && if sudo nginx -t; then sudo systemctl reload nginx; rm -f /tmp/stelline-nginx-default /tmp/stelline.conf; else sudo rm -f /etc/nginx/sites-enabled/default; sudo mv /tmp/stelline-nginx-default /etc/nginx/sites-enabled/default; rm -f /tmp/stelline.conf; exit 1; fi'
+        ssh $USER@$HOST 'sudo install -m 644 /tmp/stelline.conf /etc/nginx/sites-available/stelline && sudo mv /etc/nginx/sites-enabled/default /tmp/stelline-nginx-default && sudo ln -s /etc/nginx/sites-available/stelline /etc/nginx/sites-enabled/default && if sudo nginx -t; then sudo systemctl reload nginx; sudo rm -f /tmp/stelline-nginx-default /tmp/stelline.conf; else sudo rm -f /etc/nginx/sites-enabled/default; sudo mv /tmp/stelline-nginx-default /etc/nginx/sites-enabled/default; rm -f /tmp/stelline.conf; exit 1; fi'
 
     - name: Execute Remote Deployment Script
       env:

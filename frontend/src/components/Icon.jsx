@@ -39,6 +39,7 @@ const PATHS = {
     </>
   ),
   moon: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
+  chevron: <polyline points="6 9 12 15 18 9" />,
   shuffle: (
     <>
       <path d="M16 3h5v5" />

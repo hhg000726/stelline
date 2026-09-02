@@ -768,9 +768,12 @@ button svg {
 
 .card .meta {
   display: flex;
+  /* 좁은 화면에서 카드가 반 폭이 되면 "지난 시간"과 "유튜브로 이동"이 한 줄에 안 들어간다.
+   * 줄을 바꿔 주지 않으면 낱말 한가운데("유튜브로 이 / 동")에서 끊긴다. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px 8px;
   font-size: 0.76rem;
   color: var(--muted-soft);
 }
@@ -817,6 +820,8 @@ button svg {
   color: var(--primary-strong);
   font-size: 0.8rem;
   font-weight: 700;
+  /* 짧은 안내라 통째로 읽혀야 한다. 자리가 모자라면 줄을 바꾸지, 낱말을 끊지 않는다. */
+  white-space: nowrap;
 }
 
 .card.is-link .card-action svg { stroke: currentColor; fill: none; }

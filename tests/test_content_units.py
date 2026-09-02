@@ -5,6 +5,7 @@
 화면 HTML과 항목 목록이 서로 맞는지를 본다.
 """
 
+import json
 import pathlib
 import re
 import struct
@@ -17,14 +18,10 @@ from stelline.content.images import ImageError, detect_image
 from stelline.content.registry import CONTENT_GROUPS, CONTENT_ITEMS, IMAGE, TEXT
 from stelline.content.store import ContentError, _resolve, normalize_text, validate_image
 
-STATIC_ROOT = pathlib.Path(__file__).resolve().parent.parent / "stelline" / "static"
-PAGE_FILES = [
-    STATIC_ROOT / "index.html",
-    STATIC_ROOT / "search" / "index.html",
-    STATIC_ROOT / "karaoke" / "index.html",
-    STATIC_ROOT / "congratulation" / "index.html",
-    STATIC_ROOT / "offline" / "index.html",
-]
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
+FRONTEND_SRC = PROJECT_ROOT / "frontend" / "src"
+# 화면이 값을 못 받아왔을 때 쓰는 기본값. registry 의 default 를 그대로 옮겨 둔 파일이다.
+CONTENT_DEFAULTS_FILE = FRONTEND_SRC / "lib" / "contentDefaults.js"
 
 
 def make_png(width, height):
@@ -69,17 +66,37 @@ def test_groups_cover_every_item_exactly_once():
     assert sorted(listed) == sorted(CONTENT_ITEMS)
 
 
-# ---------------------------------------------------------------- 화면 HTML과의 짝
+# ---------------------------------------------------------------- 화면 코드와의 짝
+
+# 화면이 항목을 가리키는 방법. 문구 자리(contentKey), 공지 칸(titleKey/textKey/imageKey),
+# 칸 머리말(noteKey), 단계 안내(imageKey/labelKey), 그리고 값을 직접 읽는 useContentItem.
+CONTENT_KEY_PATTERN = re.compile(
+    r'(?:contentKey|titleKey|textKey|imageKey|noteKey|labelKey)\s*[:=]\s*"([^"]+)"'
+)
+USE_ITEM_PATTERN = re.compile(r'useContentItem\(\s*"([^"]+)"\s*\)')
+
 
 def content_keys_in_pages():
+    """화면 코드가 실제로 쓰는 항목 키."""
     keys = set()
-    for path in PAGE_FILES:
-        keys.update(re.findall(r'data-content-key="([^"]+)"', path.read_text(encoding="utf-8")))
+    for path in FRONTEND_SRC.rglob("*.js*"):
+        # 기본값 파일은 모든 키를 갖고 있어, 여기 넣으면 아래 두 검사가 무의미해진다.
+        if path == CONTENT_DEFAULTS_FILE:
+            continue
+        text = path.read_text(encoding="utf-8")
+        keys.update(CONTENT_KEY_PATTERN.findall(text))
+        keys.update(USE_ITEM_PATTERN.findall(text))
     return keys
 
 
+def frontend_defaults():
+    """contentDefaults.js 에서 값 부분만 떼어 읽는다(JSON 그대로 적어 둔 파일이다)."""
+    text = CONTENT_DEFAULTS_FILE.read_text(encoding="utf-8")
+    return json.loads(text[text.index("{") : text.rindex("}") + 1])
+
+
 def test_pages_only_reference_registered_keys():
-    """HTML에만 있는 키는 영원히 값이 채워지지 않는다(관리자 화면에 나오지 않으므로)."""
+    """화면에만 있는 키는 영원히 값이 채워지지 않는다(관리자 화면에 나오지 않으므로)."""
     assert content_keys_in_pages() <= set(CONTENT_ITEMS)
 
 
@@ -88,24 +105,27 @@ def test_every_registered_item_is_used_by_a_page():
     assert set(CONTENT_ITEMS) <= content_keys_in_pages()
 
 
-def test_pages_load_the_content_script():
-    for path in PAGE_FILES:
-        assert "/assets/content.js" in path.read_text(encoding="utf-8"), path
+def test_frontend_defaults_match_the_registry():
+    """값을 못 받아왔을 때 쓰는 기본값이 서버와 어긋나면, API 가 죽은 동안 화면이 달라진다.
 
-
-def test_empty_by_default_items_start_hidden_in_html():
-    """기본값이 빈 항목은 HTML에서 이미 hidden 이어야 한다.
-
-    그렇지 않으면 값을 받아오기 전 잠깐 빈 칸이 보였다가 사라진다.
+    예전에는 같은 문구가 화면 HTML 에 직접 적혀 있었다. 지금은 이 파일 한 곳에 모여 있으므로
+    여기가 registry 와 같은지만 지키면 된다.
     """
-    pages = "\n".join(path.read_text(encoding="utf-8") for path in PAGE_FILES)
+    expected = {key: (item.get("default") or "") for key, item in CONTENT_ITEMS.items()}
+    assert frontend_defaults() == expected
+
+
+def test_items_without_a_default_resolve_to_hidden():
+    """기본값이 빈 항목은 값을 받아오기 전에도 자리째 없어야 한다.
+
+    그렇지 않으면 빈 칸이 잠깐 보였다가 사라진다. 화면은 값이 비면 그리지 않으므로,
+    기본값이 비어 있다는 사실 자체가 곧 "감춤"이다.
+    """
+    defaults = frontend_defaults()
     for key, item in CONTENT_ITEMS.items():
-        if item["type"] == TEXT and item["default"]:
+        if item.get("default"):
             continue
-        if item["type"] == IMAGE and item["default"]:
-            continue
-        marker = re.search(r'[^\n<]*data-content-key="' + key + r'"[^\n>]*', pages)
-        assert marker and "hidden" in marker.group(0), key
+        assert defaults[key] == "", key
 
 
 # ---------------------------------------------------------------- 문구 검증

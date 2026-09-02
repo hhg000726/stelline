@@ -53,6 +53,33 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      # 공개 화면은 React 한 벌이고, 빌드 결과물(stelline/static/index.html, app/)은
+      # 저장소에 커밋한다. 배포 서버에는 Node 를 두지 않기 때문이다.
+      # 여기서 다시 빌드해 커밋된 것과 같은지 확인한다. 소스만 고치고 빌드를 잊은 채
+      # 올리면 운영 화면이 예전 것으로 남는데, 그 사고가 여기서 걸린다.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Check the committed build is up to date
+        run: |
+          if ! git diff --quiet -- stelline/static; then
+            echo '빌드 결과물이 소스와 다릅니다. frontend 에서 npm run build 한 뒤 커밋하세요.'
+            git diff --stat -- stelline/static
+            exit 1
+          fi
+
       # MySQL 서비스 컨테이너는 아래 services.mysql.options 의 health-check 가
       # 통과한 뒤에야 이 스텝들이 시작되므로 별도 대기 스텝은 두지 않는다.
       - name: Run tests

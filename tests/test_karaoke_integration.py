@@ -1,5 +1,6 @@
 """노래방 번호 기능 통합 테스트 (실제 MySQL)."""
 
+import pathlib
 from unittest.mock import patch
 
 import pytest
@@ -363,8 +364,19 @@ def test_admin_can_hide_a_main_button(admin_client, db, clean_db):
     assert _scalar(db, "SELECT visible FROM main_buttons WHERE button_key = 'search'") == 1
 
 
-def test_main_page_marks_every_button_with_a_key(client):
-    """화면의 버튼과 DB의 button_key가 어긋나면 표시 설정이 먹지 않는다."""
-    html = client.get("/").get_data(as_text=True)
-    for key in ("search", "karaoke", "congratulation"):
-        assert f'data-button-key="{key}"' in html
+def test_every_button_key_in_the_database_exists_on_screen(db):
+    """화면의 버튼과 DB의 button_key가 어긋나면 표시 설정이 먹지 않는다.
+
+    화면은 React 라 서버가 내려주는 문서에는 버튼이 적혀 있지 않다. 대신 화면이 쓰는
+    목록(frontend/src/components/navItems.js)과 DB의 키가 같은지 본다.
+    """
+    items = (
+        pathlib.Path(__file__).resolve().parent.parent
+        / "frontend" / "src" / "components" / "navItems.js"
+    ).read_text(encoding="utf-8")
+    with db.cursor() as cursor:
+        cursor.execute("SELECT button_key FROM main_buttons")
+        keys = [row["button_key"] for row in cursor.fetchall()]
+    assert keys, "main_buttons 가 비어 있어 확인할 것이 없습니다."
+    for key in keys:
+        assert f'key: "{key}"' in items, key

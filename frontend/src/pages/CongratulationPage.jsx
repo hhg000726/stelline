@@ -28,13 +28,6 @@ export function milestoneTier(tenThousands) {
   return "";
 }
 
-/* 24시간 안에 나온 가장 큰 기록. 이 화면의 머리기사에 해당하는 값이라 제목 옆에 세운다.
- * (배지와 같은 기준으로 만 단위를 센다.) */
-function topMilestone(items) {
-  const best = items.reduce((max, song) => Math.max(max, Number(song.count) || 0), 0);
-  return Math.floor(best / 100000) * 10;
-}
-
 function elapsedText(countedTime) {
   const diff = Date.now() - new Date(countedTime).getTime();
   const hours = Math.floor(diff / 3600000);
@@ -72,8 +65,6 @@ export default function CongratulationPage() {
 
   // 상태 줄이 나올 때는 안내 문구가 그 자리를 비켜 준다(예전 is-status-replaced 와 같다).
   const statusShown = Boolean(notifications.status.text || notifications.extraNote);
-  // 셀 것이 없으면 0이다. "오늘 최고 기록 0만"을 내걸지 않도록 여기서 걸러 둔다.
-  const topRecord = topMilestone(records.items);
 
   return (
     <>
@@ -85,15 +76,6 @@ export default function CongratulationPage() {
             {/* 안내 문구는 관리자 화면에서 고친다. 아래 상태 줄은 알릴 것이 생겼을 때만 나온다. */}
             {!prompt.hidden && (
               <p className={`page-subtitle${statusShown ? " is-status-replaced" : ""}`}>{prompt.value}</p>
-            )}
-            {/* 오늘 나온 가장 큰 기록. 목록을 훑기 전에 "오늘 무슨 일이 있었는지"를 한 줄로 알려 준다. */}
-            {records.status === "ready" && topRecord > 0 && (
-              <div className="page-meta">
-                <span className="meta-pill is-key">
-                  <span>오늘 최고 기록</span>
-                  <strong>{topRecord.toLocaleString("ko-KR")}만</strong>
-                </span>
-              </div>
             )}
             <p
               id="status"

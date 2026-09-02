@@ -1329,8 +1329,10 @@ button svg {
   font-size: 0.98rem;
 }
 
-.list-item-body h3 {
-  margin: 4px 0 0;
+/* 복사 카드 묶음의 이름표. 안내 상자 안이 아니라 카드 바로 위에 두어야
+ * 무엇을 가리키는 말인지 한눈에 읽힌다. */
+.copy-grid-title {
+  margin: 14px 0 0;
   color: var(--text);
   font-size: 0.95rem;
 }
@@ -1341,6 +1343,9 @@ button svg {
   gap: 10px;
   margin-top: 10px;
 }
+
+/* 이름표와 카드는 한 덩어리로 읽히도록 사이를 좁힌다. */
+.copy-grid-title + .copy-grid { margin-top: 6px; }
 
 .copy-card {
   display: flex;

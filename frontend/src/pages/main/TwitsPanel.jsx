@@ -103,8 +103,8 @@ export function TwitsPanel() {
                         <br />
                         하고 싶은 말 부분을 필수로 작성해주시기 바랍니다.
                       </p>
-                      <h3>태그 &amp; 키워드</h3>
                     </div>
+                    <h3 className="copy-grid-title">태그 &amp; 키워드</h3>
                     <div className="copy-grid">
                       {keywords.map((keyword, keywordIndex) => {
                         const value = [keyword, ...tags.map((tag) => `#${tag}`)].join("\n");

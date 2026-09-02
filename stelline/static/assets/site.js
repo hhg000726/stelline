@@ -21,6 +21,84 @@
     return ENTITIES[character];
   }
 
+  /* ---------- 알림 말풍선 ----------
+   * 복사처럼 화면이 그대로인 동작은 알려 주지 않으면 눌렸는지조차 알 수 없다.
+   * 화면마다 따로 만들면 위치와 사라지는 시간이 어긋나므로 한 곳에서 만든다. */
+
+  var toastNode = null;
+  var toastTimers = [];
+
+  function clearToastTimers() {
+    toastTimers.forEach(window.clearTimeout);
+    toastTimers = [];
+  }
+
+  function ensureToast() {
+    if (toastNode && toastNode.isConnected) return toastNode;
+    toastNode = document.createElement("div");
+    toastNode.className = "site-toast";
+    toastNode.id = "site-toast";
+    // 스스로 읽어 주되, 말풍선이 뜨기 전의 빈 상태를 읽지는 않게 한다.
+    toastNode.setAttribute("role", "status");
+    toastNode.setAttribute("aria-live", "polite");
+    toastNode.hidden = true;
+    document.body.appendChild(toastNode);
+    return toastNode;
+  }
+
+  function toast(message) {
+    if (!message) return;
+    // <body>가 아직 없으면 만들 자리가 없다. 준비된 뒤에 띄운다.
+    if (!document.body) {
+      document.addEventListener("DOMContentLoaded", function () { toast(message); });
+      return;
+    }
+    var node = ensureToast();
+    node.textContent = message;
+    node.hidden = false;
+    // hidden 을 막 벗겨낸 프레임에 클래스를 같이 붙이면 전환이 생략된다. 배치를 한 번
+    // 읽어 강제로 반영시킨 뒤에 붙인다. (requestAnimationFrame 은 탭이 가려져 있으면
+    // 아예 실행되지 않아, 말풍선이 투명한 채로 사라지는 일이 생긴다.)
+    void node.offsetWidth;
+    node.classList.add("is-visible");
+    clearToastTimers();
+    toastTimers.push(window.setTimeout(function () {
+      node.classList.remove("is-visible");
+      toastTimers.push(window.setTimeout(function () { node.hidden = true; }, 200));
+    }, 1800));
+  }
+
+  /* ---------- 클립보드 ----------
+   * navigator.clipboard 는 https 가 아니거나 권한이 막히면 조용히 실패한다.
+   * 그때 아무 일도 일어나지 않으면 사용자는 눌러도 안 된다고만 느끼므로,
+   * 예전 방식으로 한 번 더 시도하고 성공 여부를 돌려준다. */
+  async function copyText(text) {
+    var value = String(text == null ? "" : text);
+    if (!value) return false;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch (error) {
+      /* 아래 대체 방법으로 넘어간다. */
+    }
+    try {
+      var helper = document.createElement("textarea");
+      helper.value = value;
+      helper.setAttribute("readonly", "");
+      helper.style.position = "fixed";
+      helper.style.opacity = "0";
+      document.body.appendChild(helper);
+      helper.select();
+      var copied = document.execCommand("copy");
+      document.body.removeChild(helper);
+      return copied;
+    } catch (error) {
+      return false;
+    }
+  }
+
   window.Stelline = {
     api(path, options = {}) {
       return fetch(`/api/${path.replace(/^\//, "")}`, options);
@@ -30,6 +108,8 @@
     escapeHtml(value) {
       return String(value ?? "").replace(ESCAPE_RE, escape);
     },
+    copyText,
+    toast,
     icon(name) {
       const paths = {
         play: '<polygon points="5 3 19 12 5 21 5 3"></polygon>',

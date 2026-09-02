@@ -8,7 +8,7 @@ function toggleContent(id, button) {
   button.setAttribute("aria-expanded", String(!isHidden));
 }
 
-function copyText(id) {
+async function copyText(id) {
   const textNode = document.getElementById(id);
   const text = textNode ? (textNode.dataset.copyText || textNode.innerText) : "";
   if (!text) {
@@ -20,11 +20,20 @@ function copyText(id) {
     headers: { "Content-Type": "application/json" }
   }).catch(error => console.error("API 요청 중 오류 발생:", error));
 
-  navigator.clipboard.writeText(text).then(() => {
-    window.open("https://x.com/", "_blank", "noopener,noreferrer");
-  }).catch(err => {
-    console.error("복사 실패: ", err);
-  });
+  // 복사에 실패하면 X로 보내 봐야 붙여 넣을 것이 없다. 그대로 두고 까닭을 알린다.
+  if (!await Stelline.copyText(text)) {
+    Stelline.toast("복사하지 못했어요. 키워드를 직접 선택해 복사해 주세요.");
+    return;
+  }
+
+  // 새 창 열기가 막히면(팝업 차단) 아무 일도 없는 것처럼 보인다. 그때는 이 창에서 넘어간다.
+  // 넘어가는 쪽은 화면이 통째로 바뀌니 그 자체가 알림이고, 말풍선은 깜빡이기만 한다.
+  const opened = window.open("https://x.com/", "_blank", "noopener,noreferrer");
+  if (opened) {
+    Stelline.toast("복사했어요. 새 탭에서 X를 열었습니다.");
+  } else {
+    window.location.href = "https://x.com/";
+  }
 }
 
 function showEmptyState(container, message, isError = false) {
@@ -43,6 +52,19 @@ function toArray(value) {
   return [value];
 }
 
+/* 윗등수와의 차이 한 줄.
+ *
+ * 예전에는 순위별로 <p>를 세 개 깔아 두고 해당하지 않는 둘은 빈 칸으로 남겼다.
+ * 순위마다 할 말은 하나뿐이라, 그 하나만 돌려준다. */
+function rankGapText(rank, diffs = {}) {
+  const votes = (count) => `${count ?? 0}표`;
+  const share = (percent) => (percent ? ` / ${percent}%` : "");
+  if (rank === 2) return `1등과의 차이: ${votes(diffs.count_to_first)}${share(diffs.streaming_to_first)}`;
+  if (rank === 3) return `2등과의 차이: ${votes(diffs.count_to_second)}${share(diffs.streaming_to_second)}`;
+  if (rank > 3) return `윗등수와의 차이: ${votes(diffs.count_diff)}${share(diffs.streaming_diff)}`;
+  return "";
+}
+
 async function fetchBugs() {
   try {
     const response = await Stelline.api("bugs/rank");
@@ -52,7 +74,7 @@ async function fetchBugs() {
     const bugEntries = toArray(recentData).filter(Boolean);
 
     if (!bugEntries.length) {
-      if (panel) panel.style.display = "none";
+      if (panel) panel.hidden = true;
       return;
     }
 
@@ -78,16 +100,16 @@ async function fetchBugs() {
       content.id = contentId;
       content.className = "list-item-content";
       content.hidden = true;
+      // 순위마다 해당하는 줄이 하나뿐이라, 나머지를 빈 <p>로 남기지 않고 아예 만들지 않는다.
+      const gap = rankGapText(data.rank, diffs);
       content.innerHTML = `
         <div class="list-item-body">
-          <strong>현재 ${data.rank || 0}위</strong>
-          <p>${data.rank === 2 ? `1등과의 차이: ${diffs.count_to_first ?? 0}표${diffs.streaming_to_first ? ` / ${diffs.streaming_to_first}%` : ""}` : ""}</p>
-          <p>${data.rank === 3 ? `2등과의 차이: ${diffs.count_to_second ?? 0}표${diffs.streaming_to_second ? ` / ${diffs.streaming_to_second}%` : ""}` : ""}</p>
-          <p>${data.rank > 2 ? `윗등수와의 차이: ${diffs.count_diff ?? 0}표${diffs.streaming_diff ? ` / ${diffs.streaming_diff}%` : ""}` : ""}</p>
+          <strong>현재 ${Number(data.rank) || 0}위</strong>
+          ${gap ? `<p>${Stelline.escapeHtml(gap)}</p>` : ""}
           <p>매일 계정마다 하트 100개를 무료로 줍니다</p>
           <p>계정은 같은 번호로 3개까지 만들 수 있습니다</p>
           <p>광고를 시청하여 하트를 얻을 수도 있습니다</p>
-          <button type="button" class="btn-secondary" onclick="window.location.href='https://favorite.bugs.co.kr/${urlNumber}'">벅스 바로가기</button>
+          <a class="btn-secondary" href="https://favorite.bugs.co.kr/${encodeURIComponent(urlNumber)}" target="_blank" rel="noopener noreferrer">벅스 바로가기</a>
         </div>
       `;
 
@@ -112,22 +134,25 @@ async function fetchEvents() {
     const events = toArray(await res.json());
 
     if (!events.length) {
-      if (panel) panel.style.display = "none";
+      if (panel) panel.hidden = true;
       return;
     }
 
     container.innerHTML = "";
+    // 바깥 사이트로 나가는 자리는 버튼이 아니라 링크로 둔다. 그래야 새 탭으로 열거나
+    // 주소를 미리 보는, 링크라면 당연히 되는 일들이 그대로 된다.
     events.forEach(event => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "btn-secondary";
-      button.textContent = event.title || "이벤트";
-      button.onclick = () => {
-        if (event.link) {
-          window.location.href = event.link;
-        }
-      };
-      container.appendChild(button);
+      const link = document.createElement("a");
+      link.className = "btn-secondary";
+      link.textContent = event.title || "이벤트";
+      // href 가 없는 <a> 는 눌리지도 초점이 가지도 않는다. 주소가 빠진 이벤트가
+      // 눌리는 것처럼 보였다가 아무 일도 안 하는 것보다 낫다.
+      if (event.link) {
+        link.href = event.link;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+      }
+      container.appendChild(link);
     });
   } catch (error) {
     console.error("이벤트 API 요청 중 오류 발생:", error);
@@ -143,7 +168,7 @@ async function fetchTwits() {
     const panel = container.closest(".section-panel");
 
     if (!data.length) {
-      if (panel) panel.style.display = "none";
+      if (panel) panel.hidden = true;
       return;
     }
 

@@ -98,11 +98,16 @@ function renderTable(data, tableId) {
     return;
   }
 
+  // 카드를 하나씩 붙이면 그때마다 배치가 다시 계산된다. 조각에 모아 한 번에 붙인다.
+  const fragment = document.createDocumentFragment();
   data.forEach((song) => {
-    // 카드 전체가 "유튜브로 이동" 버튼이라 버튼 줄을 따로 두지 않는다.
-    const card = document.createElement("button");
-    card.type = "button";
+    // 카드 전체가 "유튜브로 이동"이라 버튼 줄을 따로 두지 않는다. 나가는 자리이므로
+    // 버튼이 아닌 링크로 둔다. 그래야 새 탭으로 열거나 주소를 미리 보는 것이 그대로 된다.
+    const card = document.createElement("a");
     card.className = "card is-link";
+    card.href = `https://www.youtube.com/watch?v=${encodeURIComponent(song.video_id)}`;
+    card.target = "_blank";
+    card.rel = "noopener noreferrer";
 
     const thumbWrap = document.createElement("div");
     thumbWrap.className = "thumb-wrap";
@@ -154,13 +159,9 @@ function renderTable(data, tableId) {
     info.appendChild(meta);
 
     card.appendChild(info);
-    card.onclick = () => handleButtonClick(song.video_id);
-    container.appendChild(card);
+    fragment.appendChild(card);
   });
-}
-
-function handleButtonClick(video_id) {
-    window.location.href = `https://www.youtube.com/watch?v=${video_id}`;
+  container.appendChild(fragment);
 }
 
 document.addEventListener("DOMContentLoaded", fetchSongs);

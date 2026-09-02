@@ -645,28 +645,6 @@ button.num-btn:active {
 
 /* ---------- 토스트 ---------- */
 
-.kara-toast {
-  position: fixed;
-  bottom: 84px;
-  left: 50%;
-  z-index: 50;
-  padding: 10px 17px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.92);
-  color: #f8fafc;
-  font-size: 0.88rem;
-  font-weight: 700;
-  opacity: 0;
-  transform: translate(-50%, 8px);
-  transition: opacity 0.18s ease, transform 0.18s ease;
-  pointer-events: none;
-}
-
-.kara-toast.is-visible {
-  opacity: 1;
-  transform: translate(-50%, 0);
-}
-
 /* ---------- 다크 모드 보정 ---------- */
 /* 토큰만으로 안 되는 곳만 손본다. */
 

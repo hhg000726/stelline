@@ -1335,6 +1335,36 @@ tr:last-child td { border-bottom: 0; }
   fill: none;
 }
 
+/* ---------- 알림 말풍선 ----------
+ * site.js가 화면 하나마다 하나씩 만들어 쓴다. 복사처럼 화면이 그대로인 동작은
+ * 이 말풍선이 없으면 눌렸는지조차 알 수 없다.
+ * 다크 모드 토글과 같은 --floating-offset 을 써서, 노래방 화면의 하단 고정 바
+ * 위로 함께 비켜선다.
+ */
+.site-toast {
+  position: fixed;
+  bottom: calc(76px + var(--floating-offset, 0px));
+  left: 50%;
+  z-index: 50;
+  max-width: min(calc(100vw - 32px), 420px);
+  padding: 10px 17px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition: opacity 0.18s ease, transform 0.18s ease, bottom 0.16s ease;
+  pointer-events: none;
+}
+
+.site-toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 @media (max-width: 720px) {
   .theme-toggle {
     right: 12px;
@@ -1347,9 +1377,15 @@ tr:last-child td { border-bottom: 0; }
     padding-right: 12px;
   }
 
+  /* 좁은 화면에서는 이름과 메뉴를 위아래로 나눈다.
+   * 한 줄에 같이 두면 이름이 가로폭의 절반 가까이를 차지해, 남은 자리로 밀려난
+   * 메뉴가 세 줄까지 접히면서 머리말만 화면 높이의 3분의 1을 먹었다. */
   .site-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
     border-radius: var(--radius-card);
-    padding: 8px 10px;
+    padding: 10px;
   }
 
   /* 좁은 화면에서 옆으로 밀어야만 보이는 메뉴는 있는 줄도 모른다. 줄을 바꿔 전부 보여 준다. */

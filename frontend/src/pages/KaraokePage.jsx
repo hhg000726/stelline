@@ -18,12 +18,22 @@ import { copyText } from "../lib/clipboard";
 import { readStore, writeStore } from "../lib/storage";
 import { usePageMeta } from "../lib/usePageMeta";
 import { FilterPanel } from "./karaoke/FilterPanel";
+import { MultiPickDialog } from "./karaoke/MultiPickDialog";
 import { PickDialog } from "./karaoke/PickDialog";
 import { SetlistBar } from "./karaoke/SetlistBar";
 import { SongCard } from "./karaoke/SongCard";
-import { MACHINE_LABELS, NARROW, PAGE_SIZE, STORAGE_KEYS } from "./karaoke/constants";
+import {
+  CATEGORY_LABELS,
+  MACHINE_LABELS,
+  MULTI_PICK_DEFAULT,
+  MULTI_PICK_MAX,
+  NARROW,
+  PAGE_SIZE,
+  SECTION_LABELS,
+  STORAGE_KEYS,
+} from "./karaoke/constants";
 import { activeFilterCount, filtersReducer, filtersToParams, initFilters } from "./karaoke/filters";
-import { applyFilters, decorate, hasNumber } from "./karaoke/search";
+import { applyFilters, decorate, hasNumber, sampleSongs } from "./karaoke/search";
 import "../styles/karaoke.css";
 
 const MACHINES = [
@@ -59,6 +69,11 @@ export default function KaraokePage() {
   const [filterOpen, setFilterOpen] = useState(() => activeFilterCount(filters) > 0);
   const [setlistOpen, setSetlistOpen] = useState(false);
   const [pick, setPick] = useState(null);
+  const [multiPick, setMultiPick] = useState(null); // 뽑은 곡들의 key 배열, 닫혀 있으면 null
+  const [pickCount, setPickCount] = useState(() => {
+    const saved = Math.floor(Number(readStore(STORAGE_KEYS.pickCount, MULTI_PICK_DEFAULT)));
+    return saved >= 1 && saved <= MULTI_PICK_MAX ? saved : MULTI_PICK_DEFAULT;
+  });
 
   const searchField = useRef(null);
   const controlsRef = useRef(null);
@@ -202,8 +217,8 @@ export default function KaraokePage() {
 
   /* 상태 갱신 함수 안에서 저장·말풍선 같은 바깥일을 하면, React 가 그 함수를 두 번
    * 부를 때 두 번 일어난다. 최신 값을 따로 들고 있다가 바깥에서 한 번만 처리한다. */
-  const latest = useRef({ favorites, setlist });
-  latest.current = { favorites, setlist };
+  const latest = useRef({ favorites, setlist, multiPick });
+  latest.current = { favorites, setlist, multiPick };
 
   const saveFavorites = useCallback((next) => {
     setFavorites(next);
@@ -300,6 +315,86 @@ export default function KaraokePage() {
     if (!list.length) return;
     setPick(list[Math.floor(Math.random() * list.length)]);
   }, [list]);
+
+  /* ---------- 랜덤 여러 곡 ----------
+   * 지금 목록(list)에 이미 필터가 걸려 있으므로 그대로 표본을 뽑는다. 뽑은 곡은 key 로
+   * 들고 있다가 songByKey 로 되살린다. 즐겨찾기·부를 곡 상태가 바뀌면 창도 함께 바뀌고,
+   * 목록이 새로 와서 사라진 곡은 자연히 빠진다. */
+  const changePickCount = useCallback(
+    (value) => {
+      const max = Math.max(1, Math.min(MULTI_PICK_MAX, list.length || MULTI_PICK_MAX));
+      const next = Math.min(max, Math.max(1, Math.floor(value) || 1));
+      setPickCount(next);
+      writeStore(STORAGE_KEYS.pickCount, next);
+    },
+    [list.length],
+  );
+
+  const showMultiPick = useCallback(
+    (count) => {
+      if (!list.length) return;
+      setMultiPick(sampleSongs(list, count).map((song) => song.key));
+    },
+    [list],
+  );
+
+  const multiPickSongs = useMemo(
+    () => (multiPick ? multiPick.map((key) => songByKey.get(key)).filter(Boolean) : []),
+    [multiPick, songByKey],
+  );
+
+  const removeFromMultiPick = useCallback((key) => {
+    setMultiPick((prev) => (prev ? prev.filter((entry) => entry !== key) : prev));
+  }, []);
+
+  const favoriteAllMultiPick = useCallback(() => {
+    const keys = latest.current.multiPick || [];
+    const next = new Set(latest.current.favorites);
+    let added = 0;
+    keys.forEach((key) => {
+      if (!next.has(key)) {
+        next.add(key);
+        added += 1;
+      }
+    });
+    if (!added) {
+      toast("이미 모두 즐겨찾기에 있어요");
+      return;
+    }
+    saveFavorites(next);
+    toast(`${added}곡을 즐겨찾기에 담았어요`);
+  }, [saveFavorites, toast]);
+
+  const setlistAllMultiPick = useCallback(() => {
+    const keys = latest.current.multiPick || [];
+    const current = latest.current.setlist;
+    const have = new Set(current);
+    const additions = keys.filter((key) => !have.has(key));
+    if (!additions.length) {
+      toast("이미 모두 부를 곡 목록에 있어요");
+      return;
+    }
+    saveSetlist([...current, ...additions]);
+    toast(`${additions.length}곡을 부를 곡 목록에 담았어요`);
+  }, [saveSetlist, toast]);
+
+  /* 뽑기 창 위쪽에 걸린 필터를 사람이 읽는 말로 늘어놓는다. 이 목록이 비어 있으면
+   * "필터 없음"이고, 그렇지 않으면 무엇으로 좁혔는지 한눈에 보인다. */
+  const pickFilterTags = useMemo(() => {
+    const tags = [];
+    if (filters.machine !== "both") {
+      tags.push(`${MACHINE_LABELS[filters.machine]} 번호`);
+    }
+    if (filters.onlyNumbered) tags.push("번호 있는 곡만");
+    if (filters.onlyFavorites) tags.push("즐겨찾기만");
+    if (filters.members.size) {
+      tags.push(`멤버 ${filters.members.size}명${filters.filterMode === "and" ? " 모두" : ""}`);
+    }
+    filters.sections.forEach((section) => tags.push(SECTION_LABELS[section] || section));
+    filters.categories.forEach((category) => tags.push(CATEGORY_LABELS[category] || category));
+    if (query.raw) tags.push(`검색 "${query.raw}"`);
+    return tags;
+  }, [filters, query]);
 
   const filterCount = activeFilterCount(filters);
 
@@ -425,7 +520,7 @@ export default function KaraokePage() {
             </label>
             <button
               id="filter-toggle"
-              className="kara-chip-button"
+              className={`kara-chip-button${filterCount > 0 ? " is-on" : ""}`}
               type="button"
               aria-expanded={filterOpen}
               onClick={toggleFilter}
@@ -447,6 +542,15 @@ export default function KaraokePage() {
                 onClick={showRandomPick}
               >
                 <Icon name="shuffle" /> 랜덤 한 곡
+              </button>
+              <button
+                id="random-pick-multi"
+                className="btn-secondary btn-small"
+                type="button"
+                disabled={list.length === 0}
+                onClick={() => showMultiPick(pickCount)}
+              >
+                <Icon name="shuffle" /> 여러 곡
               </button>
             </div>
           </div>
@@ -538,6 +642,30 @@ export default function KaraokePage() {
         }}
         onAgain={showRandomPick}
         onClose={() => setPick(null)}
+      />
+
+      <MultiPickDialog
+        open={multiPick !== null}
+        songs={multiPickSongs}
+        count={pickCount}
+        onCountChange={changePickCount}
+        poolSize={list.length}
+        totalSize={songs.length}
+        tags={pickFilterTags}
+        favorites={favorites}
+        setlistKeys={setlistKeys}
+        onCopy={copyFromPick}
+        onToggleFavorite={(song) => {
+          const had = favorites.has(song.key);
+          toggleFavorite(song);
+          toast(had ? "즐겨찾기에서 뺐어요" : "즐겨찾기에 담았어요");
+        }}
+        onToggleSetlist={toggleSetlist}
+        onRemove={removeFromMultiPick}
+        onReroll={() => showMultiPick(pickCount)}
+        onFavoriteAll={favoriteAllMultiPick}
+        onSetlistAll={setlistAllMultiPick}
+        onClose={() => setMultiPick(null)}
       />
     </>
   );

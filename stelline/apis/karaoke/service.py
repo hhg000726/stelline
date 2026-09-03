@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+from datetime import timedelta
 
 from flask import jsonify, make_response, request
 
@@ -14,6 +15,21 @@ SONG_QUERY = """
       FROM karaoke_songs
      ORDER BY id
 """
+
+# updated_at 은 DB가 CURRENT_TIMESTAMP 로 적는 값이고, 그 서버는 UTC 로 돈다.
+# 그대로 내려보내면 화면의 '마지막 갱신'이 아홉 시간 이르게 적혀, 방금 고친 번호가
+# 어제 것처럼 보인다. 읽는 사람이 한국에 있으므로 한국 시간으로 옮겨 내려보낸다.
+# (한국은 서머타임이 없어 한 해 내내 +9 로 일정하다. 그래서 tz 이름을 들고 오지 않고
+#  더하기 한 번으로 끝낸다.)
+KST_OFFSET = timedelta(hours=9)
+
+
+def _updated_at_text(rows):
+    """가장 나중에 고친 시각을 한국 시간 문자열로 만든다. 없으면 빈 문자열이다."""
+    latest = max((row["updated_at"] for row in rows if row["updated_at"]), default=None)
+    if not latest:
+        return ""
+    return (latest + KST_OFFSET).isoformat(sep=" ", timespec="seconds")
 
 
 def _split_members(value):
@@ -73,11 +89,10 @@ def fetch_songs():
         logging.exception("노래방 번호 목록 조회 실패")
         return jsonify({"error": str(exc)}), 500
 
-    updated_at = max((row["updated_at"] for row in songs if row["updated_at"]), default=None)
     payload = {
         "songs": [_serialize_song(row) for row in songs],
         "members": _member_list(members, songs),
-        "updatedAt": updated_at.isoformat(sep=" ", timespec="seconds") if updated_at else "",
+        "updatedAt": _updated_at_text(songs),
     }
 
     body = json.dumps(payload, ensure_ascii=False, sort_keys=True)

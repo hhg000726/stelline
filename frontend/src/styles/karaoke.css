@@ -101,11 +101,14 @@
 }
 
 /* 결과 수와 랜덤 뽑기는 도구 모음 오른쪽 끝에 둔다.
- * 줄을 하나 덜 쓰면서, 목록을 내려도 계속 따라온다. */
+ * 줄을 하나 덜 쓰면서, 목록을 내려도 계속 따라온다.
+ * 뽑기 단추가 둘이라 좁은 화면에서는 오른쪽 끝에서부터 줄을 바꾼다. */
 .kara-toolbar-end {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  justify-content: flex-end;
   margin-left: auto;
 }
 
@@ -680,6 +683,197 @@ button.num-btn:active {
   display: flex;
   gap: 8px;
   justify-content: center;
+}
+
+/* ---------- 랜덤 여러 곡 ----------
+ * 랜덤 한 곡의 겹쳐 뜨는 창(.pick-dialog/.pick-card)을 그대로 쓰되, 목록이 들어가므로
+ * 조금 넓히고 안쪽에서 굴린다. 글은 왼쪽으로 맞춘다. */
+.multi-pick-card {
+  width: min(100%, 560px);
+  max-height: min(85vh, 760px);
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.multi-pick-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.multi-pick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.multi-pick-tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--primary-tint);
+  color: var(--primary-strong);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.multi-pick-tag.is-muted {
+  background: var(--surface-subtle);
+  color: var(--muted);
+}
+
+.multi-pick-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-subtle);
+}
+
+.multi-pick-count > span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.multi-pick-stepper {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.multi-pick-stepper input {
+  width: 58px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.multi-pick-quick {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.multi-pick-reroll {
+  width: 100%;
+  margin: 12px 0;
+}
+
+/* 뽑힌 목록만 자리가 모자랄 때 줄어들고, 안에서 세로로 굴린다. */
+.multi-pick-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 2px;
+  list-style: none;
+  counter-reset: multipick;
+}
+
+.multi-pick-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "song actions"
+    "numbers numbers";
+  gap: 8px;
+  align-items: center;
+  padding: 9px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  counter-increment: multipick;
+}
+
+/* 뽑을 때마다 목록이 통째로 바뀌므로, 앞 몇 줄만 차례로 올라오게 해 "새로 뽑혔다"를 알린다. */
+@media (prefers-reduced-motion: no-preference) {
+  .multi-pick-item {
+    animation: item-rise 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  }
+
+  .multi-pick-item:nth-child(2) { animation-delay: 0.03s; }
+  .multi-pick-item:nth-child(3) { animation-delay: 0.06s; }
+  .multi-pick-item:nth-child(4) { animation-delay: 0.09s; }
+  .multi-pick-item:nth-child(5) { animation-delay: 0.12s; }
+  .multi-pick-item:nth-child(n + 6) { animation-delay: 0.14s; }
+}
+
+.multi-pick-song {
+  grid-area: song;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.multi-pick-song::before {
+  content: counter(multipick) ".";
+  color: var(--muted-soft);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.multi-pick-song strong {
+  font-size: 0.92rem;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.multi-pick-song span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.multi-pick-numbers {
+  grid-area: numbers;
+  display: flex;
+  gap: 5px;
+}
+
+.multi-pick-numbers .num-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.multi-pick-nonum {
+  color: var(--muted-soft);
+  font-size: 0.78rem;
+}
+
+.multi-pick-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 4px;
+}
+
+.multi-pick-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.multi-pick-bulk button {
+  flex: 1;
+  min-width: 150px;
+  font-size: 0.84rem;
+}
+
+.multi-pick .pick-actions {
+  justify-content: flex-end;
 }
 
 /* ---------- 다크 모드 보정 ---------- */

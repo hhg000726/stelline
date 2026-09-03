@@ -208,6 +208,24 @@ def test_karaoke_page_offers_the_new_controls():
     assert "PickDialog" in page
 
 
+def test_karaoke_multi_pick_extends_the_random_pick():
+    """랜덤 한 곡을 여러 곡으로 늘렸다. 뽑을 곡 수를 정하고, 같은 필터에서 표본을
+    뽑으며, 낱개로 빼거나 목록째 즐겨찾기·부를 곡에 담을 수 있다."""
+    page = source("pages", "KaraokePage.jsx")
+    dialog = source("pages", "karaoke", "MultiPickDialog.jsx")
+    assert "MultiPickDialog" in page
+    assert 'id="random-pick-multi"' in page
+    assert "sampleSongs" in source("pages", "karaoke", "search.js")
+    # 뽑을 곡 수 지정
+    assert 'id="multi-pick-count"' in dialog
+    # 개별 삭제 + 전체 담기
+    assert 'id="multi-pick-favorite-all"' in dialog
+    assert 'id="multi-pick-setlist-all"' in dialog
+    assert "onRemove" in dialog
+    # 랜덤 한 곡은 그대로 남는다.
+    assert 'id="random-pick"' in page
+
+
 def test_karaoke_list_is_shown_in_pages():
     """곡이 수백 개라 한 번에 다 그리면 스크롤 막대가 실낱같이 얇아진다."""
     page = source("pages", "KaraokePage.jsx")

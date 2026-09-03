@@ -5,7 +5,13 @@ export const STORAGE_KEYS = {
   setlist: "stelline.karaoke.setlist",
   machine: "stelline.karaoke.machine",
   cache: "stelline.karaoke.cache",
+  pickCount: "stelline.karaoke.pickCount",
 };
+
+/* 랜덤 여러 곡을 뽑을 때의 기본값과 상한. 상한은 화면에 한꺼번에 늘어놔도
+ * 눈으로 훑을 수 있는 정도로 둔다. */
+export const MULTI_PICK_DEFAULT = 5;
+export const MULTI_PICK_MAX = 30;
 
 export const SECTION_LABELS = { group: "단체", unit: "유닛", collab: "콜라보", gift: "기프트", solo: "개인" };
 export const CATEGORY_LABELS = { original: "오리지널", cover: "커버" };

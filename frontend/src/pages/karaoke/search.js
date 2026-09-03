@@ -90,6 +90,19 @@ export function applyFilters(songs, filters, favorites) {
   return { list, query };
 }
 
+/* 목록에서 서로 다른 곡 n 개를 무작위로 뽑는다. 화면 정렬(랜덤순·가나다순)과는
+ * 상관없이 뽑을 때마다 새로 섞는다. n 이 목록보다 많으면 있는 만큼만 돌려준다.
+ * 앞의 n 칸만 셔플하면 되므로 목록 전체를 섞지 않는다(피셔-예이츠 부분 셔플). */
+export function sampleSongs(list, n) {
+  const pool = list.slice();
+  const count = Math.max(0, Math.min(Math.floor(n) || 0, pool.length));
+  for (let i = 0; i < count; i += 1) {
+    const j = i + Math.floor(Math.random() * (pool.length - i));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, count);
+}
+
 /* 검색어와 겹치는 부분을 <mark> 로 감싼다. React 가 그리므로 문자열이 아니라 조각을 돌려준다. */
 export function highlightParts(text, query) {
   const value = String(text ?? "");

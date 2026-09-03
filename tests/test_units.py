@@ -11,6 +11,7 @@ from stelline.apis.bugs.tasks import scrape_bugs_favorite
 from stelline.apis.offline.service import geocode_location
 from stelline.apis.search import tasks as search_tasks
 from stelline.admin import routes as admin_routes
+from stelline.apis.karaoke import service as karaoke_service
 
 
 # --- Cloudflare Turnstile -------------------------------------------------
@@ -187,3 +188,25 @@ def test_admin_row_token_rejects_tampering():
     token = admin_routes.serialize_row({"id": 1})
     with pytest.raises(BadSignature):
         admin_routes.row_serializer().loads(token + "x")
+
+
+# --- 노래방 '마지막 갱신' 시각 ------------------------------------------
+
+def test_karaoke_updated_at_is_shown_in_korean_time():
+    """DB(UTC)에서 읽은 시각을 아홉 시간 앞으로 옮겨 내려준다."""
+    rows = [{"updated_at": datetime(2026, 9, 1, 3, 0, 0)}]
+    assert karaoke_service._updated_at_text(rows) == "2026-09-01 12:00:00"
+
+
+def test_karaoke_updated_at_uses_the_latest_row():
+    rows = [
+        {"updated_at": datetime(2026, 9, 1, 3, 0, 0)},
+        {"updated_at": datetime(2026, 9, 2, 15, 30, 0)},
+        {"updated_at": None},
+    ]
+    assert karaoke_service._updated_at_text(rows) == "2026-09-03 00:30:00"
+
+
+def test_karaoke_updated_at_is_empty_without_rows():
+    assert karaoke_service._updated_at_text([]) == ""
+    assert karaoke_service._updated_at_text([{"updated_at": None}]) == ""

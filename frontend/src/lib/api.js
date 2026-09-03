@@ -7,17 +7,6 @@ export function api(path, options = {}) {
   return fetch(`/api/${String(path).replace(/^\//, "")}`, options);
 }
 
-/* JSON 을 기대하는 호출. 응답이 JSON 이 아니면 예외를 던져 호출한 쪽이 빈 상태를 그린다. */
-export async function apiJson(path, options) {
-  const response = await api(path, options);
-  if (!response.ok) {
-    const error = new Error("요청이 실패했습니다.");
-    error.response = response;
-    throw error;
-  }
-  return response.json();
-}
-
 /* 제보 보내기. 세 화면(검색·노래방·조회수 축하)이 같은 형식을 쓴다.
  * 성공하면 서버가 준 message 를, 실패하면 error 를 그대로 보여 준다. */
 export async function submitReport(path, content, captchaToken) {

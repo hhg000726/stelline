@@ -3,7 +3,7 @@
  * 총공 시간은 펼치기 전에도 보여야 "언제 하는지"를 바로 알 수 있다.
  * 복사 & 새 탭은 예전 index.js 의 copyText 와 같은 순서로 움직인다.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Collapse } from "../../components/Collapse";
 import { EmptyState } from "../../components/EmptyState";
@@ -13,7 +13,7 @@ import { useToast } from "../../context/ToastContext";
 import { api } from "../../lib/api";
 import { copyText } from "../../lib/clipboard";
 import { openExternal } from "../../lib/openExternal";
-import { toArray } from "../../lib/toArray";
+import { useApiList } from "../../lib/useApiList";
 
 function splitList(value) {
   return String(value || "")
@@ -23,25 +23,9 @@ function splitList(value) {
 }
 
 export function TwitsPanel() {
-  const [state, setState] = useState({ status: "loading", items: [] });
+  const state = useApiList("main/twits", { errorLabel: "트윗 데이터 로드 실패:" });
   const [openIndex, setOpenIndex] = useState(null);
   const toast = useToast();
-
-  useEffect(() => {
-    let alive = true;
-    api("main/twits")
-      .then((response) => response.json())
-      .then((data) => {
-        if (alive) setState({ status: "ready", items: toArray(data) });
-      })
-      .catch((error) => {
-        console.error("트윗 데이터 로드 실패:", error);
-        if (alive) setState({ status: "error", items: [] });
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   // 값이 하나도 없으면 칸째 사라진다(예전에도 panel.hidden 이었다).
   if (state.status === "ready" && !state.items.length) return null;

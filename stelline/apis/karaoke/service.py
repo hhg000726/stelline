@@ -32,7 +32,8 @@ def _updated_at_text(rows):
     return (latest + KST_OFFSET).isoformat(sep=" ", timespec="seconds")
 
 
-def _split_members(value):
+def _split_names(value):
+    """쉼표로 이어 둔 이름을 목록으로 나눈다(멤버 이름과 이전 유닛이 같은 형식이다)."""
     return [part.strip() for part in (value or "").split(",") if part.strip()]
 
 
@@ -42,7 +43,7 @@ def _serialize_song(row):
         "title": row["title"],
         "titleAlt": row["title_alt"] or "",
         "artist": row["artist"],
-        "members": _split_members(row["members"]),
+        "members": _split_names(row["members"]),
         "section": row["section"],
         "category": row["category"],
         "tj": row["tj"] or "",
@@ -57,14 +58,14 @@ def _member_list(members, songs):
             {
                 "name": row["name"],
                 "unit": row["unit"] or "",
-                "formerUnits": [part.strip() for part in (row["former_units"] or "").split(",") if part.strip()],
+                "formerUnits": _split_names(row["former_units"]),
             }
             for row in members
         ]
     # 어차피 마지막에 정렬하므로 순서를 지킬 필요가 없다. 리스트 검색(O(n^2)) 대신 집합을 쓴다.
     names = set()
     for row in songs:
-        names.update(_split_members(row["members"]))
+        names.update(_split_names(row["members"]))
     return [{"name": name, "unit": "", "formerUnits": []} for name in sorted(names)]
 
 

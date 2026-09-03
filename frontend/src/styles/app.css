@@ -394,7 +394,6 @@ button[disabled],
  * "닿았다"가 전해진다. (site.css 의 :active 규칙을 이어받아 덮어쓴다.)
  */
 button:active,
-.button:active,
 .btn-primary:active,
 .btn-secondary:active,
 .card.is-link:active,
@@ -417,7 +416,6 @@ button:active,
   .report-collapse .report-panel { transform: none; }
 
   button:active,
-  .button:active,
   .btn-primary:active,
   .btn-secondary:active,
   .card.is-link:active,

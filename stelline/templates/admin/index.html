@@ -691,42 +691,29 @@
       return { form, label: fillForm(form, rowData) };
     }
 
-    function enterEditMode(row) {
+    /* 표의 행을 양식으로 가져온다. 두 가지 뜻이 있다.
+       - 'edit': 그 행을 고친다(서명한 행 토큰을 함께 보낸다).
+       - 'copy': 값만 그대로 가져와 '추가' 모드로 둔다. 저장하면 원래 행은 그대로 있고
+         새 항목이 생긴다. */
+    function enterRowMode(row, mode) {
       const prepared = prepareRow(row);
       if (!prepared) return;
 
       const { form, label } = prepared;
-      form.action = form.dataset.updateAction;
-      form.querySelector('[data-row-token]').value = row.dataset.rowToken || '';
-      form.querySelector('[data-submit-label]').textContent = '수정 저장';
+      const editing = mode === 'edit';
+      form.action = editing ? form.dataset.updateAction : form.dataset.addAction;
+      form.querySelector('[data-row-token]').value = editing ? row.dataset.rowToken || '' : '';
+      form.querySelector('[data-submit-label]').textContent = editing ? '수정 저장' : '새 항목으로 추가';
       form.querySelector('[data-cancel-edit]').hidden = false;
 
       const hint = form.querySelector('[data-edit-hint]');
-      hint.classList.remove('is-copy');
-      hint.textContent = `수정 중: ${label}`;
+      hint.classList.toggle('is-copy', !editing);
+      hint.textContent = editing
+        ? `수정 중: ${label}`
+        : `${label} 복제 — 값을 고쳐 저장하세요. 이름이 같으면 저장되지 않습니다.`;
       hint.hidden = false;
 
-      row.classList.add('is-editing');
-      form.scrollIntoView({ block: 'nearest' });
-    }
-
-    /* 값만 그대로 가져와 '추가' 모드로 둔다. 저장하면 원래 행은 그대로 있고 새 항목이 생긴다. */
-    function enterCopyMode(row) {
-      const prepared = prepareRow(row);
-      if (!prepared) return;
-
-      const { form, label } = prepared;
-      form.action = form.dataset.addAction;
-      form.querySelector('[data-row-token]').value = '';
-      form.querySelector('[data-submit-label]').textContent = '새 항목으로 추가';
-      form.querySelector('[data-cancel-edit]').hidden = false;
-
-      const hint = form.querySelector('[data-edit-hint]');
-      hint.classList.add('is-copy');
-      hint.textContent = `${label} 복제 — 값을 고쳐 저장하세요. 이름이 같으면 저장되지 않습니다.`;
-      hint.hidden = false;
-
-      row.classList.add('is-copying');
+      row.classList.add(editing ? 'is-editing' : 'is-copying');
       form.scrollIntoView({ block: 'nearest' });
     }
 
@@ -740,10 +727,10 @@
       if (copyButton) {
         copyButton.addEventListener('click', (event) => {
           event.stopPropagation();
-          enterCopyMode(row);
+          enterRowMode(row, 'copy');
         });
       }
-      row.addEventListener('click', () => enterEditMode(row));
+      row.addEventListener('click', () => enterRowMode(row, 'edit'));
     });
 
     document.querySelectorAll('[data-cancel-edit]').forEach((button) => {

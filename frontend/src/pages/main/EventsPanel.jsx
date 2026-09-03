@@ -3,32 +3,16 @@
  * 바깥 사이트로 나가는 자리는 버튼이 아니라 링크로 둔다. 그래야 새 탭으로 열거나
  * 주소를 미리 보는, 링크라면 당연히 되는 일들이 그대로 된다.
  */
-import { useEffect, useState } from "react";
-
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonRows } from "../../components/Loading";
 import { SectionPanel } from "../../components/SectionPanel";
-import { api } from "../../lib/api";
-import { toArray } from "../../lib/toArray";
+import { useApiList } from "../../lib/useApiList";
 
 export function EventsPanel() {
-  const [state, setState] = useState({ status: "loading", items: [] });
-
-  useEffect(() => {
-    let alive = true;
-    api("main/events", { method: "GET", headers: { "Content-Type": "application/json" } })
-      .then((response) => response.json())
-      .then((data) => {
-        if (alive) setState({ status: "ready", items: toArray(data) });
-      })
-      .catch((error) => {
-        console.error("이벤트 API 요청 중 오류 발생:", error);
-        if (alive) setState({ status: "error", items: [] });
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const state = useApiList("main/events", {
+    options: { method: "GET", headers: { "Content-Type": "application/json" } },
+    errorLabel: "이벤트 API 요청 중 오류 발생:",
+  });
 
   if (state.status === "ready" && !state.items.length) return null;
 

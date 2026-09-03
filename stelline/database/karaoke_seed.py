@@ -45,9 +45,6 @@ CATEGORIES = {
     "cover": "cover", "커버": "cover",
 }
 
-SECTION_LABELS = {"group": "단체", "unit": "유닛", "collab": "콜라보", "gift": "기프트", "solo": "개인"}
-CATEGORY_LABELS = {"original": "오리지널", "cover": "커버"}
-
 # 멤버 마스터. 공개 화면 필터 칩의 순서와 유닛 묶음을 결정한다.
 #
 # 유닛은 고정이 아니다. 2025-09-20 개편으로 미스틱이 사라지고 에버리스가 생겼으며,

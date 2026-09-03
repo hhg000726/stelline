@@ -295,8 +295,7 @@ a { color: inherit; text-decoration: none; }
 .meta-text,
 .list-note,
 .section-panel p,
-.card p,
-.method p {
+.card p {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
@@ -367,8 +366,7 @@ a { color: inherit; text-decoration: none; }
 
 .section-header h2,
 .section-panel h2,
-.stage h3,
-.method h2 {
+.stage h3 {
   margin: 0;
   color: var(--text);
   text-align: left;
@@ -604,7 +602,6 @@ button.report-toggle.is-open {
 /* ---------- 버튼 ---------- */
 
 button,
-.button,
 .btn-primary,
 .btn-secondary {
   display: inline-flex;
@@ -623,7 +620,6 @@ button,
 }
 
 button:hover,
-.button:hover,
 .btn-primary:hover,
 .btn-secondary:hover {
   transform: translateY(-1px);
@@ -641,7 +637,6 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 }
 
 button:focus-visible,
-.button:focus-visible,
 a.btn-primary:focus-visible,
 a.btn-secondary:focus-visible,
 .query-chip:focus-visible {
@@ -1015,19 +1010,6 @@ button svg {
 
 /* ---------- 단계 안내(검색 정상화 방법) ---------- */
 
-.method,
-.stage {
-  width: 100%;
-  border-radius: var(--radius-card);
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-}
-
-.method {
-  margin: 14px 0 10px;
-  padding: 10px 14px;
-}
-
 .step-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
@@ -1038,8 +1020,12 @@ button svg {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
   margin: 0;
   padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface-raised);
   box-shadow: var(--shadow-sm);
 }
 
@@ -1314,8 +1300,6 @@ button svg {
 /* 아래 여백은 넉넉히 둔다. 이 칸은 접히느라 넘치는 부분을 잘라내므로(collapse-inner),
  * 여백이 없으면 안에 있는 복사 카드가 손이 닿아 떠오를 때 그림자가 밑에서 잘린다. */
 .list-item-content { padding: 8px 0 10px; }
-
-.list-item-content[hidden] { display: none; }
 
 .list-item-body {
   display: grid;

@@ -94,11 +94,4 @@
         if (query.addEventListener) query.addEventListener("change", onChange);
         else if (query.addListener) query.addListener(onChange);
     }
-
-    // 화면별 스크립트에서 테마를 읽거나 바꿔야 할 때 쓴다.
-    window.StellineTheme = {
-        current: function () { return current; },
-        isExplicit: function () { return Boolean(chosen); },
-        set: function (theme) { apply(theme, true); },
-    };
 })();

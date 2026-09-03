@@ -277,24 +277,60 @@ def load_table(connection, table_name):
         return cursor.fetchall()
 
 
-def nullable_columns(connection, table_name):
+def nullable_columns(cursor, table_name):
     """비워 두면 NULL로 저장해도 되는 열 이름을 모은다.
 
     NOT NULL 열은 빈 칸으로 지울 수 없으므로 수정 시 기존 값을 유지한다.
     """
-    with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT COLUMN_NAME, IS_NULLABLE FROM information_schema.COLUMNS"
-            " WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
-            (table_name,),
-        )
-        return {row["COLUMN_NAME"] for row in cursor.fetchall() if row["IS_NULLABLE"] == "YES"}
+    cursor.execute(
+        "SELECT COLUMN_NAME, IS_NULLABLE FROM information_schema.COLUMNS"
+        " WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+        (table_name,),
+    )
+    return {row["COLUMN_NAME"] for row in cursor.fetchall() if row["IS_NULLABLE"] == "YES"}
 
 
-def row_conditions(definition, row):
-    """수정·삭제 대상 행을 특정하는 WHERE 조건을 만든다."""
+def content_table(table_name):
+    """관리자가 고칠 수 있는 표만 통과시킨다."""
+    definition = CONTENT_TABLES.get(table_name)
+    if definition is None:
+        abort(404)
+    return definition
+
+
+def target_conditions(definition, token):
+    """서명된 행 토큰에서 수정·삭제 대상을 특정하는 WHERE 조건을 만든다."""
+    row = load_row_token(token)
     allowed_columns = set(definition.get("key_fields", definition["fields"]))
     return [(key, value) for key, value in row.items() if key in allowed_columns]
+
+
+def where_clause(conditions):
+    return " AND ".join(f"`{key}` <=> %s" for key, _ in conditions), [value for _, value in conditions]
+
+
+def apply_write(table_name, log_label, failure_message, write):
+    """관리자 쓰기 작업 하나를 실행하고 결과를 알린다.
+
+    `write(cursor)`는 사용자에게 보여 줄 (문구, 종류)를 돌려준다. 어디서 실패하든
+    롤백하고 같은 안내를 띄우므로, 라우트마다 뒷정리를 다시 적지 않는다.
+    """
+    connection = None
+    try:
+        connection = get_connection()
+        with connection.cursor() as cursor:
+            message = write(cursor)
+        connection.commit()
+    except Exception:
+        logging.exception("%s: %s", log_label, table_name)
+        if connection is not None:
+            connection.rollback()
+        message = (failure_message, "error")
+    finally:
+        if connection is not None:
+            connection.close()
+    flash(*message)
+    return redirect(url_for("admin.admin_index"))
 
 
 @admin_bp.route("/")
@@ -364,41 +400,32 @@ def import_snapshot_from_admin_html():
 @login_required
 def add_row(table_name):
     require_csrf()
-    definition = CONTENT_TABLES.get(table_name)
-    if definition is None:
-        abort(404)
+    definition = content_table(table_name)
     # 빈 칸은 INSERT 대상에서 빼서 열의 기본값이 그대로 쓰이게 한다.
     entries = [(field, value) for field in definition["fields"] if (value := request.form.get(field, "").strip())]
     if not entries:
         flash("저장할 내용을 입력하세요.", "error")
         return redirect(url_for("admin.admin_index"))
 
-    connection = None
-    try:
-        connection = get_connection()
+    def write(cursor):
         # 순서 열을 비워 두면 열의 기본값(0)이 들어가 목록 맨 앞에 끼어든다. 맨 뒤가 자연스럽다.
         order_field = definition.get("order_field")
         if order_field and all(field != order_field for field, _ in entries):
-            with connection.cursor() as cursor:
-                cursor.execute(f"SELECT COALESCE(MAX(`{order_field}`), -1) + 1 AS next_order FROM `{table_name}`")
-                entries.append((order_field, cursor.fetchone()["next_order"]))
+            cursor.execute(f"SELECT COALESCE(MAX(`{order_field}`), -1) + 1 AS next_order FROM `{table_name}`")
+            entries.append((order_field, cursor.fetchone()["next_order"]))
         columns = ", ".join(f"`{field}`" for field, _ in entries)
-        with connection.cursor() as cursor:
-            cursor.execute(
-                f"INSERT INTO `{table_name}` ({columns}) VALUES ({', '.join(['%s'] * len(entries))})",
-                [value for _, value in entries],
-            )
-        connection.commit()
-        flash(f"{definition['title']} 항목을 추가했습니다.", "success")
-    except Exception:
-        logging.exception("관리자 데이터 추가 실패: %s", table_name)
-        if connection:
-            connection.rollback()
-        flash("저장하지 못했습니다. 필수 항목과 데이터 형식을 확인하세요.", "error")
-    finally:
-        if connection:
-            connection.close()
-    return redirect(url_for("admin.admin_index"))
+        cursor.execute(
+            f"INSERT INTO `{table_name}` ({columns}) VALUES ({', '.join(['%s'] * len(entries))})",
+            [value for _, value in entries],
+        )
+        return f"{definition['title']} 항목을 추가했습니다.", "success"
+
+    return apply_write(
+        table_name,
+        "관리자 데이터 추가 실패",
+        "저장하지 못했습니다. 필수 항목과 데이터 형식을 확인하세요.",
+        write,
+    )
 
 
 @admin_bp.route("/data/<table_name>/update", methods=["POST"])
@@ -409,18 +436,13 @@ def update_row(table_name):
     대상 행은 서명된 `row_token`으로만 지정할 수 있어 임의의 행을 건드릴 수 없다.
     """
     require_csrf()
-    definition = CONTENT_TABLES.get(table_name)
-    if definition is None:
-        abort(404)
-    row = load_row_token(request.form.get("row_token", ""))
-    conditions = row_conditions(definition, row)
+    definition = content_table(table_name)
+    conditions = target_conditions(definition, request.form.get("row_token", ""))
     if not conditions:
         abort(400, "수정할 행을 특정할 수 없습니다.")
 
-    connection = None
-    try:
-        connection = get_connection()
-        nullable = nullable_columns(connection, table_name)
+    def write(cursor):
+        nullable = nullable_columns(cursor, table_name)
         # 빈 칸은 값을 지우겠다는 뜻이지만, NOT NULL 열은 지울 수 없어 기존 값을 유지한다.
         assignments = []
         for field in definition["fields"]:
@@ -430,64 +452,44 @@ def update_row(table_name):
             elif field in nullable:
                 assignments.append((field, None))
         if not assignments:
-            flash("수정할 내용을 입력하세요.", "error")
-            return redirect(url_for("admin.admin_index"))
+            return "수정할 내용을 입력하세요.", "error"
+
+        where, condition_values = where_clause(conditions)
+        # 값이 그대로면 UPDATE의 반영 행 수가 0이므로, 대상 존재 여부는 따로 확인한다.
+        cursor.execute(f"SELECT COUNT(*) AS matched FROM `{table_name}` WHERE {where}", condition_values)
+        if not cursor.fetchone()["matched"]:
+            return "수정할 항목을 찾지 못했습니다. 목록을 새로고침한 뒤 다시 시도하세요.", "error"
 
         setters = ", ".join(f"`{field}` = %s" for field, _ in assignments)
-        where = " AND ".join(f"`{key}` <=> %s" for key, _ in conditions)
-        condition_values = [value for _, value in conditions]
-        with connection.cursor() as cursor:
-            # 값이 그대로면 UPDATE의 반영 행 수가 0이므로, 대상 존재 여부는 따로 확인한다.
-            cursor.execute(f"SELECT COUNT(*) AS matched FROM `{table_name}` WHERE {where}", condition_values)
-            if not cursor.fetchone()["matched"]:
-                flash("수정할 항목을 찾지 못했습니다. 목록을 새로고침한 뒤 다시 시도하세요.", "error")
-                return redirect(url_for("admin.admin_index"))
-            cursor.execute(
-                f"UPDATE `{table_name}` SET {setters} WHERE {where}",
-                [value for _, value in assignments] + condition_values,
-            )
-        connection.commit()
-        flash(f"{definition['title']} 항목을 수정했습니다.", "success")
-    except Exception:
-        logging.exception("관리자 데이터 수정 실패: %s", table_name)
-        if connection:
-            connection.rollback()
-        flash("수정하지 못했습니다. 값의 형식과 중복 여부를 확인하세요.", "error")
-    finally:
-        if connection:
-            connection.close()
-    return redirect(url_for("admin.admin_index"))
+        cursor.execute(
+            f"UPDATE `{table_name}` SET {setters} WHERE {where}",
+            [value for _, value in assignments] + condition_values,
+        )
+        return f"{definition['title']} 항목을 수정했습니다.", "success"
+
+    return apply_write(
+        table_name,
+        "관리자 데이터 수정 실패",
+        "수정하지 못했습니다. 값의 형식과 중복 여부를 확인하세요.",
+        write,
+    )
 
 
 @admin_bp.route("/data/<table_name>/delete", methods=["POST"])
 @login_required
 def delete_row(table_name):
     require_csrf()
-    if table_name not in CONTENT_TABLES:
-        abort(404)
-    definition = CONTENT_TABLES[table_name]
-    row = load_row_token(request.form.get("row_token", ""))
-    conditions = row_conditions(definition, row)
+    definition = content_table(table_name)
+    conditions = target_conditions(definition, request.form.get("row_token", ""))
     if not conditions:
         abort(400)
 
-    connection = None
-    try:
-        connection = get_connection()
-        where = " AND ".join(f"`{key}` <=> %s" for key, _ in conditions)
-        with connection.cursor() as cursor:
-            cursor.execute(f"DELETE FROM `{table_name}` WHERE {where}", [value for _, value in conditions])
-        connection.commit()
-        flash("항목을 삭제했습니다.", "success")
-    except Exception:
-        logging.exception("관리자 데이터 삭제 실패: %s", table_name)
-        if connection:
-            connection.rollback()
-        flash("삭제하지 못했습니다.", "error")
-    finally:
-        if connection:
-            connection.close()
-    return redirect(url_for("admin.admin_index"))
+    def write(cursor):
+        where, condition_values = where_clause(conditions)
+        cursor.execute(f"DELETE FROM `{table_name}` WHERE {where}", condition_values)
+        return "항목을 삭제했습니다.", "success"
+
+    return apply_write(table_name, "관리자 데이터 삭제 실패", "삭제하지 못했습니다.", write)
 
 
 @admin_bp.route("/karaoke/import", methods=["POST"])

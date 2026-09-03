@@ -6,7 +6,7 @@ from flask import jsonify
 from stelline.config import NCP_CLIENT_ID, NCP_CLIENT_SECRET
 from stelline.database.connection import database_cursor
 
-# 주소 → 위경도 변환
+
 def geocode_location(address, client_id, client_secret):
     try:
         headers = {
@@ -19,10 +19,9 @@ def geocode_location(address, client_id, client_secret):
             "https://maps.apigw.ntruss.com/map-geocode/v2/geocode",
             headers=headers,
             params=params,
-            timeout=5  # ⏱️ 요청 제한 시간 설정 (옵션)
+            timeout=5,
         )
-
-        res.raise_for_status()  # HTTP 에러 발생 시 예외 던짐
+        res.raise_for_status()
 
         data = res.json()
         addresses = data.get("addresses", [])
@@ -34,12 +33,12 @@ def geocode_location(address, client_id, client_secret):
         logging.warning("[Geocode] 주소 결과 없음: %s", address)
         return None, None
 
-    except requests.exceptions.RequestException as e:
-        logging.error("[Geocode] 요청 실패: %s - %s", address, str(e))
-    except (ValueError, KeyError, TypeError) as e:
-        logging.error("[Geocode] 응답 파싱 실패: %s - %s", address, str(e))
-    except Exception as e:
-        logging.error("[Geocode] 알 수 없는 에러: %s - %s", address, str(e))
+    except requests.exceptions.RequestException as error:
+        logging.error("[Geocode] 요청 실패: %s - %s", address, error)
+    except (ValueError, KeyError, TypeError) as error:
+        logging.error("[Geocode] 응답 파싱 실패: %s - %s", address, error)
+    except Exception as error:
+        logging.error("[Geocode] 알 수 없는 에러: %s - %s", address, error)
 
     return None, None
 

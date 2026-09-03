@@ -3,15 +3,13 @@
  * 최근 24시간 안에 달성한 기록을 카드로 보여 주고, 브라우저 알림을 켜고 끈다.
  * 목록 정렬(달성 시각 내림차순)과 배지 규칙은 예전 congratulation.js 그대로다.
  */
-import { useEffect, useState } from "react";
-
 import { ContentText } from "../components/ContentText";
 import { EmptyState } from "../components/EmptyState";
 import { Icon } from "../components/Icon";
 import { SkeletonCards } from "../components/Loading";
 import { ReportPanel } from "../components/ReportPanel";
 import { useContentItem } from "../context/ContentContext";
-import { api } from "../lib/api";
+import { useApiList } from "../lib/useApiList";
 import { usePageMeta } from "../lib/usePageMeta";
 import { useNotifications } from "./congratulation/useNotifications";
 
@@ -28,6 +26,13 @@ export function milestoneTier(tenThousands) {
   return "";
 }
 
+/* 최근에 달성한 것부터 위에 둔다. */
+function byNewest(data) {
+  const items = Array.isArray(data) ? data.slice() : [];
+  items.sort((a, b) => new Date(b.counted_time) - new Date(a.counted_time));
+  return items;
+}
+
 function elapsedText(countedTime) {
   const diff = Date.now() - new Date(countedTime).getTime();
   const hours = Math.floor(diff / 3600000);
@@ -40,28 +45,12 @@ export default function CongratulationPage() {
     description: "스텔라이브 영상의 조회수 달성 기록을 확인하고, 앱 설치 없이 브라우저 알림을 받아보세요.",
   });
 
-  const [records, setRecords] = useState({ status: "loading", items: [] });
+  const records = useApiList("congratulation/congratulations", {
+    errorLabel: "Error fetching songs:",
+    select: byNewest,
+  });
   const notifications = useNotifications();
   const prompt = useContentItem("congratulation_notify_prompt");
-
-  useEffect(() => {
-    let alive = true;
-    api("congratulation/congratulations")
-      .then((response) => response.json())
-      .then((data) => {
-        if (!alive) return;
-        const items = Array.isArray(data) ? data.slice() : [];
-        items.sort((a, b) => new Date(b.counted_time) - new Date(a.counted_time));
-        setRecords({ status: "ready", items });
-      })
-      .catch((error) => {
-        console.error("Error fetching songs:", error);
-        if (alive) setRecords({ status: "error", items: [] });
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   // 상태 줄이 나올 때는 안내 문구가 그 자리를 비켜 준다(예전 is-status-replaced 와 같다).
   const statusShown = Boolean(notifications.status.text || notifications.extraNote);

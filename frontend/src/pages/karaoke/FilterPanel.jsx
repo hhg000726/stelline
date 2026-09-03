@@ -34,7 +34,7 @@ export function FilterPanel({ hidden, members, songs, filters, dispatch }) {
   const usedSections = SECTION_ORDER.filter((section) => songs.some((song) => song.section === section));
 
   return (
-    <Collapse id="filter-panel" open={!hidden}>
+    <Collapse id="filter-panel" className="kara-filter-collapse" open={!hidden}>
       <div className="kara-filters">
         <div className="kara-filter-group is-wide">
           <h3>멤버</h3>

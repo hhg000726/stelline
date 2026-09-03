@@ -8,14 +8,40 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  display: grid;
-  /* 접힌 필터 칸도 자리를 차지하는 한 칸이라, grid gap 을 두면 필터를 열지 않아도
-   * 도구 모음 아래에 빈 줄이 남는다. 간격은 칸마다 직접 준다. */
-  gap: 0;
+  /* 칸 사이 간격은 각자의 margin 이 맡는다. 여기에 gap 을 두면 접어 둔 필터 칸
+   * 자리에도 빈 줄이 남는다. */
+  display: flex;
+  flex-direction: column;
+  /* 화면 위에 붙어 있는 칸이라, 화면보다 길어지면 밖으로 밀려난 아래쪽을 아무리
+   * 굴려도 볼 수 없다. 좁은 화면에서 필터를 펼치면 실제로 그렇게 되어, 구분·종류·
+   * 보기 옵션과 '필터 초기화'에 닿을 방법이 없었다. 키를 화면만큼으로 묶고,
+   * 넘치는 만큼은 아래 필터 칸 안에서 굴린다.
+   * 아래에 붙는 '부를 곡' 바는 제 키를 --floating-offset 으로 알려 주므로,
+   * 그만큼을 빼 두면 필터의 마지막 줄이 그 바에 가리지 않는다. */
+  max-height: calc(100vh - var(--floating-offset, 0px));
+  max-height: calc(100dvh - var(--floating-offset, 0px));
   margin: 14px calc(var(--shell-padding) * -1) 12px;
   padding: 10px var(--shell-padding);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
+}
+
+/* 검색칸과 도구 모음은 언제나 제 키를 지킨다. 줄어드는 것은 필터 칸뿐이다. */
+.kara-search,
+.kara-toolbar {
+  flex-shrink: 0;
+}
+
+/* 자리가 모자랄 때 줄어드는 칸. min-height: 0 이 없으면 flex 항목이 제 내용보다
+ * 작아지지 않아, 묶어 둔 키를 그대로 뚫고 나간다. */
+.kara-filter-collapse {
+  min-height: 0;
+}
+
+/* 줄어든 만큼은 잘려 나가는 자리(collapse-inner 의 overflow: hidden)라, 세로만
+ * 굴릴 수 있게 바꾼다. 가로는 그대로 잘라 두어야 여닫는 동안 옆이 비어 보이지 않는다. */
+.kara-filter-collapse .collapse-inner {
+  overflow-y: auto;
 }
 
 .kara-search {
@@ -509,11 +535,16 @@ button.num-btn:active {
   overflow-y: auto;
 }
 
+/* li 를 flex 로 두면 번호 표시가 사라진다. 예전에는 그 자리(padding-left)만 비워 두어,
+ * 목록만 까닭 없이 안으로 들어가고 아래 버튼 줄과 왼쪽이 어긋나 보였다.
+ * 자리를 도로 없애고, 번호는 직접 붙인다(복사한 글의 차례와 같다). */
 .setlist-items {
   display: grid;
   gap: 5px;
   margin: 0 0 10px;
-  padding-left: 20px;
+  padding-left: 0;
+  list-style: none;
+  counter-reset: setlist;
 }
 
 .setlist-item {
@@ -526,6 +557,7 @@ button.num-btn:active {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   background: var(--surface);
+  counter-increment: setlist;
 }
 
 .setlist-name {
@@ -534,6 +566,13 @@ button.num-btn:active {
   gap: 8px;
   align-items: baseline;
   min-width: 0;
+}
+
+.setlist-name::before {
+  content: counter(setlist) ".";
+  color: var(--muted-soft);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .setlist-name span {
@@ -702,4 +741,20 @@ button.num-btn:active {
   .kara-chip-unit {
     min-width: 100%;
   }
+
+  /* 한 줄에 다 들어가지 않아 접히는데, 접히는 자리가 곡마다 달라 위·아래·빼기 버튼이
+   * 어떤 줄에서는 왼쪽에 어떤 줄에서는 오른쪽에 섰다. 곡 카드와 같은 방식으로
+   * 이름은 윗줄을 통째로, 번호와 버튼은 아랫줄 양 끝에 세운다. */
+  .setlist-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name name"
+      "numbers buttons";
+    align-items: center;
+  }
+
+  .setlist-name { grid-area: name; }
+  .setlist-numbers { grid-area: numbers; }
+  .setlist-buttons { grid-area: buttons; }
 }

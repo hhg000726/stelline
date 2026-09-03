@@ -900,6 +900,17 @@ button svg {
 
 .card.is-link .info { gap: 6px; }
 
+/* 카드 아래에 붙는 줄. 제목이 한 줄인 카드와 세 줄인 카드가 나란히 서면,
+ * 이 줄이 제목 바로 밑에 떠 있어 카드마다 다른 높이에서 읽힌다.
+ * (조회수 축하 카드처럼 안내가 .meta 줄 안에 들어 있을 때 그랬다.) */
+.card.is-link .meta {
+  margin-top: auto;
+}
+
+.card.is-link .meta .card-action {
+  margin-top: 0;
+}
+
 .card.is-link .card-action {
   display: inline-flex;
   gap: 6px;

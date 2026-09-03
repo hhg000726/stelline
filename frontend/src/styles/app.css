@@ -10,9 +10,14 @@
  *
  * 화면 전체를 한 덩어리로 밀어 올리면 "무언가 바뀌었다"까지만 전해진다. 칸을 위에서부터
  * 아주 조금씩 늦춰 올리면 읽는 순서(제목 → 목록 → 참고)가 그대로 눈에 들어온다.
+ *
+ * 채우기(fill)는 backwards 다. both 로 두면 페이드가 끝난 뒤에도 '투명도를 다루는 중'인
+ * 상태가 남아 이 칸이 쌓임 맥락(stacking context)을 만든다. 그러면 안에서 겹쳐 뜨는
+ * 창(랜덤 한 곡·그림 크게 보기)의 z-index 가 이 칸 안에 갇혀, 바깥에 떠 있는 다크 모드
+ * 버튼이 어두워진 배경 위로 홀로 떠 보였다.
  */
 .route-view {
-  animation: route-enter 0.18s ease both;
+  animation: route-enter 0.18s ease backwards;
 }
 
 @keyframes route-enter {

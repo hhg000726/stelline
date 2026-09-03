@@ -61,6 +61,7 @@ export default function KaraokePage() {
   const [pick, setPick] = useState(null);
 
   const searchField = useRef(null);
+  const controlsRef = useRef(null);
   const appliedHash = useRef("");
 
   /* ---------- 곡 목록 ----------
@@ -302,6 +303,27 @@ export default function KaraokePage() {
 
   const filterCount = activeFilterCount(filters);
 
+  /* 필터를 펼치면 도구 모음 칸이 화면 높이만큼 길어진다. 화면 위쪽에서 열면 그 아래가
+   * 화면 밖으로 나가, 정작 펼친 필터가 거의 보이지 않는다. 그럴 때만 칸을 화면 맨 위로
+   * 올려 붙인다(이미 위에 붙어 있거나 다 보이는 자리라면 그대로 둔다). */
+  const toggleFilter = useCallback(() => {
+    setFilterOpen((prev) => !prev);
+    if (filterOpen) return;
+
+    const node = controlsRef.current;
+    // 접혀 있어도 필터 칸 자체는 제 높이를 갖고 있어, 펼친 뒤의 크기를 미리 알 수 있다.
+    const panel = node?.querySelector(".kara-filters");
+    if (!node || !panel) return;
+
+    const { top, height } = node.getBoundingClientRect();
+    const hidden = top + height + panel.offsetHeight - window.innerHeight;
+    if (top <= 0 || hidden <= 0) return;
+    window.scrollBy({
+      top: Math.min(top, hidden),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
+  }, [filterOpen]);
+
   return (
     <>
       <section className="page-shell">
@@ -338,7 +360,7 @@ export default function KaraokePage() {
           />
         </div>
 
-        <div className="kara-controls">
+        <div className="kara-controls" ref={controlsRef}>
           <div className="kara-search">
             <svg
               className="kara-search-icon"
@@ -421,7 +443,7 @@ export default function KaraokePage() {
               className="kara-chip-button"
               type="button"
               aria-expanded={filterOpen}
-              onClick={() => setFilterOpen((prev) => !prev)}
+              onClick={toggleFilter}
             >
               필터{" "}
               <span id="filter-count" className="kara-badge" hidden={filterCount === 0}>

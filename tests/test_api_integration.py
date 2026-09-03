@@ -4,8 +4,6 @@ import time
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
-import pytest
-
 from stelline.apis import reports
 from tests.conftest import requires_db
 

@@ -101,21 +101,24 @@ def load_overrides():
         return {row["content_key"]: row for row in cursor.fetchall()}
 
 
+def _from_default(item):
+    """코드에 적어 둔 기본값으로 답한다. 기본값이 비면 그 자리는 화면에서 사라진다."""
+    value = item.get("default") or ""
+    return {"type": item["type"], "value": value, "hidden": not value, "source": "default"}
+
+
 def _resolve(key, item, override):
     """항목 하나의 최종 표시값을 정한다."""
-    default = item.get("default")
     if override is None:
         # 아직 손대지 않은 항목. HTML에 적힌 값과 같은 기본값을 쓴다.
-        value = default if default is not None else ""
-        return {"type": item["type"], "value": value, "hidden": not value, "source": "default"}
+        return _from_default(item)
     if override["cleared"]:
         return {"type": item["type"], "value": "", "hidden": True, "source": "cleared"}
 
     if item["type"] == IMAGE:
         if not override["image_mime"]:
             # 그림이 없는데 비움 표시도 없다면 데이터가 어긋난 것이다. 기본값으로 돌아간다.
-            value = default or ""
-            return {"type": IMAGE, "value": value, "hidden": not value, "source": "default"}
+            return _from_default(item)
         return {
             "type": IMAGE,
             "value": f"/api/content/image/{key}?v={_cache_tag(override['updated_at'])}",
@@ -128,8 +131,7 @@ def _resolve(key, item, override):
     value = override["text_value"] or ""
     if not value:
         # 빈 문자열이 비움 표시 없이 남아 있으면 기본값으로 되돌린다(빈 화면 방지).
-        value = default or ""
-        return {"type": TEXT, "value": value, "hidden": not value, "source": "default"}
+        return _from_default(item)
     return {"type": TEXT, "value": value, "hidden": False, "source": "custom"}
 
 

@@ -112,11 +112,12 @@ def _resolve_match(query, video_id, video_ids, song_risk):
     if video_id in video_ids:
         update_song_risk(query, max(song_risk - 1, 0))
         return True
-    update_song_risk(query, 28)
+    update_song_risk(query, MAX_RISK)
     return False
 
 
 def crawl_search_results_for_missing_videos(songs):
+    """검색 결과에 여전히 없는 곡만 돌려준다. 크롤링이 막히면 받은 목록을 그대로 돌려준다."""
     not_searched = []
     base_url = "https://www.youtube.com/results"
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -163,9 +164,9 @@ def crawl_search_results_for_missing_videos(songs):
 
         except requests.RequestException as exc:
             logging.error("크롤링 실패: %s", exc)
-            return {"all_songs": songs, "searched_time": time.time()}
+            return songs
 
-    return {"all_songs": not_searched, "searched_time": time.time()}
+    return not_searched
 
 
 def select_search_targets(song_infos):
@@ -214,16 +215,11 @@ def search_unverified_songs(by_admin=False):
     logging.info("[1차 검사 시작] risk_zero_songs=%s, search_targets=%s", len(risk_zero_songs), len(search_targets))
 
     while remaining_quotes > len(not_searched) + 1:
-        song = None
-
         if search_targets:
             song = search_targets.pop(0)
-        else:
-            if not risk_zero_songs:
-                break
+        elif risk_zero_songs:
             song = risk_zero_songs.pop(random.randrange(len(risk_zero_songs)))
-
-        if not song:
+        else:
             break
 
         time.sleep(20)
@@ -279,7 +275,7 @@ def search_unverified_songs(by_admin=False):
 
     logging.info("[2차 검사 종료] remainingQuotes=%s, not_searched=%s", remaining_quotes, len(not_searched))
 
-    not_searched = crawl_search_results_for_missing_videos(not_searched)["all_songs"]
+    not_searched = crawl_search_results_for_missing_videos(not_searched)
     logging.info("[최종 결과] 총 실패곡=%s", len(not_searched))
 
     return {"all_songs": not_searched, "searched_time": time.time(), "isQuotaExceeded": is_quota_exceeded}
@@ -347,14 +343,11 @@ def start_delayed_search(delay):
     run_search_cycle()
 
 
-def schedule_initial_search():
+def start_search_scheduler():
+    """다음 검색 주기가 시작될 때까지 기다렸다가 반복 검색을 시작한다."""
+    logging.info("검색 스케줄러 초기화 시작")
     delay = max(5, SEARCH_API_INTERVAL - time.time() % SEARCH_API_INTERVAL)
     hours, remainder = divmod(int(delay), 3600)
     minutes, seconds = divmod(remainder, 60)
     logging.info("첫 검색을 %d:%02d:%02d 만큼 지연..", hours, minutes, seconds)
     threading.Thread(target=start_delayed_search, daemon=True, args=(delay,)).start()
-
-
-def start_search_scheduler():
-    logging.info("검색 스케줄러 초기화 시작")
-    schedule_initial_search()

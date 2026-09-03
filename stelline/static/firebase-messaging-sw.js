@@ -25,9 +25,6 @@ const messaging = firebase.messaging();
 /**
  * 백그라운드 메시지 수신 처리 (웹사이트가 닫혀 있거나 브라우저 백그라운드 상태일 때)
  */
-/**
- * 백그라운드 메시지 수신 처리 (웹사이트가 닫혀 있거나 브라우저 백그라운드 상태일 때)
- */
 messaging.onBackgroundMessage(function(payload) {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
 

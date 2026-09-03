@@ -3,14 +3,14 @@
  * 순위는 펼치지 않아도 보이는 편이 훨씬 쓸모 있어 접힌 줄에 함께 적는다.
  * 순위마다 할 말은 하나뿐이라, 예전처럼 빈 <p> 를 세 개 깔지 않고 그 하나만 그린다.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Collapse } from "../../components/Collapse";
 import { EmptyState } from "../../components/EmptyState";
 import { SkeletonRows } from "../../components/Loading";
 import { SectionPanel } from "../../components/SectionPanel";
-import { api } from "../../lib/api";
 import { toArray } from "../../lib/toArray";
+import { useApiList } from "../../lib/useApiList";
 
 /* 윗등수와의 차이 한 줄. */
 function rankGapText(rank, diffs = {}) {
@@ -22,33 +22,20 @@ function rankGapText(rank, diffs = {}) {
   return "";
 }
 
-export function BugsPanel() {
-  const [state, setState] = useState({ status: "loading", items: [] });
-  const [openKey, setOpenKey] = useState(null);
+/* 이름이 행 안에 없으면 객체의 키를 대신 쓴다(예전 index.js 와 같다). */
+function namedEntries(data) {
+  const names = data && typeof data === "object" && !Array.isArray(data) ? Object.keys(data) : [];
+  return toArray(data)
+    .filter(Boolean)
+    .map((entry, index) => ({
+      ...entry,
+      name: entry.name || names[index] || `대상${index + 1}`,
+    }));
+}
 
-  useEffect(() => {
-    let alive = true;
-    api("bugs/rank")
-      .then((response) => response.json())
-      .then((data) => {
-        // 이름이 행 안에 없으면 객체의 키를 대신 쓴다(예전 index.js 와 같다).
-        const names = data && typeof data === "object" && !Array.isArray(data) ? Object.keys(data) : [];
-        const items = toArray(data)
-          .filter(Boolean)
-          .map((entry, index) => ({
-            ...entry,
-            name: entry.name || names[index] || `대상${index + 1}`,
-          }));
-        if (alive) setState({ status: "ready", items });
-      })
-      .catch((error) => {
-        console.error("벅스 데이터 로드 실패:", error);
-        if (alive) setState({ status: "error", items: [] });
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+export function BugsPanel() {
+  const state = useApiList("bugs/rank", { errorLabel: "벅스 데이터 로드 실패:", select: namedEntries });
+  const [openKey, setOpenKey] = useState(null);
 
   if (state.status === "ready" && !state.items.length) return null;
 

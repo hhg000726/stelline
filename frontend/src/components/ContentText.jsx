@@ -35,8 +35,3 @@ export function ContentText({ contentKey, as: Tag = "p", className, list = false
     </Tag>
   );
 }
-
-/* 문구가 비었는지만 알고 싶은 자리(칸 전체를 접을지 정할 때)에서 쓴다. */
-export function useContentVisible(contentKey) {
-  return !useContentItem(contentKey).hidden;
-}

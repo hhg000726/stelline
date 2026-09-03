@@ -21,6 +21,7 @@ import { useToast } from "../context/ToastContext";
 import { api } from "../lib/api";
 import { copyText } from "../lib/clipboard";
 import { openExternal } from "../lib/openExternal";
+import { useApiList } from "../lib/useApiList";
 import { usePageMeta } from "../lib/usePageMeta";
 import { StepGrid } from "./search/StepGrid";
 import "../styles/search.css";
@@ -71,7 +72,10 @@ export default function SearchPage() {
 
   const toast = useToast();
   const [songs, setSongs] = useState({ status: "loading", current: [], recent: [], updated: "" });
-  const [queries, setQueries] = useState({ status: "loading", items: [] });
+  const queries = useApiList("search/songs", {
+    errorLabel: "JSON을 불러오는 중 오류 발생:",
+    select: (data) => (Array.isArray(data) ? data : []),
+  });
   const [filter, setFilter] = useState("");
   const [songTab, setSongTab] = useState("current");
   const [methodTab, setMethodTab] = useState(defaultMethodTab);
@@ -93,22 +97,6 @@ export default function SearchPage() {
       .catch((error) => {
         console.error("Error fetching songs:", error);
         if (alive) setSongs({ status: "error", current: [], recent: [], updated: "" });
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let alive = true;
-    api("search/songs")
-      .then((response) => response.json())
-      .then((data) => {
-        if (alive) setQueries({ status: "ready", items: Array.isArray(data) ? data : [] });
-      })
-      .catch((error) => {
-        console.error("JSON을 불러오는 중 오류 발생:", error);
-        if (alive) setQueries({ status: "error", items: [] });
       });
     return () => {
       alive = false;

@@ -42,10 +42,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.14"
           cache: pip
@@ -58,7 +58,7 @@ jobs:
       # 여기서 다시 빌드해 커밋된 것과 같은지 확인한다. 소스만 고치고 빌드를 잊은 채
       # 올리면 운영 화면이 예전 것으로 남는데, 그 사고가 여기서 걸린다.
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -92,7 +92,7 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Set up SSH Key
       run: |

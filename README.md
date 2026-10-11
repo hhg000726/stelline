@@ -117,7 +117,9 @@ npm run build    # 고칠 때마다
 공개 화면은 React SPA이므로 `/search` 같은 주소도 Flask가 `index.html`을 내려줘야
 합니다. `deploy/nginx/stelline.conf`는 `/search`와 `/search/`만 nginx의 정적 디렉터리
 검사보다 먼저 Flask(기본 포트 `5000`)로 전달하고, 나머지 실제 정적 파일은 nginx가
-그대로 제공합니다. HTTPS 인증서는 Certbot 경로를 사용합니다.
+그대로 제공합니다. Vercel rewrite가 원본 IP(`168.107.1.195`)로 보내는 HTTP 요청과
+`stel-line.vercel.app` Host 요청도 같은 Flask 앱과 정적 파일 처리로 연결합니다. 알 수 없는
+Host는 기본 서버가 404로 거부합니다. HTTPS 인증서는 `stelline.xyz`에만 Certbot 경로로 사용합니다.
 
 `main` 브랜치 배포 때 GitHub Actions가 이 설정을 서버에 설치하고 nginx를 검사·reload하므로
 별도 수동 설정이 필요하지 않습니다. 배포 서버에서 실행 중인 계정은 비밀번호 없이
@@ -128,6 +130,9 @@ npm run build    # 고칠 때마다
 `static/search/`가 디렉터리로 먼저 선택되어 `/search`에서 403이 발생할 수 있습니다.
 배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, HTTPS 인증서
 파일(`/etc/letsencrypt/live/stelline.xyz/`)과 Flask의 `5000` 포트가 서버에 있어야 합니다.
+Vercel 원본 프록시를 계속 사용할 때는 `vercel.json`의 rewrite 대상 IP와 위 Nginx의
+`server_name`을 함께 맞춰야 합니다. 이 Nginx 설정은 배포마다 workflow가 설치하므로,
+서버에서만 수동 수정하지 말고 저장소 설정도 함께 변경하세요.
 
 ## 관리자 HTML로 개발 데이터 채우기
 

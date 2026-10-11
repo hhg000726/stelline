@@ -95,6 +95,25 @@ def test_unknown_path_returns_404(client):
     assert resp.status_code == 404
 
 
+def test_deployment_nginx_forwards_vercel_origin_requests_to_the_app():
+    config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    server_blocks = re.findall(r"(?ms)^server \{\n(.*?)(?=^server \{|\Z)", config)
+    vercel_server = next(
+        (block for block in server_blocks if "server_name 168.107.1.195 stel-line.vercel.app;" in block),
+        None,
+    )
+
+    assert vercel_server is not None
+    assert "listen 80;" in vercel_server
+    assert "try_files $uri $uri/ @app;" in vercel_server
+    assert "location @app" in vercel_server
+    assert "location /api/" in vercel_server
+    assert "location /admin" in vercel_server
+    assert "location /auth" in vercel_server
+    assert "proxy_pass http://127.0.0.1:5000;" in vercel_server
+    assert "return 404;" in next(block for block in server_blocks if "listen 80 default_server;" in block)
+
+
 def test_removed_frontend_files_are_gone(client):
     """예전 화면 파일이 남아 있으면 어느 쪽이 진짜인지 알 수 없다."""
     for path in ("/index.js", "/assets/site.js", "/assets/nav.js", "/assets/content.js",

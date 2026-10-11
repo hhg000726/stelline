@@ -134,6 +134,15 @@ def test_member_master_reflects_unit_history():
     assert facts["사키하네 후야"][3] == "2025-09-20"
 
 
+def test_abyss_members_are_registered_without_assumed_debut_dates():
+    facts = {row[0]: row for row in MEMBER_SEED}
+    abyss_members = ("시즈키 토아", "코가네 랑", "하나요 히요리", "토키노 메리")
+
+    assert all(facts[name][1] == "ABYSS" for name in abyss_members)
+    assert all(facts[name][3] is None for name in abyss_members)
+    assert all(facts[name][5] == order for order, name in enumerate(abyss_members, start=12))
+
+
 def test_seed_members_were_active_when_the_song_was_released():
     """발매일이 적힌 곡에는 그 시점에 활동 중이던 멤버만 있어야 한다.
 

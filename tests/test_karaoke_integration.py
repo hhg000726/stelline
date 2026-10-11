@@ -180,7 +180,7 @@ def test_bulk_import_requires_login(client, db, clean_db):
     assert _scalar(db, "SELECT COUNT(*) FROM karaoke_songs") == 0
 
 
-def test_seed_file_import_loads_reference_list(admin_client, db, clean_db):
+def test_seed_file_import_loads_reference_list(admin_client, client, db, clean_db):
     resp = admin_client.post(
         "/admin/karaoke/import",
         data={"csrf_token": admin_client.csrf, "source": "seed"},
@@ -189,7 +189,10 @@ def test_seed_file_import_loads_reference_list(admin_client, db, clean_db):
     assert resp.status_code == 200
     assert _scalar(db, "SELECT COUNT(*) FROM karaoke_songs") > 200
     # 멤버 마스터도 함께 채워져 공개 화면 필터가 바로 동작한다.
-    assert _scalar(db, "SELECT COUNT(*) FROM karaoke_members") == 11
+    assert _scalar(db, "SELECT COUNT(*) FROM karaoke_members") == 15
+    payload = client.get("/api/karaoke/songs").get_json()
+    abyss_members = {member["name"] for member in payload["members"] if member["unit"] == "ABYSS"}
+    assert abyss_members == {"시즈키 토아", "코가네 랑", "하나요 히요리", "토키노 메리"}
 
 
 # ---------- 관리자 개별 편집 ----------

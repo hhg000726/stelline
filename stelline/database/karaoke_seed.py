@@ -64,6 +64,10 @@ MEMBER_SEED = (
     ("아오쿠모 린", "CLICHÉ", None, "2024-05-19", None, 9),
     ("하나코 나나", "CLICHÉ", None, "2024-05-18", None, 10),
     ("유즈하 리코", "CLICHÉ", None, "2024-05-19", None, 11),
+    ("시즈키 토아", "ABYSS", None, None, None, 12),
+    ("코가네 랑", "ABYSS", None, None, None, 13),
+    ("하나요 히요리", "ABYSS", None, None, None, 14),
+    ("토키노 메리", "ABYSS", None, None, None, 15),
 )
 KNOWN_MEMBERS = {row[0] for row in MEMBER_SEED}
 

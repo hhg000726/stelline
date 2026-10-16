@@ -132,3 +132,35 @@ def test_admin_update_row_reports_missing_target(admin_client, db, clean_db):
     )
     assert "수정할 항목을 찾지 못했습니다" in resp.get_data(as_text=True)
     assert _scalar(db, "SELECT COUNT(*) FROM events") == 0
+
+
+def test_admin_can_edit_song_count_title_and_count(admin_client, db, clean_db):
+    with db.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO song_counts (video_id, title, count, counted_time) VALUES (%s, %s, %s, %s)",
+            ("video-1", "이전 제목", 100, datetime(2026, 1, 1)),
+        )
+        cursor.execute("SELECT * FROM song_counts WHERE video_id = %s", ("video-1",))
+        row = cursor.fetchone()
+    db.commit()
+
+    from stelline.admin.routes import serialize_row
+
+    resp = admin_client.post(
+        "/admin/data/song_counts/update",
+        data={
+            "csrf_token": admin_client.csrf,
+            "row_token": serialize_row(row),
+            "title": "관리자가 고친 제목",
+            "video_id": "video-1",
+            "count": "250",
+            "counted_time": "",
+        },
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 302
+    with db.cursor() as cursor:
+        cursor.execute("SELECT title, count FROM song_counts WHERE video_id = %s", ("video-1",))
+        updated = cursor.fetchone()
+    assert updated == {"title": "관리자가 고친 제목", "count": 250}

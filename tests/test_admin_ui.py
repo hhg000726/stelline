@@ -101,6 +101,26 @@ class KaraokeListViewTest(unittest.TestCase):
         self.assertIn('data-row=', html)
         self.assertIn('title_alt', html)
 
+    def test_song_count_rows_have_an_edit_form(self):
+        song_count = {
+            "video_id": "video-1", "title": "조회수 기록 제목", "count": 12345,
+            "counted_time": "2026-08-31 09:00:00",
+        }
+        with patch("stelline.admin.routes.get_connection"), patch(
+            "stelline.admin.routes.load_table",
+            side_effect=lambda connection, table: [song_count] if table == "song_counts" else [],
+        ):
+            with self.client.session_transaction() as session:
+                session["logged_in"] = True
+                session["admin_csrf"] = "test-token"
+            html = self.client.get("/admin/").get_data(as_text=True)
+
+        self.assertIn('data-group="counts"', html)
+        self.assertIn('action="/admin/data/song_counts"', html)
+        self.assertIn('name="count"', html)
+        self.assertIn('name="counted_time"', html)
+        self.assertIn("조회수 기록은 직접 수정할 수 있으며", html)
+
     def test_every_row_offers_a_copy_button(self):
         """행을 누르면 수정이라, 값을 그대로 가져다 새 항목을 만들 길을 따로 둔다."""
         html = self._render()

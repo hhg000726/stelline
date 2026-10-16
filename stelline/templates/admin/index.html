@@ -372,7 +372,7 @@
 
     {% for category, message in get_flashed_messages(with_categories=true) %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}
 
-    <p class="hint" style="margin-bottom:12px">표에서 <strong>행을 클릭하면</strong> 위 양식에 값이 채워지고 수정 모드가 됩니다. <strong>복제</strong>는 같은 값을 새 항목으로 채워 넣습니다. 통계 데이터는 읽기 전용입니다.</p>
+    <p class="hint" style="margin-bottom:12px">표에서 <strong>행을 클릭하면</strong> 위 양식에 값이 채워지고 수정 모드가 됩니다. <strong>복제</strong>는 같은 값을 새 항목에 채워 넣습니다. 조회수 기록은 직접 수정할 수 있으며, 그 밖의 통계 데이터는 읽기 전용입니다.</p>
 
     <nav class="admin-tabs" id="admin-tabs" aria-label="관리 항목">
       {% for group in groups %}

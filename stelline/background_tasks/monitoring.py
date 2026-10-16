@@ -110,25 +110,38 @@ def update_song_counts(cursor, songs, access_token):
     예전에는 곡마다 SELECT 를 한 번씩 던져 플레이리스트 크기만큼 왕복이 생겼다.
     지금은 저장된 조회수를 한 번에 읽어 두고 메모리에서 비교한다.
     """
-    cursor.execute("SELECT video_id, count FROM song_counts")
-    stored_counts = {row["video_id"]: row["count"] for row in cursor.fetchall()}
+    cursor.execute("SELECT video_id, title, count FROM song_counts")
+    stored_songs = {row["video_id"]: row for row in cursor.fetchall()}
 
     for song in songs:
-        existing = stored_counts.get(song["video_id"])
+        existing = stored_songs.get(song["video_id"])
         if existing is None:
             cursor.execute(
                 "INSERT INTO song_counts (title, video_id, count, counted_time) VALUES (%s, %s, %s, %s)",
                 (song["title"], song["video_id"], song["count"], datetime(2000, 1, 1)),
             )
             # 같은 영상이 목록에 두 번 들어와도 예전처럼 한 번만 저장되도록 방금 쓴 값을 반영한다.
-            stored_counts[song["video_id"]] = song["count"]
-        elif existing // 100000 < song["count"] // 100000:
+            stored_songs[song["video_id"]] = {"title": song["title"], "count": song["count"]}
+            continue
+
+        crossed_milestone = existing["count"] // 100000 < song["count"] // 100000
+        if crossed_milestone:
             send_milestone_notifications(cursor, access_token, song)
-            cursor.execute(
-                "UPDATE song_counts SET count = %s, counted_time = %s WHERE video_id = %s",
-                (song["count"], datetime.now(), song["video_id"]),
-            )
-            stored_counts[song["video_id"]] = song["count"]
+        if crossed_milestone or existing["title"] != song["title"]:
+            if crossed_milestone:
+                cursor.execute(
+                    "UPDATE song_counts SET title = %s, count = %s, counted_time = %s WHERE video_id = %s",
+                    (song["title"], song["count"], datetime.now(), song["video_id"]),
+                )
+            else:
+                cursor.execute(
+                    "UPDATE song_counts SET title = %s WHERE video_id = %s",
+                    (song["title"], song["video_id"]),
+                )
+        stored_songs[song["video_id"]] = {
+            "title": song["title"],
+            "count": song["count"] if crossed_milestone else existing["count"],
+        }
 
 
 def monitoring_process():

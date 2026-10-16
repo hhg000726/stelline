@@ -98,6 +98,16 @@ CONTENT_TABLES = {
         "list_fields": ("query", "video_id", "risk"),
         "searchable": True,
     },
+    "song_counts": {
+        "title": "YouTube 조회수 기록",
+        "group": "counts",
+        "description": "YouTube 영상별 조회수 기록입니다. 제목은 다음 조회수 갱신 때 영상 제목으로 동기화됩니다.",
+        "fields": ("title", "video_id", "count", "counted_time"),
+        "labels": {"title": "영상 제목", "video_id": "영상 ID", "count": "조회수", "counted_time": "마지막 갱신 시각"},
+        "list_fields": ("title", "video_id", "count", "counted_time"),
+        "key_fields": ("video_id",),
+        "searchable": True,
+    },
     "offline": {
         "title": "오프라인 이벤트",
         "group": "offline",
@@ -152,11 +162,12 @@ TABLE_GROUPS = (
     ("main", "메인 화면"),
     ("karaoke", "노래방"),
     ("search", "검색 점검"),
+    ("counts", "조회수 기록"),
     ("offline", "오프라인"),
     ("reports", "사용자 제보"),
 )
 
-READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "record_karaoke", "song_counts", "fcm_tokens")
+READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "record_karaoke", "fcm_tokens")
 
 # 값이 정해져 있는 열은 직접 입력 대신 선택 목록으로 보여준다.
 FIELD_CHOICES = {
@@ -210,11 +221,11 @@ def load_row_token(token):
 
 
 def input_type(field):
-    if field in {"expires_at", "start_date", "end_date"}:
+    if field in {"expires_at", "start_date", "end_date", "counted_time"}:
         return "datetime-local"
     if field in {"release_date", "debut_date", "graduated_at"}:
         return "date"
-    if field in {"url_number", "risk", "latitude", "longitude", "sort_order", "display_order"}:
+    if field in {"url_number", "risk", "latitude", "longitude", "sort_order", "display_order", "count"}:
         return "number"
     return "text"
 

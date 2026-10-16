@@ -75,13 +75,13 @@ def test_select_search_targets_does_not_alias_the_bucket():
 # --- 조회수 갱신 (곡마다 SELECT 하지 않는다) ---------------------------
 
 def test_update_song_counts_reads_stored_counts_once():
-    cursor = FakeCursor([[{"video_id": "old", "count": 100_000}]])
+    cursor = FakeCursor([[{"video_id": "old", "title": "곡", "count": 100_000}]])
     songs = [{"video_id": "old", "title": "곡", "count": 100_001}, {"video_id": "new", "title": "새 곡", "count": 3}]
 
     monitoring.update_song_counts(cursor, songs, access_token="unused")
 
     selects = [sql for sql in cursor.statements() if sql.startswith("SELECT")]
-    assert selects == ["SELECT video_id, count FROM song_counts"]
+    assert selects == ["SELECT video_id, title, count FROM song_counts"]
 
 
 def test_update_song_counts_inserts_unknown_song():
@@ -94,17 +94,31 @@ def test_update_song_counts_inserts_unknown_song():
 
 
 def test_update_song_counts_notifies_only_when_crossing_a_milestone():
-    cursor = FakeCursor([[{"video_id": "v", "count": 120_000}]])
+    cursor = FakeCursor([[{"video_id": "v", "title": "곡", "count": 120_000}]])
     with patch.object(monitoring, "send_milestone_notifications") as notify:
         monitoring.update_song_counts(cursor, [{"video_id": "v", "title": "곡", "count": 150_000}], "tok")
     notify.assert_not_called()
     assert not [sql for sql in cursor.statements() if sql.startswith("UPDATE")]
 
-    cursor = FakeCursor([[{"video_id": "v", "count": 120_000}]])
+    cursor = FakeCursor([[{"video_id": "v", "title": "곡", "count": 120_000}]])
     with patch.object(monitoring, "send_milestone_notifications") as notify:
         monitoring.update_song_counts(cursor, [{"video_id": "v", "title": "곡", "count": 250_000}], "tok")
     notify.assert_called_once()
     assert [sql for sql in cursor.statements() if sql.startswith("UPDATE")]
+
+
+def test_update_song_counts_refreshes_changed_title_without_milestone():
+    cursor = FakeCursor([[{"video_id": "v", "title": "이전 제목", "count": 120_000}]])
+    song = {"video_id": "v", "title": "새 제목", "count": 150_000}
+
+    with patch.object(monitoring, "send_milestone_notifications") as notify:
+        monitoring.update_song_counts(cursor, [song], "unused")
+
+    notify.assert_not_called()
+    updates = [call for call in cursor.calls if call[0] == "execute" and call[1].startswith("UPDATE")]
+    assert updates == [
+        ("execute", "UPDATE song_counts SET title = %s WHERE video_id = %s", ("새 제목", "v"))
+    ]
 
 
 def test_update_song_counts_inserts_a_repeated_video_only_once():

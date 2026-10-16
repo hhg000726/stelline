@@ -88,6 +88,30 @@ def test_update_song_counts_no_notify_within_same_bucket(db, clean_db):
     notify.assert_not_called()
 
 
+def test_update_song_counts_syncs_changed_title_without_milestone(db, clean_db):
+        with db.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO song_counts (video_id, title, count, counted_time) VALUES (%s, %s, %s, %s)",
+                ("vidTitle", "이전 제목", 120_000, datetime(2000, 1, 1)),
+            )
+        db.commit()
+
+        with patch.object(monitoring, "send_milestone_notifications") as notify:
+            with db.cursor() as cursor:
+                monitoring.update_song_counts(
+                    cursor,
+                    [{"video_id": "vidTitle", "title": "바뀐 YouTube 제목", "count": 150_000}],
+                    access_token="unused",
+                )
+            db.commit()
+
+        notify.assert_not_called()
+        row = _rows(db, "SELECT title, count, counted_time FROM song_counts WHERE video_id = 'vidTitle'")[0]
+        assert row["title"] == "바뀐 YouTube 제목"
+        assert row["count"] == 120_000
+        assert row["counted_time"] == datetime(2000, 1, 1)
+
+
 def test_bugs_load_targets_reads_rows(db, clean_db):
     with db.cursor() as cursor:
         cursor.execute(

@@ -99,6 +99,27 @@ def test_start_admin_search_refuses_while_a_run_is_in_progress():
     run.assert_called_once_with(by_admin=True)
 
 
+
+def test_start_admin_search_refuses_while_another_worker_is_searching(tmp_path):
+    """정기 검사는 다른 워커에서 돈다. 스레드 잠금만으로는 그 워커를 볼 수 없다."""
+    from stelline.apis.search import tasks
+
+    if tasks.fcntl is None:
+        pytest.skip("파일 잠금은 POSIX 에서만 쓴다")
+
+    lock_path = tmp_path / "search.lock"
+    with patch.object(tasks, "SEARCH_LOCK_PATH", lock_path),          patch.object(tasks, "run_search_once") as run:
+        # 다른 워커와 같은 처지: 같은 파일을 따로 열어 잠가 둔다.
+        other_worker = open(lock_path, "a", encoding="utf-8")
+        try:
+            tasks.fcntl.flock(other_worker, tasks.fcntl.LOCK_EX | tasks.fcntl.LOCK_NB)
+            assert tasks.start_admin_search() is False
+            # 거절한 뒤에는 이 프로세스의 스레드 잠금을 쥐고 있으면 안 된다.
+            assert not tasks.SEARCH_LOCK.locked()
+        finally:
+            other_worker.close()
+    run.assert_not_called()
+
 def test_admin_login_accepts_only_the_configured_account(client):
     resp = client.post("/auth/login", data={"username": "admin", "password": "wrong"})
     assert resp.status_code == 200

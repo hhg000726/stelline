@@ -7,9 +7,14 @@ import threading
 import time
 from collections import defaultdict
 
+try:
+    import fcntl
+except ImportError:  # 윈도우 개발 환경. 여러 프로세스로 띄울 일이 없다.
+    fcntl = None
+
 import requests
 
-from stelline.config import SEARCH_API_INTERVAL, SEARCH_API_KEY, TEMP_API_KEY
+from stelline.config import PROJECT_ROOT, SEARCH_API_INTERVAL, SEARCH_API_KEY, TEMP_API_KEY
 from stelline.database.connection import database_cursor
 from stelline.http_client import SESSION
 
@@ -284,11 +289,50 @@ def search_unverified_songs(by_admin=False):
 # 검사 한 회차는 API 할당량을 수십 번 쓰고 songs_data 를 비웠다가 다시 채운다.
 # 정기 검사와 관리자 즉시 검사가 겹치면 할당량을 두 번 쓰고 결과도 서로 덮어쓰므로,
 # 한 번에 한 회차만 돌게 막는다.
+#
+# 정기 검사는 백그라운드 작업을 맡은 워커 하나에서 돌지만, 관리자 요청은 gunicorn 의
+# 어느 워커에나 떨어진다. 그래서 같은 프로세스 안의 스레드 잠금(SEARCH_LOCK)에 더해
+# 프로세스끼리 통하는 파일 잠금(SEARCH_LOCK_PATH)을 함께 잡는다.
 SEARCH_LOCK = threading.Lock()
+SEARCH_LOCK_PATH = PROJECT_ROOT / ".search_cycle.lock"
+
+# 파일 잠금은 파일이 열려 있는 동안만 유지된다. SEARCH_LOCK 을 쥔 스레드만 건드린다.
+_search_lock_handle = None
+
+
+def acquire_search_lock(blocking=True):
+    """검사 한 회차를 돌려도 되면 True. blocking=False 면 누가 돌고 있을 때 바로 False."""
+    global _search_lock_handle
+    if not SEARCH_LOCK.acquire(blocking=blocking):
+        return False
+    if fcntl is None:
+        return True
+    try:
+        handle = open(SEARCH_LOCK_PATH, "a", encoding="utf-8")
+    except OSError:
+        # 잠금 파일을 못 만든다고 검사를 통째로 멈추면 그쪽이 더 큰 손해다.
+        logging.warning("검색 잠금 파일을 열 수 없어 프로세스 간 잠금 없이 돌립니다: %s", SEARCH_LOCK_PATH)
+        return True
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX if blocking else fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        SEARCH_LOCK.release()
+        return False
+    _search_lock_handle = handle
+    return True
+
+
+def release_search_lock():
+    global _search_lock_handle
+    handle, _search_lock_handle = _search_lock_handle, None
+    if handle is not None:
+        handle.close()  # 닫으면 파일 잠금도 풀린다.
+    SEARCH_LOCK.release()
 
 
 def run_search_once(by_admin=False):
-    """검사 한 회차를 돌고 결과를 저장한다. 호출하는 쪽이 SEARCH_LOCK 을 잡고 있어야 한다."""
+    """검사 한 회차를 돌고 결과를 저장한다. 호출하는 쪽이 acquire_search_lock() 을 잡고 있어야 한다."""
     global last_search_timestamp
 
     try:
@@ -310,21 +354,24 @@ def run_search_once(by_admin=False):
 def run_search_cycle():
     logging.info("주기적 검색 시작됨")
     while True:
-        with SEARCH_LOCK:
+        acquire_search_lock()
+        try:
             run_search_once()
+        finally:
+            release_search_lock()
         wait_until_next_search_interval()
 
 
 def start_admin_search():
     """관리자 즉시 검사를 띄운다. 이미 한 회차가 돌고 있으면 띄우지 않고 False 를 돌려준다."""
-    if not SEARCH_LOCK.acquire(blocking=False):
+    if not acquire_search_lock(blocking=False):
         return False
 
     def run():
         try:
             run_search_once(by_admin=True)
         finally:
-            SEARCH_LOCK.release()
+            release_search_lock()
 
     threading.Thread(target=run, daemon=True, name="admin-search").start()
     return True

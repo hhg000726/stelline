@@ -31,6 +31,8 @@ last_search_time.txt
 last_search_time.txt.tmp
 # 백그라운드 작업을 한 프로세스만 맡게 하는 잠금 파일
 .background_tasks.lock
+# 검색 점검을 워커 사이에서도 한 회차만 돌게 하는 잠금 파일
+.search_cycle.lock
 record.json
 
 # Secrets and keys

@@ -6,3 +6,6 @@
 frontend/** text eol=lf
 stelline/static/index.html text eol=lf
 stelline/static/app/** text eol=lf
+
+# 서버(리눅스)에 그대로 올리는 배포 파일. CRLF 가 섞이면 bash·systemd 가 줄 끝의  까지 읽는다.
+deploy/** text eol=lf

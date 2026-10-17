@@ -136,6 +136,29 @@ def test_hashed_bundles_are_cached_for_good_and_the_shell_is_not():
         shell_rule = re.search(r"(?s)location / \{(.*?)\}", block).group(1)
         assert 'Cache-Control "no-cache"' in shell_rule
 
+
+def test_production_process_is_supervised_single_worker_and_local_only():
+    """운영 앱은 systemd 가 워커 하나로, 서버 안쪽 주소에만 띄운다.
+
+    워커가 여럿이면 백그라운드 작업이 겹치고, 0.0.0.0 이면 nginx 를 건너뛴 길이 열리며,
+    nohup 으로 띄우면 죽었을 때 다음 배포까지 502다.
+    """
+    unit = (PROJECT_ROOT / "deploy" / "systemd" / "stelline.service").read_text(encoding="utf-8")
+    exec_start = next(line for line in unit.splitlines() if line.startswith("ExecStart="))
+    assert "/home/ubuntu/stelline/venv/bin/gunicorn" in exec_start
+    assert "--workers 1" in exec_start
+    assert "--bind 127.0.0.1:5000" in exec_start
+    assert "Restart=always" in unit
+    assert "WorkingDirectory=/home/ubuntu/stelline" in unit
+
+    script = (PROJECT_ROOT / "deploy" / "deploy.sh").read_text(encoding="utf-8")
+    commands = [line.strip() for line in script.splitlines() if line.strip() and not line.strip().startswith("#")]
+    assert "sudo systemctl restart stelline" in commands
+    assert not any(command.startswith(("pkill", "nohup")) for command in commands)
+
+    nginx = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    assert set(re.findall(r"proxy_pass (\S+);", nginx)) == {"http://127.0.0.1:5000"}
+
 def test_removed_frontend_files_are_gone(client):
     """예전 화면 파일이 남아 있으면 어느 쪽이 진짜인지 알 수 없다."""
     for path in ("/index.js", "/assets/site.js", "/assets/nav.js", "/assets/content.js",

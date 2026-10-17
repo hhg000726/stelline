@@ -117,11 +117,12 @@ def test_deployment_nginx_forwards_vercel_origin_requests_to_the_app():
 
 
 def test_deployment_nginx_serves_only_through_vercel_without_certificates():
-    """공개 주소는 Vercel 하나다. 정리한 도메인의 인증서 경로가 남아 있으면, 인증서 파일이
-    지워지는 날 nginx -t 가 실패해 배포가 통째로 막힌다."""
+    """공개 주소는 Vercel 하나다. 서버에는 인증서가 없으므로, 인증서 경로나 다른 이름의 server 블록을
+    적어 두면 nginx -t 가 실패해 배포가 통째로 막히거나 쓰지 않는 주소가 다시 열린다."""
     config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
     directives = "\n".join(line for line in config.splitlines() if not line.lstrip().startswith("#"))
-    assert "stelline.xyz" not in directives
+    server_names = {name for line in re.findall(r"server_name ([^;]+);", directives) for name in line.split()}
+    assert server_names == {"168.107.1.195", "stel-line.vercel.app", "_"}
     assert "ssl_certificate" not in directives
     assert "listen 443" not in directives
 

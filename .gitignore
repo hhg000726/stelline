@@ -36,6 +36,9 @@ last_search_time.txt.tmp
 record.json
 
 # Secrets and keys
+# FCM 발송용 Firebase 서비스 계정 키. 운영 서버에서는 저장소 폴더 안에 둔다.
+service-account.json
+*service-account*.json
 *.pem
 *.key
 *.crt

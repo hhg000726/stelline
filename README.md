@@ -96,19 +96,34 @@ npm run build    # 고칠 때마다
 
 ## 환경 분리
 
-- 운영은 `.env`와 운영 RDS를 사용합니다. 운영 DB에 자동으로 스키마를 적용하지 않습니다.
+- 운영은 `.env`와 운영 RDS를 사용합니다. 앱이 뜰 때 스키마를 자동으로 만들지는 않지만(`AUTO_CREATE_SCHEMA=false`), **배포 스크립트가 배포마다 마이그레이션을 실행합니다**(`deploy/deploy.sh`).
 - 개발은 `.env.development`와 Docker의 `stelline_dev` MySQL을 사용합니다. 개발 기본값은 외부 API 호출과 FCM 발송을 비활성화합니다.
+
+## 백그라운드 작업
+
+조회수 감시(5분)·검색 점검(6시간)·Bugs 순위는 앱을 불러올 때 스레드로 시작합니다.
+
+- **서버 한 대에서 한 프로세스만 맡습니다.** gunicorn 워커를 여럿 띄우면 워커마다 앱을 불러오므로,
+  그대로 두면 YouTube 할당량을 워커 수만큼 쓰고 달성 알림도 같은 사람에게 여러 번 나갑니다.
+  맨 위 폴더의 `.background_tasks.lock` 을 먼저 잠근 프로세스만 작업을 시작합니다(`background_tasks/__init__.py`).
+- **검색 점검은 한 번에 한 회차만 돕니다.** 관리자 화면의 `검색 점검 즉시 실행`은 정기 점검이 돌고 있으면
+  띄우지 않고 그렇다고 알려 줍니다. 관리자 요청은 어느 워커에나 떨어지므로, 스레드 잠금과 함께
+  `.search_cycle.lock` 파일 잠금을 잡아 워커가 달라도 겹치지 않게 합니다. 이 버튼은 관리자 로그인과 CSRF 토큰이 있어야 동작합니다.
+  (예전의 공개 주소 `/api/search/force_search` 는 누구나 관리자 키의 할당량을 쓸 수 있어 없앴습니다.)
+- **알림 한 건이 실패해도 나머지는 계속 보냅니다.** 실패가 밖으로 새면 조회수 갱신이 롤백되어 다음 5분에
+  모두에게 같은 알림이 다시 나가기 때문입니다. 만료 데이터 정리도 YouTube·FCM 과 따로 돌아,
+  API 키 문제가 있어도 지난 이벤트는 제때 내려갑니다.
 
 ## 개발 시작
 
-1. `docker compose -f docker-compose.dev.yml up -d`로 개발 DB를 시작합니다.
-2. `pip install -r requirements.txt` 후 `./run-development.ps1`을 실행합니다.
+1. `dev/.env.development.example`을 맨 위 폴더의 `.env.development`로 복사하고, `docker compose -f dev/docker-compose.dev.yml up -d`로 개발 DB를 시작합니다.
+2. `pip install -r requirements.txt` 후 `./dev/run-development.ps1`을 실행합니다. 자세한 순서는 `README_DEV.md` 참고.
 3. `AUTO_CREATE_SCHEMA=true`이면 코드 기준 스키마가 빈 개발 DB에 자동 생성됩니다.
 4. 화면 소스를 고칠 것이라면 `cd frontend && npm install` 후 `npm run build`(또는 `npm run dev`)를 실행합니다.
 
 ## 스키마 변경
 
-스키마는 `stelline/database/schema.py`의 `MIGRATIONS`가 기준입니다. 새 변경은 새 버전의 migration을 추가하고, 개발 DB에서는 앱을 재시작하거나 `python -m stelline.database.migrate`로 적용합니다. 운영 배포 시에는 백업 후 이 명령을 명시적으로 실행하세요.
+스키마는 `stelline/database/schema.py`의 `MIGRATIONS`가 기준입니다. 새 변경은 새 버전의 migration을 추가하고, 개발 DB에서는 앱을 재시작하거나 `python -m stelline.database.migrate`로 적용합니다. 운영에는 `main` 배포 때 `deploy/deploy.sh` 가 이 명령을 자동으로 실행합니다. 데이터를 지우거나 바꾸는 마이그레이션이면 **합치기 전에 운영 DB를 백업**하세요.
 
 운영에서 `AUTO_CREATE_SCHEMA`는 항상 `false`로 유지하세요.
 
@@ -117,22 +132,50 @@ npm run build    # 고칠 때마다
 공개 화면은 React SPA이므로 `/search` 같은 주소도 Flask가 `index.html`을 내려줘야
 합니다. `deploy/nginx/stelline.conf`는 `/search`와 `/search/`만 nginx의 정적 디렉터리
 검사보다 먼저 Flask(기본 포트 `5000`)로 전달하고, 나머지 실제 정적 파일은 nginx가
-그대로 제공합니다. Vercel rewrite가 원본 IP(`168.107.1.195`)로 보내는 HTTP 요청과
-`stel-line.vercel.app` Host 요청도 같은 Flask 앱과 정적 파일 처리로 연결합니다. 알 수 없는
-Host는 기본 서버가 404로 거부합니다. HTTPS 인증서는 `stelline.xyz`에만 Certbot 경로로 사용합니다.
+그대로 제공합니다.
+
+**공개 주소는 `https://stel-line.vercel.app` 하나입니다.** Vercel 이 원본 IP(`168.107.1.195`)의 80 번으로
+rewrite 해 보내고, 브라우저 쪽 https 는 Vercel 이 맡습니다. 그래서 이 서버는 80 번만 열고 인증서를 두지
+않습니다. 알 수 없는 Host는 기본 서버가 404로 거부합니다. 예전 도메인 `stelline.xyz` 는 2026-10 에
+일부러 정리했습니다.
+
+빌드 결과물 `/app/` 아래 파일은 이름에 내용 해시가 붙어 있어 1년(`immutable`) 캐시하고,
+`index.html` 등 나머지는 `no-cache` 로 매번 확인합니다. 해시 없는 파일을 `app/` 에 넣으면 테스트가 실패합니다.
 
 `main` 브랜치 배포 때 GitHub Actions가 이 설정을 서버에 설치하고 nginx를 검사·reload하므로
 별도 수동 설정이 필요하지 않습니다. 배포 서버에서 실행 중인 계정은 비밀번호 없이
-`install`, `ln`, `rm`, `nginx -t`, `systemctl reload nginx`를 `sudo`로 실행할 수 있어야
+`install`, `ln`, `rm`, `nginx -t`, `systemctl reload nginx`, `systemctl restart stelline`을 `sudo`로 실행할 수 있어야
 합니다.
 
 기존 nginx 설정에서 `root .../stelline/static`와 `try_files $uri $uri/ ...`를 사용하면
 `static/search/`가 디렉터리로 먼저 선택되어 `/search`에서 403이 발생할 수 있습니다.
-배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, HTTPS 인증서
-파일(`/etc/letsencrypt/live/stelline.xyz/`)과 Flask의 `5000` 포트가 서버에 있어야 합니다.
-Vercel 원본 프록시를 계속 사용할 때는 `vercel.json`의 rewrite 대상 IP와 위 Nginx의
+배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, Flask가 `127.0.0.1:5000` 에
+떠 있어야 합니다(아래 `앱 프로세스(systemd)`).
+Vercel 원본 프록시를 계속 사용할 때는 Vercel 프로젝트 쪽 `vercel.json`(이 저장소에는 없습니다)의 rewrite 대상 IP와 위 Nginx의
 `server_name`을 함께 맞춰야 합니다. 이 Nginx 설정은 배포마다 workflow가 설치하므로,
 서버에서만 수동 수정하지 말고 저장소 설정도 함께 변경하세요.
+
+### 앱 프로세스(systemd)
+
+운영 앱은 systemd 의 `stelline.service` 가 띄웁니다(`deploy/systemd/stelline.service`).
+
+- gunicorn 워커 하나, `127.0.0.1:5000` 에만 엽니다. 바깥 요청은 모두 nginx 를 거칩니다.
+- `Restart=always` 라 죽어도 몇 초 안에 다시 뜨고, 서버가 재부팅돼도 함께 뜹니다.
+  (예전에는 `nohup gunicorn` 으로 띄워, 죽으면 다음 배포까지 502였습니다.)
+- 배포 스크립트(`deploy/deploy.sh`, 서버의 `~/deploy.sh`)는 `systemctl restart stelline` 뒤
+  앱이 응답할 때까지 기다리고, 끝내 응답이 없으면 실패로 끝나 Actions 에 빨갛게 남습니다.
+- 앱 출력은 `journalctl -u stelline`, 앱 로그는 서버의 `~/stelline/logs/` 에 있습니다.
+
+nginx 설정과 달리 **이 두 파일은 배포 때 자동으로 설치되지 않습니다.** 고쳤으면 서버에 직접 옮기세요.
+
+```bash
+sudo install -m 644 deploy/systemd/stelline.service /etc/systemd/system/stelline.service
+sudo systemctl daemon-reload && sudo systemctl restart stelline
+install -m 644 deploy/deploy.sh ~/deploy.sh
+```
+
+**프로세스를 이름으로 찾아 죽이지 마세요**(`pkill -f gunicorn` 등). 그 명령을 실행하는 셸의 명령줄에도
+같은 글자가 들어 있으면 셸까지 함께 죽습니다. 다시 띄울 때는 `systemctl restart stelline` 만 씁니다.
 
 ## 관리자 HTML로 개발 데이터 채우기
 

@@ -16,6 +16,7 @@ EXPECTED_RULES = {
     "/admin/data/<table_name>/delete",
     "/admin/data/<table_name>/update",
     "/admin/karaoke/import",
+    "/admin/search/force",
     "/admin/dev/import-snapshot",
     # main API
     "/api/main/record",
@@ -23,7 +24,6 @@ EXPECTED_RULES = {
     "/api/main/twits",
     "/api/main/buttons",
     # search API
-    "/api/search/force_search",
     "/api/search/not_searched",
     "/api/search/record",
     "/api/search/songs",

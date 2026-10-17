@@ -9,7 +9,8 @@ from stelline.config import RDS_DB, RDS_HOST, RDS_PASSWORD, RDS_PORT, RDS_USER
 
 
 def get_connection():
-    logging.info(
+    # 요청마다 불리므로 INFO 로 남기면 로그의 대부분이 이 줄이 된다. 접속 문제를 볼 때만 켠다.
+    logging.debug(
         "DB 연결 시도: host=%s, port=%s, database=%s, user=%s",
         RDS_HOST,
         RDS_PORT,

@@ -114,6 +114,63 @@ def test_deployment_nginx_forwards_vercel_origin_requests_to_the_app():
     assert "return 404;" in next(block for block in server_blocks if "listen 80 default_server;" in block)
 
 
+
+
+def test_deployment_nginx_serves_only_through_vercel_without_certificates():
+    """공개 주소는 Vercel 하나다. 정리한 도메인의 인증서 경로가 남아 있으면, 인증서 파일이
+    지워지는 날 nginx -t 가 실패해 배포가 통째로 막힌다."""
+    config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    directives = "\n".join(line for line in config.splitlines() if not line.lstrip().startswith("#"))
+    assert "stelline.xyz" not in directives
+    assert "ssl_certificate" not in directives
+    assert "listen 443" not in directives
+
+def test_hashed_bundles_are_cached_for_good_and_the_shell_is_not():
+    """/app/ 을 오래 캐시해도 되는 것은 이름에 내용 해시가 붙어 있기 때문이다.
+
+    해시 없는 파일이 그 폴더에 들어오면, 고쳐도 방문자 브라우저에는 1년 동안 옛것이 남는다.
+    """
+    bundle_names = [path.name for path in (PROJECT_ROOT / "stelline" / "static" / "app").iterdir()]
+    assert bundle_names
+    unhashed = [name for name in bundle_names if not re.fullmatch(r"[\w.]+-[\w-]{8}\.(js|css)", name)]
+    assert not unhashed, f"해시 없는 번들: {unhashed}"
+
+    config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    server_blocks = re.findall(r"(?ms)^server \{\n(.*?)(?=^server \{|\Z)", config)
+    app_servers = [block for block in server_blocks if "@app" in block]
+    assert len(app_servers) == 1
+    for block in app_servers:
+        bundle_rule = re.search(r"(?s)location /app/ \{(.*?)\}", block).group(1)
+        assert "immutable" in bundle_rule
+        assert "try_files $uri =404;" in bundle_rule
+        shell_rule = re.search(r"(?s)location / \{(.*?)\}", block).group(1)
+        assert 'Cache-Control "no-cache"' in shell_rule
+
+
+def test_production_process_is_supervised_single_worker_and_local_only():
+    """운영 앱은 systemd 가 워커 하나로, 서버 안쪽 주소에만 띄운다.
+
+    워커가 여럿이면 백그라운드 작업이 겹치고, 0.0.0.0 이면 nginx 를 건너뛴 길이 열리며,
+    nohup 으로 띄우면 죽었을 때 다음 배포까지 502다.
+    """
+    unit = (PROJECT_ROOT / "deploy" / "systemd" / "stelline.service").read_text(encoding="utf-8")
+    exec_start = next(line for line in unit.splitlines() if line.startswith("ExecStart="))
+    assert "/home/ubuntu/stelline/venv/bin/gunicorn" in exec_start
+    assert "--workers 1" in exec_start
+    assert "--bind 127.0.0.1:5000" in exec_start
+    assert "Restart=always" in unit
+    assert "WorkingDirectory=/home/ubuntu/stelline" in unit
+
+    script = (PROJECT_ROOT / "deploy" / "deploy.sh").read_text(encoding="utf-8")
+    commands = [line.strip() for line in script.splitlines() if line.strip() and not line.strip().startswith("#")]
+    assert "sudo systemctl restart stelline" in commands
+    # 준비 단계가 실패하면 재시작 전에 멈춰야 한다(마이그레이션 실패를 초록 배포로 덮지 않게).
+    assert commands.index("set -eo pipefail") < commands.index("sudo systemctl restart stelline")
+    assert not any(command.startswith(("pkill", "nohup")) for command in commands)
+
+    nginx = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    assert set(re.findall(r"proxy_pass (\S+);", nginx)) == {"http://127.0.0.1:5000"}
+
 def test_removed_frontend_files_are_gone(client):
     """예전 화면 파일이 남아 있으면 어느 쪽이 진짜인지 알 수 없다."""
     for path in ("/index.js", "/assets/site.js", "/assets/nav.js", "/assets/content.js",

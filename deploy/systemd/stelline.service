@@ -1,0 +1,25 @@
+# 운영 서버의 /etc/systemd/system/stelline.service 원본. 서버에서만 고치지 말고 여기도 함께 고친다.
+#
+# - 워커는 하나만 띄운다. 백그라운드 작업(조회수 감시·검색 점검)이 워커마다 돌면
+#   할당량을 더 쓰고 알림도 겹쳐 나간다(코드에도 잠금이 있지만 처음부터 하나가 맞다).
+# - 127.0.0.1 에만 연다. 바깥 요청은 모두 nginx(80/443)를 거친다.
+# - 죽거나 서버가 재부팅돼도 systemd 가 다시 띄운다. 예전 nohup 방식은 다음 배포까지 502였다.
+#
+# 설치: sudo install -m 644 deploy/systemd/stelline.service /etc/systemd/system/stelline.service
+#       sudo systemctl daemon-reload && sudo systemctl enable --now stelline
+[Unit]
+Description=Gunicorn instance to serve stelline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+# 설정(.env)·로그(logs/)·잠금 파일이 모두 이 폴더 기준이다.
+WorkingDirectory=/home/ubuntu/stelline
+ExecStart=/home/ubuntu/stelline/venv/bin/gunicorn --workers 1 --bind 127.0.0.1:5000 stelline:app
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

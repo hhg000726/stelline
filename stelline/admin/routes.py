@@ -7,6 +7,7 @@ import secrets
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 from itsdangerous import BadSignature, URLSafeSerializer
 
+from stelline.apis.search.tasks import start_admin_search
 from stelline.config import ADMIN_HTML_SNAPSHOT_PATH, APP_ENV, SECRET_KEY
 from stelline.content import CONTENT_GROUPS, admin_rows
 from stelline.database.connection import get_connection
@@ -101,7 +102,7 @@ CONTENT_TABLES = {
     "song_counts": {
         "title": "YouTube 조회수 기록",
         "group": "counts",
-        "description": "YouTube 영상별 조회수 기록입니다. 제목은 다음 조회수 갱신 때 영상 제목으로 동기화됩니다.",
+        "description": "YouTube 영상별 조회수 기록입니다. 제목은 다음 조회수 갱신 때 영상 제목으로 동기화됩니다. 조회수를 실제보다 10만 단위 이상 낮게 고치면, 다음 갱신(5분마다) 때 달성 알림이 구독자 모두에게 다시 나갑니다.",
         "fields": ("title", "video_id", "count", "counted_time"),
         "labels": {"title": "영상 제목", "video_id": "영상 ID", "count": "조회수", "counted_time": "마지막 갱신 시각"},
         "list_fields": ("title", "video_id", "count", "counted_time"),
@@ -404,6 +405,19 @@ def import_snapshot_from_admin_html():
     except Exception:
         logging.exception("개발용 관리자 HTML 스냅샷 적재 실패")
         flash("스냅샷 파일을 읽거나 적재하지 못했습니다. 경로와 파일 내용을 확인하세요.", "error")
+    return redirect(url_for("admin.admin_index"))
+
+
+@admin_bp.route("/search/force", methods=["POST"])
+@login_required
+def force_search():
+    """검색 점검 한 회차를 지금 띄운다. 끝까지 도는 데 수 분이 걸려 기다리지 않고 돌아온다."""
+    require_csrf()
+    if start_admin_search():
+        logging.info("관리자 요청 즉시 검색 시작")
+        flash("검색 점검을 시작했습니다. 끝나는 데 몇 분 걸립니다.", "success")
+    else:
+        flash("검색 점검이 이미 돌고 있습니다. 끝난 뒤 다시 시도하세요.", "error")
     return redirect(url_for("admin.admin_index"))
 
 

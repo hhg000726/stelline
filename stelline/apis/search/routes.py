@@ -1,9 +1,8 @@
 from . import search_bp
-from .service import force_search_now, get_not_searched, get_song_infos, record_search, submit_song_report
+from .service import get_not_searched, get_song_infos, record_search, submit_song_report
 
-@search_bp.route("/force_search", methods=["GET"])
-def force_search_now_api():
-    return force_search_now()
+# 즉시 검사는 관리자 화면(`/admin/search/force`)에서만 띄운다. 공개 API 로 두면 누구나
+# 관리자 키의 YouTube 할당량을 써 버릴 수 있다.
 
 @search_bp.route("/not_searched", methods=["GET"])
 def get_not_searched_api():

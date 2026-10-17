@@ -5,7 +5,7 @@
  * (예전 karaoke.js 와 같은 규칙·같은 저장소 키·같은 문구를 쓴다.)
  */
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 
 import { ContentText } from "../components/ContentText";
 import { EmptyState } from "../components/EmptyState";

@@ -1,0 +1,1 @@
+import{t as e}from"./jsx_runtime-BIUEfZIL.js";var t=e();function n({children:e,isError:n=!1}){return(0,t.jsx)(`p`,{className:n?`empty-state is-error`:`empty-state`,children:e})}export{n as t};

@@ -1,0 +1,1 @@
+import{t as e}from"./jsx_runtime-BIUEfZIL.js";var t=e();function n({id:e,open:n,className:r,children:i}){let a=[`collapse`,n?`is-open`:``,r].filter(Boolean).join(` `);return(0,t.jsx)(`div`,{id:e,className:a,inert:n?void 0:``,children:(0,t.jsx)(`div`,{className:`collapse-inner`,children:i})})}export{n as t};

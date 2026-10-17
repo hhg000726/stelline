@@ -3,7 +3,7 @@
  *
  * 메인 화면에는 큰 제목과 기능 카드가 따로 있어 이 줄을 두지 않는다(예전과 같다).
  */
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link } from "react-router";
 
 import { useNavItems } from "../context/NavButtonsContext";
 import { NAV_ITEMS } from "./navItems";

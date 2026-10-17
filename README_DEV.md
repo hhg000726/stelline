@@ -105,7 +105,7 @@ CI(GitHub Actions, `.github/workflows/deploy.yml`)는 MySQL 서비스 컨테이�
 | 언제 | 무엇을 | 자동? | 확인 기준 |
 | --- | --- | --- | --- |
 | 5분마다 | 조회수 감시·만료 데이터 정리 | 자동(서버 백그라운드) | `logs/app_info.log` 에 `YouTube 조회수 동기화 완료` 가 5분 간격으로 찍힘 |
-| 6시간마다 | 검색 점검 | 자동(서버 백그라운드) | `검색 데이터 업데이트 완료!` 또는 `쿼터 초과` |
+| 8시간마다(01·09·17시) | 검색 점검 | 자동(서버 백그라운드) | `검색 데이터 업데이트 완료!` 또는 `쿼터 초과` |
 | push/PR 마다 | 테스트·빌드 일치 검사·배포 | 자동(GitHub Actions) | Actions 가 초록 |
 | 배포 직후 | 공개 화면 5개·관리자 로그인이 열리는지 | 사람 | `https://stel-line.vercel.app/`, `/search`, `/karaoke`, `/congratulation`, `/offline`, `/admin/` |
 | 주 1회 | `logs/app_error.log` 훑기, 관리자 화면의 사용자 제보 3종 처리 | 사람 | 같은 오류가 반복되지 않음, 제보가 쌓이지 않음 |

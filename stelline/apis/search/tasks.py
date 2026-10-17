@@ -27,6 +27,10 @@ YT_INITIAL_DATA_RE = re.compile(r"ytInitialData\s*=\s*({.*?});", re.DOTALL)
 # 위험도 값의 범위(1..28). 값이 큰 쪽부터 먼저 검사한다.
 MAX_RISK = 28
 
+# 한 회차에 부를 수 있는 YouTube 검색 횟수. 세 회차 × 30 = 하루 9,000 이라 할당량 10,000 중
+# 1,000 을 같은 프로젝트의 다른 사용분 몫으로 남긴다(config.SEARCH_API_INTERVAL 참고).
+SEARCH_CALLS_PER_RUN = 30
+
 # 한 회차에 위험도 높은 곡으로 채울 수 있는 최대 곡 수.
 SEARCH_TARGET_LIMIT = 12
 
@@ -205,7 +209,7 @@ def search_unverified_songs(by_admin=False):
     not_searched = []
     risk_zero_songs, search_targets = select_search_targets(song_infos)
 
-    remaining_quotes = 25
+    remaining_quotes = SEARCH_CALLS_PER_RUN
 
     if by_admin:
         logging.info("관리자 즉시 검색 실행")

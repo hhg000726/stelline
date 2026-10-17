@@ -132,9 +132,12 @@ npm run build    # 고칠 때마다
 공개 화면은 React SPA이므로 `/search` 같은 주소도 Flask가 `index.html`을 내려줘야
 합니다. `deploy/nginx/stelline.conf`는 `/search`와 `/search/`만 nginx의 정적 디렉터리
 검사보다 먼저 Flask(기본 포트 `5000`)로 전달하고, 나머지 실제 정적 파일은 nginx가
-그대로 제공합니다. Vercel rewrite가 원본 IP(`168.107.1.195`)로 보내는 HTTP 요청과
-`stel-line.vercel.app` Host 요청도 같은 Flask 앱과 정적 파일 처리로 연결합니다. 알 수 없는
-Host는 기본 서버가 404로 거부합니다. HTTPS 인증서는 `stelline.xyz`에만 Certbot 경로로 사용합니다.
+그대로 제공합니다.
+
+**공개 주소는 `https://stel-line.vercel.app` 하나입니다.** Vercel 이 원본 IP(`168.107.1.195`)의 80 번으로
+rewrite 해 보내고, 브라우저 쪽 https 는 Vercel 이 맡습니다. 그래서 이 서버는 80 번만 열고 인증서를 두지
+않습니다. 알 수 없는 Host는 기본 서버가 404로 거부합니다. 예전 도메인 `stelline.xyz` 는 2026-10 에
+일부러 정리했습니다.
 
 빌드 결과물 `/app/` 아래 파일은 이름에 내용 해시가 붙어 있어 1년(`immutable`) 캐시하고,
 `index.html` 등 나머지는 `no-cache` 로 매번 확인합니다. 해시 없는 파일을 `app/` 에 넣으면 테스트가 실패합니다.
@@ -146,8 +149,8 @@ Host는 기본 서버가 404로 거부합니다. HTTPS 인증서는 `stelline.xy
 
 기존 nginx 설정에서 `root .../stelline/static`와 `try_files $uri $uri/ ...`를 사용하면
 `static/search/`가 디렉터리로 먼저 선택되어 `/search`에서 403이 발생할 수 있습니다.
-배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, HTTPS 인증서
-파일(`/etc/letsencrypt/live/stelline.xyz/`)과 Flask의 `5000` 포트가 서버에 있어야 합니다.
+배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, Flask가 `127.0.0.1:5000` 에
+떠 있어야 합니다(아래 `앱 프로세스(systemd)`).
 Vercel 원본 프록시를 계속 사용할 때는 Vercel 프로젝트 쪽 `vercel.json`(이 저장소에는 없습니다)의 rewrite 대상 IP와 위 Nginx의
 `server_name`을 함께 맞춰야 합니다. 이 Nginx 설정은 배포마다 workflow가 설치하므로,
 서버에서만 수동 수정하지 말고 저장소 설정도 함께 변경하세요.

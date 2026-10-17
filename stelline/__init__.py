@@ -23,7 +23,7 @@ app.secret_key = SECRET_KEY
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
 # 관리자 세션 쿠키는 다른 사이트에서 보낸 요청(폼 제출 등)에는 실리지 않게 한다.
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-# 운영은 https 로만 들어온다(stelline.xyz, Vercel 경유). http 로 관리자에 들어갈 일이 있으면
+# 운영은 Vercel(https) 을 거쳐서만 들어온다. http 로 관리자에 들어갈 일이 있으면
 # .env 에 SESSION_COOKIE_SECURE=false 를 두면 된다.
 app.config["SESSION_COOKIE_SECURE"] = SESSION_COOKIE_SECURE
 # 공개 화면은 같은 주소에서 /api 를 부르므로 CORS 가 필요 없지만, 바깥에서 공개 API 를

@@ -115,6 +115,16 @@ def test_deployment_nginx_forwards_vercel_origin_requests_to_the_app():
 
 
 
+
+def test_deployment_nginx_serves_only_through_vercel_without_certificates():
+    """공개 주소는 Vercel 하나다. 정리한 도메인의 인증서 경로가 남아 있으면, 인증서 파일이
+    지워지는 날 nginx -t 가 실패해 배포가 통째로 막힌다."""
+    config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    directives = "\n".join(line for line in config.splitlines() if not line.lstrip().startswith("#"))
+    assert "stelline.xyz" not in directives
+    assert "ssl_certificate" not in directives
+    assert "listen 443" not in directives
+
 def test_hashed_bundles_are_cached_for_good_and_the_shell_is_not():
     """/app/ 을 오래 캐시해도 되는 것은 이름에 내용 해시가 붙어 있기 때문이다.
 
@@ -128,7 +138,7 @@ def test_hashed_bundles_are_cached_for_good_and_the_shell_is_not():
     config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
     server_blocks = re.findall(r"(?ms)^server \{\n(.*?)(?=^server \{|\Z)", config)
     app_servers = [block for block in server_blocks if "@app" in block]
-    assert len(app_servers) == 2
+    assert len(app_servers) == 1
     for block in app_servers:
         bundle_rule = re.search(r"(?s)location /app/ \{(.*?)\}", block).group(1)
         assert "immutable" in bundle_rule

@@ -11,7 +11,7 @@
 - **`main`에 올라가면 곧바로 운영에 배포된다.** 브랜치 → PR → CI 초록 → squash 머지 순서로만 올린다. `main`에 직접 push하지 않는다.
 - **`frontend/`를 고쳤으면** `cd frontend && npm run build` 후 `stelline/static/index.html`, `stelline/static/app/`를 같은 커밋에 넣는다. CI가 다시 빌드해 커밋된 것과 비교한다.
 - 배색과 간격 토큰은 `stelline/static/assets/site.css` 한 곳에서 정한다. 관리자·로그인 화면도 이 파일을 쓴다.
-- 스키마를 바꿨으면 운영 반영(백업 → `python -m stelline.database.migrate`)은 자동으로 되지 않는다. PR 설명에 적고 사용자에게 알린다.
+- 스키마를 바꿨으면: 운영 반영은 `main` 배포 때 `deploy/deploy.sh` 가 `python -m stelline.database.migrate` 로 **자동으로 한다**. 데이터를 지우거나 바꾸는 마이그레이션이면 합치기 전에 백업이 필요하다고 PR 설명에 적고 사용자에게 알린다.
 - 기존 기능과 화면 동작을 바꾸지 말라는 요청이 많다. 범위 밖의 변경은 제안만 한다.
 
 ## 명령 (저장소 맨 위에서 실행)
@@ -24,7 +24,9 @@
 - `config.py`의 기본값은 `APP_ENV=production`, `START_BACKGROUND_TASKS=true`다. 환경 변수 없이 띄우면 실제 YouTube API를 부르고 FCM 알림을 보낼 수 있다. 백그라운드 작업은 사용자 확인 없이 켜지 않는다.
 - 개발 모드는 리로더 때문에 python 프로세스가 둘 뜬다. 띄운 서버만 PID로 끈다. `taskkill //IM python.exe`처럼 전체 python을 죽이지 않는다(이 PC에서는 ComfyUI 같은 다른 작업도 돈다).
 - 파일 잠금 같은 리눅스 전용 테스트는 Windows에서 skip되고 CI(ubuntu)에서만 돈다.
-- 공개 주소는 `stelline.xyz`에서 Vercel(`stel-line.vercel.app`)로 옮겼다. Vercel이 원본 서버의 nginx로 프록시하고, `stelline.xyz` HTTPS 설정도 nginx에 남아 있다(`README.md` "nginx 운영 설정"). `deploy/nginx/stelline.conf`를 바꾸면 `tests/test_pages.py`의 nginx 검사도 확인한다.
+- 공개 주소는 Vercel(`stel-line.vercel.app`) 하나다. Vercel이 원본 서버(`168.107.1.195`) nginx 80번으로 보낸다. `stelline.xyz`는 일부러 정리한 도메인이라 nginx에도 두지 않는다(되살리지 않는다). `deploy/nginx/stelline.conf`를 바꾸면 `tests/test_pages.py`의 nginx 검사도 확인한다.
+- 운영 앱은 systemd `stelline.service`(워커 1개, `127.0.0.1:5000`)가 띄운다. 프로세스를 이름 패턴으로 죽이지 않는다(`pkill -f gunicorn`은 그 명령을 실행하는 원격 셸까지 죽인다). 다시 띄울 때는 `sudo systemctl restart stelline`.
+- 백그라운드 작업은 앱을 불러올 때가 아니라 서버로 뜰 때만 시작한다(`gunicorn.conf.py`, `stelline/__main__.py`). `stelline/__init__.py`에서 작업을 시작하지 않는다.
 
 ## 커밋과 PR
 - 제목은 한국어 평서형으로, 사용자가 겪는 변화를 쓴다. 예: `'마지막 갱신'을 한국 시간으로 보여 준다`. 브랜치는 `feat/`, `fix/`, `chore/`, `docs/`를 쓴다.

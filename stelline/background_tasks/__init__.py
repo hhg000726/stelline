@@ -10,7 +10,7 @@ except ImportError:  # 윈도우 개발 환경. 여러 프로세스로 띄울 �
 from stelline.apis.bugs.tasks import start_rank_refresh
 from stelline.apis.search.tasks import start_search_scheduler
 from stelline.background_tasks.monitoring import start_monitoring
-from stelline.config import PROJECT_ROOT
+from stelline.config import PROJECT_ROOT, START_BACKGROUND_TASKS
 
 # gunicorn 워커를 여럿 띄우면 워커마다 앱을 불러 작업도 워커 수만큼 돈다.
 # 그러면 YouTube 할당량을 그만큼 더 쓰고, 조회수 달성 알림도 같은 사람에게 여러 번 나간다.
@@ -50,3 +50,14 @@ def start_background_tasks():
     start_search_scheduler()
     start_rank_refresh()
     logging.info("백그라운드 작업 스레드 등록 완료")
+
+
+def start_background_tasks_if_enabled():
+    """서버 프로세스가 뜰 때 부르는 진입점. START_BACKGROUND_TASKS 가 꺼져 있으면 아무것도 하지 않는다.
+
+    개발에서는 기본적으로 꺼 두어 외부 API와 운영 알림을 건드리지 않는다.
+    """
+    if START_BACKGROUND_TASKS:
+        start_background_tasks()
+    else:
+        logging.info("START_BACKGROUND_TASKS=false 라 백그라운드 작업을 시작하지 않습니다.")

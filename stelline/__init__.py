@@ -9,8 +9,7 @@ from flask_cors import CORS
 from stelline.admin import admin_bp
 from stelline.apis import api_bp
 from stelline.auth import auth_bp
-from stelline.background_tasks import start_background_tasks
-from stelline.config import AUTO_CREATE_SCHEMA, SECRET_KEY, SESSION_COOKIE_SECURE, START_BACKGROUND_TASKS
+from stelline.config import AUTO_CREATE_SCHEMA, SECRET_KEY, SESSION_COOKIE_SECURE
 from stelline.database.migrate import apply_migrations
 from stelline.logging_config import setup_logging
 
@@ -82,7 +81,7 @@ def serve_static(filename):
 if AUTO_CREATE_SCHEMA:
     apply_migrations()
 
-# 개발에서는 기본적으로 꺼 두어 외부 API와 운영 알림을 건드리지 않는다.
-if START_BACKGROUND_TASKS:
-    start_background_tasks()
+# 백그라운드 작업은 여기서 시작하지 않는다. 이 패키지는 마이그레이션·시드 같은 명령도
+# 불러오는데, 여기서 시작하면 그 짧은 프로세스가 작업과 잠금을 먼저 잡아 버린다.
+# 서버로 뜰 때만 시작한다: 운영은 gunicorn.conf.py 의 post_worker_init, 개발은 __main__.py.
 logging.info("Flask 앱 초기화 완료.")

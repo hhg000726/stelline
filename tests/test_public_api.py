@@ -43,20 +43,82 @@ def test_report_rejects_overlong_content(client, endpoint):
     assert "2000" in resp.get_json()["error"]
 
 
-def test_force_search_spawns_worker_and_returns_ok(client):
+def test_force_search_is_not_a_public_api(client):
+    """즉시 검사는 관리자 키의 할당량을 쓴다. 로그인 없이 띄울 수 있으면 안 된다."""
+    with patch("stelline.apis.search.tasks.start_admin_search") as start:
+        assert client.get("/api/search/force_search").status_code == 404
+        assert client.post("/api/search/force_search").status_code in (404, 405)
+    start.assert_not_called()
+
+
+def test_admin_force_search_requires_login(client):
+    with patch("stelline.admin.routes.start_admin_search") as start:
+        resp = client.post("/admin/search/force")
+    assert resp.status_code == 302
+    assert "/auth/login" in resp.headers["Location"]
+    start.assert_not_called()
+
+
+def test_admin_force_search_requires_csrf(admin_client):
+    with patch("stelline.admin.routes.start_admin_search") as start:
+        resp = admin_client.post("/admin/search/force", data={"csrf_token": "wrong"})
+    assert resp.status_code == 400
+    start.assert_not_called()
+
+
+def test_admin_force_search_starts_one_run(admin_client):
+    with patch("stelline.admin.routes.start_admin_search", return_value=True) as start:
+        resp = admin_client.post("/admin/search/force", data={"csrf_token": admin_client.csrf})
+    assert resp.status_code == 302
+    start.assert_called_once_with()
+
+
+def test_start_admin_search_refuses_while_a_run_is_in_progress():
     import threading
 
-    called = threading.Event()
-    captured = {}
+    from stelline.apis.search import tasks
 
-    def fake_cycle(by_admin=False):
-        captured["by_admin"] = by_admin
-        called.set()
+    started = threading.Event()
+    release = threading.Event()
 
-    with patch("stelline.apis.search.service.run_search_cycle", side_effect=fake_cycle):
-        resp = client.get("/api/search/force_search")
-        assert resp.status_code == 200
-        assert resp.get_json() == {"status": "ok"}
-        assert called.wait(timeout=5), "백그라운드 검색 워커가 기동되지 않았습니다"
+    def slow_run(by_admin=False):
+        started.set()
+        release.wait(timeout=5)
 
-    assert captured["by_admin"] is True
+    with patch.object(tasks, "run_search_once", side_effect=slow_run) as run:
+        assert tasks.start_admin_search() is True
+        assert started.wait(timeout=5)
+        # 첫 회차가 끝나기 전에는 두 번째를 띄우지 않는다.
+        assert tasks.start_admin_search() is False
+        release.set()
+        for _ in range(50):
+            if not tasks.SEARCH_LOCK.locked():
+                break
+            threading.Event().wait(0.05)
+        assert not tasks.SEARCH_LOCK.locked(), "회차가 끝나면 잠금이 풀려야 합니다"
+    run.assert_called_once_with(by_admin=True)
+
+
+def test_admin_login_accepts_only_the_configured_account(client):
+    resp = client.post("/auth/login", data={"username": "admin", "password": "wrong"})
+    assert resp.status_code == 200
+    with client.session_transaction() as sess:
+        assert not sess.get("logged_in")
+
+    resp = client.post("/auth/login", data={"username": "admin", "password": "test-admin-password"})
+    assert resp.status_code == 302
+    with client.session_transaction() as sess:
+        assert sess.get("logged_in") is True
+
+
+def test_admin_login_is_closed_when_no_password_is_configured(client):
+    with patch("stelline.auth.routes.ADMIN_PASSWORD", ""), patch("stelline.auth.routes.ADMIN_USERNAME", ""):
+        client.post("/auth/login", data={"username": "", "password": ""})
+    with client.session_transaction() as sess:
+        assert not sess.get("logged_in")
+
+
+def test_cors_is_limited_to_public_api(client):
+    origin = {"Origin": "https://example.com"}
+    assert client.get("/api/bugs/rank", headers=origin).headers.get("Access-Control-Allow-Origin")
+    assert "Access-Control-Allow-Origin" not in client.get("/auth/login", headers=origin).headers

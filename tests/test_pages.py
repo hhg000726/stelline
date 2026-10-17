@@ -114,6 +114,28 @@ def test_deployment_nginx_forwards_vercel_origin_requests_to_the_app():
     assert "return 404;" in next(block for block in server_blocks if "listen 80 default_server;" in block)
 
 
+
+def test_hashed_bundles_are_cached_for_good_and_the_shell_is_not():
+    """/app/ 을 오래 캐시해도 되는 것은 이름에 내용 해시가 붙어 있기 때문이다.
+
+    해시 없는 파일이 그 폴더에 들어오면, 고쳐도 방문자 브라우저에는 1년 동안 옛것이 남는다.
+    """
+    bundle_names = [path.name for path in (PROJECT_ROOT / "stelline" / "static" / "app").iterdir()]
+    assert bundle_names
+    unhashed = [name for name in bundle_names if not re.fullmatch(r"[\w.]+-[\w-]{8}\.(js|css)", name)]
+    assert not unhashed, f"해시 없는 번들: {unhashed}"
+
+    config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    server_blocks = re.findall(r"(?ms)^server \{\n(.*?)(?=^server \{|\Z)", config)
+    app_servers = [block for block in server_blocks if "@app" in block]
+    assert len(app_servers) == 2
+    for block in app_servers:
+        bundle_rule = re.search(r"(?s)location /app/ \{(.*?)\}", block).group(1)
+        assert "immutable" in bundle_rule
+        assert "try_files $uri =404;" in bundle_rule
+        shell_rule = re.search(r"(?s)location / \{(.*?)\}", block).group(1)
+        assert 'Cache-Control "no-cache"' in shell_rule
+
 def test_removed_frontend_files_are_gone(client):
     """예전 화면 파일이 남아 있으면 어느 쪽이 진짜인지 알 수 없다."""
     for path in ("/index.js", "/assets/site.js", "/assets/nav.js", "/assets/content.js",

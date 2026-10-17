@@ -167,6 +167,67 @@ def test_send_milestone_notifications_deletes_dead_tokens_in_one_batch():
     assert deletes[0][2] == [("gone1",), ("gone2",)]
 
 
+
+def test_send_milestone_notifications_keeps_going_when_one_request_fails():
+    """한 토큰의 시간 초과가 예외로 새면 조회수 갱신이 롤백되어 모두에게 알림이 다시 나간다."""
+    import requests
+
+    cursor = FakeCursor([[{"token": "slow"}, {"token": "ok"}]])
+    responses = [requests.Timeout("timed out"), _fcm_response(200)]
+
+    with patch.object(monitoring.SESSION, "post", side_effect=responses) as post:
+        monitoring.send_milestone_notifications(cursor, "access", {"title": "곡", "video_id": "v", "count": 100_000})
+
+    assert post.call_count == 2
+
+
+def test_monitoring_cleans_expired_rows_even_when_youtube_fails():
+    from contextlib import contextmanager
+
+    cursor = FakeCursor([])
+
+    @contextmanager
+    def fake_cursor():
+        yield cursor
+
+    with patch.object(monitoring, "database_cursor", fake_cursor),          patch.object(monitoring, "remove_expired_data") as remove,          patch.object(monitoring, "get_playlist_videos", side_effect=RuntimeError("quota")),          patch.object(monitoring.time, "sleep", side_effect=StopIteration):
+        with pytest.raises(StopIteration):
+            monitoring.monitoring_process()
+
+    remove.assert_called_once_with(cursor)
+
+
+def test_background_tasks_start_in_only_one_process(tmp_path):
+    """워커가 여럿이어도 작업은 한 벌만 돌아야 알림이 겹쳐 나가지 않는다."""
+    import stelline.background_tasks as background_tasks
+
+    if background_tasks.fcntl is None:
+        pytest.skip("파일 잠금은 POSIX 에서만 쓴다")
+
+    lock_path = tmp_path / "runner.lock"
+    previous = background_tasks._lock_handle
+    try:
+        assert background_tasks.acquire_runner_lock(lock_path) is True
+        first = background_tasks._lock_handle
+        # 다른 프로세스와 같은 처지: 같은 파일을 새로 열어 잠그려 한다.
+        assert background_tasks.acquire_runner_lock(lock_path) is False
+        first.close()
+        assert background_tasks.acquire_runner_lock(lock_path) is True
+        background_tasks._lock_handle.close()
+    finally:
+        background_tasks._lock_handle = previous
+
+
+def test_start_background_tasks_skips_when_another_process_runs_them():
+    import stelline.background_tasks as background_tasks
+
+    with patch.object(background_tasks, "acquire_runner_lock", return_value=False),          patch.object(background_tasks, "start_monitoring") as monitoring_start,          patch.object(background_tasks, "start_search_scheduler") as search_start,          patch.object(background_tasks, "start_rank_refresh") as rank_start:
+        background_tasks.start_background_tasks()
+
+    monitoring_start.assert_not_called()
+    search_start.assert_not_called()
+    rank_start.assert_not_called()
+
 # --- 오프라인 좌표 보완 ------------------------------------------------
 
 @pytest.mark.parametrize(

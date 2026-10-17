@@ -38,6 +38,10 @@ DEBUG_MODE = APP_ENV == "development"
 RELOADER_MODE = DEBUG_MODE
 AUTO_CREATE_SCHEMA = os.getenv("AUTO_CREATE_SCHEMA", "false").lower() == "true"
 START_BACKGROUND_TASKS = os.getenv("START_BACKGROUND_TASKS", "true").lower() == "true"
+# 관리자 세션 쿠키를 https 에서만 보낸다. 개발 서버는 http 라 기본으로 끈다.
+SESSION_COOKIE_SECURE = os.getenv(
+    "SESSION_COOKIE_SECURE", "false" if APP_ENV == "development" else "true"
+).lower() == "true"
 
 API_CHECK_INTERVAL = 300
 SEARCH_API_INTERVAL = 6 * 3600

@@ -7,6 +7,7 @@ import time
 
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
+import requests
 
 from stelline.config import API_CHECK_INTERVAL, API_KEY, MAX_RESULTS, PLAYLIST_ID, PROJECT_ID, SERVICE_ACCOUNT_FILE
 from stelline.database.connection import database_cursor
@@ -76,6 +77,9 @@ def send_milestone_notifications(cursor, access_token, song):
 
     같은 호스트로 토큰 수만큼 연달아 POST 하므로 공용 세션으로 연결을 재사용한다.
     사라진 토큰은 모아 두었다가 마지막에 한 번에 지운다(왕복 횟수를 줄인다).
+
+    토큰 하나가 시간 초과로 실패해도 예외를 밖으로 내보내지 않는다. 내보내면 조회수
+    갱신까지 롤백되어, 이미 알림을 받은 사람들에게 5분마다 같은 알림이 다시 나간다.
     """
     cursor.execute("SELECT token FROM fcm_tokens")
     url = f"https://fcm.googleapis.com/v1/projects/{PROJECT_ID}/messages:send"
@@ -89,12 +93,16 @@ def send_milestone_notifications(cursor, access_token, song):
 
     unregistered = []
     for row in cursor.fetchall():
-        response = SESSION.post(
-            url,
-            headers=headers,
-            json={"message": {"token": row["token"], "data": data}},
-            timeout=10,
-        )
+        try:
+            response = SESSION.post(
+                url,
+                headers=headers,
+                json={"message": {"token": row["token"], "data": data}},
+                timeout=10,
+            )
+        except requests.RequestException as exc:
+            logging.error("FCM 알림 요청 실패: %s", exc)
+            continue
         if response.status_code == 404 and "UNREGISTERED" in response.text:
             unregistered.append((row["token"],))
         elif not response.ok:
@@ -146,13 +154,19 @@ def update_song_counts(cursor, songs, access_token):
 
 def monitoring_process():
     while True:
+        # 만료 정리는 YouTube·FCM 과 무관하다. 한 트랜잭션에 묶으면 API 키나 서비스 계정
+        # 문제만으로 지난 이벤트가 화면에 계속 남으므로 따로 돌린다.
+        try:
+            with database_cursor() as cursor:
+                remove_expired_data(cursor)
+        except Exception:
+            logging.exception("만료 데이터 정리 실패")
         try:
             songs = get_playlist_videos()
             access_token = get_access_token()
             with database_cursor() as cursor:
-                remove_expired_data(cursor)
                 update_song_counts(cursor, songs, access_token)
-            logging.info("YouTube 조회수 및 만료 데이터 동기화 완료")
+            logging.info("YouTube 조회수 동기화 완료")
         except Exception:
             logging.exception("조회수 감시 작업 실패")
         time.sleep(API_CHECK_INTERVAL)

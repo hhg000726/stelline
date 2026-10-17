@@ -365,7 +365,10 @@
           <button class="secondary" type="submit">개발 DB 재시드</button>
         </form>
         {% endif %}
-        <button id="forceSearchBtn" class="secondary" type="button">검색 점검 즉시 실행</button>
+        <form method="post" action="{{ url_for('admin.force_search') }}" onsubmit="return confirm('지금 검색 점검을 시작할까요?')">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="secondary" type="submit">검색 점검 즉시 실행</button>
+        </form>
         <a class="btn-primary" href="{{ url_for('auth.logout') }}">로그아웃</a>
       </div>
     </header>
@@ -916,8 +919,6 @@
         });
       });
     })();
-
-    document.getElementById('forceSearchBtn').addEventListener('click', async () => { if (!confirm('지금 검색 점검을 시작할까요?')) return; try { const response = await fetch('/api/search/force_search'); if (!response.ok) throw new Error(); alert('검색 점검을 시작했습니다.'); } catch { alert('실행하지 못했습니다.'); } });
   </script>
 </body>
 </html>

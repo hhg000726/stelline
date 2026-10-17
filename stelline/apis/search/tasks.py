@@ -281,30 +281,53 @@ def search_unverified_songs(by_admin=False):
     return {"all_songs": not_searched, "searched_time": time.time(), "isQuotaExceeded": is_quota_exceeded}
 
 
-# 주기적으로 검색 데이터 가져오기
-def run_search_cycle(by_admin=False):
-    logging.info("주기적 검색 시작됨")
+# 검사 한 회차는 API 할당량을 수십 번 쓰고 songs_data 를 비웠다가 다시 채운다.
+# 정기 검사와 관리자 즉시 검사가 겹치면 할당량을 두 번 쓰고 결과도 서로 덮어쓰므로,
+# 한 번에 한 회차만 돌게 막는다.
+SEARCH_LOCK = threading.Lock()
+
+
+def run_search_once(by_admin=False):
+    """검사 한 회차를 돌고 결과를 저장한다. 호출하는 쪽이 SEARCH_LOCK 을 잡고 있어야 한다."""
     global last_search_timestamp
 
+    try:
+        new_songs = search_unverified_songs(by_admin)
+
+        if new_songs.get("isQuotaExceeded"):
+            logging.info("쿼터 초과")
+        else:
+            last_search_timestamp = new_songs["searched_time"]
+            write_last_search_timestamp(last_search_timestamp)
+            all_songs = new_songs["all_songs"]
+            save_search_results_to_db(all_songs, new_songs["searched_time"])
+            logging.info("검색 데이터 업데이트 완료!")
+    except Exception as exc:
+        logging.error("검색 업데이트 오류: %s", exc)
+
+
+# 주기적으로 검색 데이터 가져오기
+def run_search_cycle():
+    logging.info("주기적 검색 시작됨")
     while True:
-        try:
-            new_songs = search_unverified_songs(by_admin)
-
-            if new_songs.get("isQuotaExceeded"):
-                logging.info("쿼터 초과")
-            else:
-                last_search_timestamp = new_songs["searched_time"]
-                write_last_search_timestamp(last_search_timestamp)
-                all_songs = new_songs["all_songs"]
-                save_search_results_to_db(all_songs, new_songs["searched_time"])
-                logging.info("검색 데이터 업데이트 완료!")
-        except Exception as exc:
-            logging.error("검색 업데이트 오류: %s", exc)
-
-        if by_admin:
-            break
-
+        with SEARCH_LOCK:
+            run_search_once()
         wait_until_next_search_interval()
+
+
+def start_admin_search():
+    """관리자 즉시 검사를 띄운다. 이미 한 회차가 돌고 있으면 띄우지 않고 False 를 돌려준다."""
+    if not SEARCH_LOCK.acquire(blocking=False):
+        return False
+
+    def run():
+        try:
+            run_search_once(by_admin=True)
+        finally:
+            SEARCH_LOCK.release()
+
+    threading.Thread(target=run, daemon=True, name="admin-search").start()
+    return True
 
 
 def save_search_results_to_db(all_songs, searched_time):

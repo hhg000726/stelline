@@ -99,10 +99,24 @@ npm run build    # 고칠 때마다
 - 운영은 `.env`와 운영 RDS를 사용합니다. 운영 DB에 자동으로 스키마를 적용하지 않습니다.
 - 개발은 `.env.development`와 Docker의 `stelline_dev` MySQL을 사용합니다. 개발 기본값은 외부 API 호출과 FCM 발송을 비활성화합니다.
 
+## 백그라운드 작업
+
+조회수 감시(5분)·검색 점검(6시간)·Bugs 순위는 앱을 불러올 때 스레드로 시작합니다.
+
+- **서버 한 대에서 한 프로세스만 맡습니다.** gunicorn 워커를 여럿 띄우면 워커마다 앱을 불러오므로,
+  그대로 두면 YouTube 할당량을 워커 수만큼 쓰고 달성 알림도 같은 사람에게 여러 번 나갑니다.
+  맨 위 폴더의 `.background_tasks.lock` 을 먼저 잠근 프로세스만 작업을 시작합니다(`background_tasks/__init__.py`).
+- **검색 점검은 한 번에 한 회차만 돕니다.** 관리자 화면의 `검색 점검 즉시 실행`은 정기 점검이 돌고 있으면
+  띄우지 않고 그렇다고 알려 줍니다. 이 버튼은 관리자 로그인과 CSRF 토큰이 있어야 동작합니다.
+  (예전의 공개 주소 `/api/search/force_search` 는 누구나 관리자 키의 할당량을 쓸 수 있어 없앴습니다.)
+- **알림 한 건이 실패해도 나머지는 계속 보냅니다.** 실패가 밖으로 새면 조회수 갱신이 롤백되어 다음 5분에
+  모두에게 같은 알림이 다시 나가기 때문입니다. 만료 데이터 정리도 YouTube·FCM 과 따로 돌아,
+  API 키 문제가 있어도 지난 이벤트는 제때 내려갑니다.
+
 ## 개발 시작
 
-1. `docker compose -f docker-compose.dev.yml up -d`로 개발 DB를 시작합니다.
-2. `pip install -r requirements.txt` 후 `./run-development.ps1`을 실행합니다.
+1. `dev/.env.development.example`을 맨 위 폴더의 `.env.development`로 복사하고, `docker compose -f dev/docker-compose.dev.yml up -d`로 개발 DB를 시작합니다.
+2. `pip install -r requirements.txt` 후 `./dev/run-development.ps1`을 실행합니다. 자세한 순서는 `README_DEV.md` 참고.
 3. `AUTO_CREATE_SCHEMA=true`이면 코드 기준 스키마가 빈 개발 DB에 자동 생성됩니다.
 4. 화면 소스를 고칠 것이라면 `cd frontend && npm install` 후 `npm run build`(또는 `npm run dev`)를 실행합니다.
 
@@ -121,6 +135,9 @@ npm run build    # 고칠 때마다
 `stel-line.vercel.app` Host 요청도 같은 Flask 앱과 정적 파일 처리로 연결합니다. 알 수 없는
 Host는 기본 서버가 404로 거부합니다. HTTPS 인증서는 `stelline.xyz`에만 Certbot 경로로 사용합니다.
 
+빌드 결과물 `/app/` 아래 파일은 이름에 내용 해시가 붙어 있어 1년(`immutable`) 캐시하고,
+`index.html` 등 나머지는 `no-cache` 로 매번 확인합니다. 해시 없는 파일을 `app/` 에 넣으면 테스트가 실패합니다.
+
 `main` 브랜치 배포 때 GitHub Actions가 이 설정을 서버에 설치하고 nginx를 검사·reload하므로
 별도 수동 설정이 필요하지 않습니다. 배포 서버에서 실행 중인 계정은 비밀번호 없이
 `install`, `ln`, `rm`, `nginx -t`, `systemctl reload nginx`를 `sudo`로 실행할 수 있어야
@@ -130,7 +147,7 @@ Host는 기본 서버가 404로 거부합니다. HTTPS 인증서는 `stelline.xy
 `static/search/`가 디렉터리로 먼저 선택되어 `/search`에서 403이 발생할 수 있습니다.
 배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, HTTPS 인증서
 파일(`/etc/letsencrypt/live/stelline.xyz/`)과 Flask의 `5000` 포트가 서버에 있어야 합니다.
-Vercel 원본 프록시를 계속 사용할 때는 `vercel.json`의 rewrite 대상 IP와 위 Nginx의
+Vercel 원본 프록시를 계속 사용할 때는 Vercel 프로젝트 쪽 `vercel.json`(이 저장소에는 없습니다)의 rewrite 대상 IP와 위 Nginx의
 `server_name`을 함께 맞춰야 합니다. 이 Nginx 설정은 배포마다 workflow가 설치하므로,
 서버에서만 수동 수정하지 말고 저장소 설정도 함께 변경하세요.
 

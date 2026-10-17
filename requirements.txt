@@ -1,12 +1,14 @@
-flask
-flask_cors
+# 배포는 main 에 올리면 자동으로 나간다. 지금 쓰는 메이저 버전을 넘는 판올림이
+# 시험 없이 운영에 들어가지 않도록 위쪽만 막아 둔다(아래쪽은 서버에 깔린 것을 그대로 쓴다).
+flask<4
+flask_cors<7
 # 관리자 화면이 행 토큰 서명에 직접 사용한다(Flask가 함께 설치하지만 명시해 둔다).
-itsdangerous
-python-dotenv
+itsdangerous<3
+python-dotenv<2
 bs4
-requests
-gunicorn
-pymysql
-google-auth
-google-auth-oauthlib
-firebase-admin
+requests<3
+gunicorn<27
+pymysql<2
+google-auth<3
+google-auth-oauthlib<2
+firebase-admin<8

@@ -24,7 +24,7 @@
 - `config.py`의 기본값은 `APP_ENV=production`, `START_BACKGROUND_TASKS=true`다. 환경 변수 없이 띄우면 실제 YouTube API를 부르고 FCM 알림을 보낼 수 있다. 백그라운드 작업은 사용자 확인 없이 켜지 않는다.
 - 개발 모드는 리로더 때문에 python 프로세스가 둘 뜬다. 띄운 서버만 PID로 끈다. `taskkill //IM python.exe`처럼 전체 python을 죽이지 않는다(이 PC에서는 ComfyUI 같은 다른 작업도 돈다).
 - 파일 잠금 같은 리눅스 전용 테스트는 Windows에서 skip되고 CI(ubuntu)에서만 돈다.
-- 공개 주소는 Vercel(`stel-line.vercel.app`) 하나다. Vercel이 원본 서버(`168.107.1.195`) nginx 80번으로 보낸다. `stelline.xyz`는 일부러 정리한 도메인이라 nginx에도 두지 않는다(되살리지 않는다). `deploy/nginx/stelline.conf`를 바꾸면 `tests/test_pages.py`의 nginx 검사도 확인한다.
+- 공개 주소는 Vercel(`stel-line.vercel.app`) 하나다. Vercel이 원본 서버(`168.107.1.195`) nginx 80번으로 보낸다. 이 서버에는 HTTPS 블록과 인증서를 두지 않는다(예전 자체 도메인은 일부러 정리했다). `deploy/nginx/stelline.conf`를 바꾸면 `tests/test_pages.py`의 nginx 검사도 확인한다.
 - 운영 앱은 systemd `stelline.service`(워커 1개, `127.0.0.1:5000`)가 띄운다. 프로세스를 이름 패턴으로 죽이지 않는다(`pkill -f gunicorn`은 그 명령을 실행하는 원격 셸까지 죽인다). 다시 띄울 때는 `sudo systemctl restart stelline`.
 - 백그라운드 작업은 앱을 불러올 때가 아니라 서버로 뜰 때만 시작한다(`gunicorn.conf.py`, `stelline/__main__.py`). `stelline/__init__.py`에서 작업을 시작하지 않는다.
 

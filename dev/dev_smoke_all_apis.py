@@ -29,7 +29,6 @@ def check_post(path, payload):
         print(f"POST {path} -> ERROR: {e}")
 
 GET_ENDPOINTS = [
-    "/api/search/force_search",
     "/api/search/not_searched",
     "/api/search/record",
     "/api/search/songs",

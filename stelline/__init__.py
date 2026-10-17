@@ -10,7 +10,7 @@ from stelline.admin import admin_bp
 from stelline.apis import api_bp
 from stelline.auth import auth_bp
 from stelline.background_tasks import start_background_tasks
-from stelline.config import AUTO_CREATE_SCHEMA, SECRET_KEY, START_BACKGROUND_TASKS
+from stelline.config import AUTO_CREATE_SCHEMA, SECRET_KEY, SESSION_COOKIE_SECURE, START_BACKGROUND_TASKS
 from stelline.database.migrate import apply_migrations
 from stelline.logging_config import setup_logging
 
@@ -21,7 +21,14 @@ app.secret_key = SECRET_KEY
 # 관리자 화면의 그림 올리기가 유일한 파일 업로드다. 항목별 상한은 이보다 훨씬 작지만,
 # 그보다 큰 요청은 본문을 읽기도 전에 끊어 메모리를 붙들지 않게 한다.
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
-CORS(app)
+# 관리자 세션 쿠키는 다른 사이트에서 보낸 요청(폼 제출 등)에는 실리지 않게 한다.
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# 운영은 Vercel(https) 을 거쳐서만 들어온다. http 로 관리자에 들어갈 일이 있으면
+# .env 에 SESSION_COOKIE_SECURE=false 를 두면 된다.
+app.config["SESSION_COOKIE_SECURE"] = SESSION_COOKIE_SECURE
+# 공개 화면은 같은 주소에서 /api 를 부르므로 CORS 가 필요 없지만, 바깥에서 공개 API 를
+# 읽는 쪽이 있을 수 있어 /api 에만 열어 둔다. 관리자·로그인 화면까지 열 이유는 없다.
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
 @app.errorhandler(413)

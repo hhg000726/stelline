@@ -44,10 +44,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v7
 
+      # 운영 서버(Ubuntu 24.04)의 venv 와 같은 버전으로 시험한다. 더 새 버전으로 돌리면
+      # 운영 Python 에 없는 문법·표준 라이브러리를 써도 CI 가 통과해 배포 뒤에야 터진다.
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version: "3.12"
           cache: pip
 
       - name: Install dependencies

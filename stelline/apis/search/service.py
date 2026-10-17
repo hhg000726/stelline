@@ -1,5 +1,4 @@
 import logging
-import threading
 
 from flask import jsonify
 
@@ -9,14 +8,7 @@ from .tasks import (
     fetch_recent_data_from_db,
     fetch_song_infos_from_db,
     fetch_songs_data_from_db,
-    run_search_cycle,
 )
-
-
-def force_search_now():
-    logging.info("관리자 요청 즉시 검색")
-    threading.Thread(target=run_search_cycle, daemon=True, args=(True,)).start()
-    return jsonify({"status": "ok"}), 200
 
 
 def get_not_searched():

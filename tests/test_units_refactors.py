@@ -6,6 +6,8 @@ DB 왕복을 줄이려고 손댄 자리들이 예전과 같은 결과를 내는�
 
 from unittest.mock import MagicMock, patch
 
+from pathlib import Path
+
 import pytest
 
 from stelline.apis.karaoke.service import _member_list
@@ -227,6 +229,75 @@ def test_start_background_tasks_skips_when_another_process_runs_them():
     monitoring_start.assert_not_called()
     search_start.assert_not_called()
     rank_start.assert_not_called()
+
+
+def test_importing_the_app_never_starts_background_tasks():
+    """마이그레이션·시드 명령은 앱 패키지를 불러온다. 그것만으로 작업이 돌면 안 된다.
+
+    그 짧은 프로세스가 작업과 잠금을 먼저 잡으면, 그동안 뜬 서버 워커는 작업을 건너뛴다.
+    운영처럼 START_BACKGROUND_TASKS=true 로 두고 별도 프로세스에서 실제로 불러와 본다.
+    """
+    import os
+    import subprocess
+    import sys
+
+    env = {
+        **os.environ,
+        "APP_ENV": "development",
+        "START_BACKGROUND_TASKS": "true",
+        "AUTO_CREATE_SCHEMA": "false",
+        "SECRET_KEY": "test-secret-key",
+    }
+    code = (
+        "import threading\n"
+        "import stelline, stelline.database.migrate, stelline.database.karaoke_seed\n"
+        "print(threading.active_count())\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], env=env, capture_output=True, text=True, timeout=30,
+        cwd=Path(__file__).resolve().parent.parent,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip().splitlines()[-1] == "1", "앱을 불러오기만 했는데 스레드가 떴습니다"
+
+
+def test_gunicorn_worker_starts_background_tasks_after_loading_the_app():
+    import importlib.util
+
+    conf_path = Path(__file__).resolve().parent.parent / "gunicorn.conf.py"
+    spec = importlib.util.spec_from_file_location("stelline_gunicorn_conf", conf_path)
+    conf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(conf)
+
+    with patch("stelline.background_tasks.start_background_tasks_if_enabled") as start:
+        conf.post_worker_init(worker=None)
+    start.assert_called_once_with()
+
+
+
+def test_gunicorn_picks_up_the_conf_file_from_the_repo_root():
+    """systemd 는 --config 없이 저장소 맨 위에서 gunicorn 을 띄운다. 그래도 이 훅이 쓰여야 한다."""
+    import subprocess
+    import sys
+
+    pytest.importorskip("fcntl", reason="gunicorn 은 POSIX 에서만 돈다")
+    result = subprocess.run(
+        [sys.executable, "-m", "gunicorn", "--print-config", "stelline:app"],
+        capture_output=True, text=True, timeout=30, cwd=Path(__file__).resolve().parent.parent,
+    )
+    assert result.returncode == 0, result.stderr
+    hook = next(line for line in result.stdout.splitlines() if line.startswith("post_worker_init "))
+    # 기본값이면 '<PostWorkerInit.post_worker_init()>' 로 나온다.
+    assert "PostWorkerInit" not in hook, hook
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_background_tasks_follow_the_switch(enabled):
+    import stelline.background_tasks as background_tasks
+
+    with patch.object(background_tasks, "START_BACKGROUND_TASKS", enabled), \
+         patch.object(background_tasks, "start_background_tasks") as start:
+        background_tasks.start_background_tasks_if_enabled()
+    assert start.called is enabled
 
 # --- 오프라인 좌표 보완 ------------------------------------------------
 

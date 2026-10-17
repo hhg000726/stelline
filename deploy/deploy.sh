@@ -1,5 +1,12 @@
 # 운영 서버의 ~/deploy.sh 원본. GitHub Actions 가 main 배포 때 `bash ~/deploy.sh` 로 부른다.
 # 서버에서만 고치지 말고 여기도 함께 고친다.
+#
+# 준비 단계(pull·설치·마이그레이션) 중 하나라도 실패하면 재시작 전에 멈춘다.
+# 그대로 재시작하면 새 코드가 적용되지 않은 스키마 위에서 돌면서 배포는 초록으로 끝난다.
+# 멈추면 지금 떠 있는 앱은 그대로 둔 채 Actions 가 빨갛게 끝난다.
+set -eo pipefail
+trap 'echo "배포 중단: ${BASH_COMMAND} 가 실패했습니다. 앱은 재시작하지 않았습니다." >&2' ERR
+
 cd stelline
 
 # 1. 최신 코드 가져오기

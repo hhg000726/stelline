@@ -154,6 +154,8 @@ def test_production_process_is_supervised_single_worker_and_local_only():
     script = (PROJECT_ROOT / "deploy" / "deploy.sh").read_text(encoding="utf-8")
     commands = [line.strip() for line in script.splitlines() if line.strip() and not line.strip().startswith("#")]
     assert "sudo systemctl restart stelline" in commands
+    # 준비 단계가 실패하면 재시작 전에 멈춰야 한다(마이그레이션 실패를 초록 배포로 덮지 않게).
+    assert commands.index("set -eo pipefail") < commands.index("sudo systemctl restart stelline")
     assert not any(command.startswith(("pkill", "nohup")) for command in commands)
 
     nginx = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")

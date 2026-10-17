@@ -299,6 +299,55 @@ def test_background_tasks_follow_the_switch(enabled):
         background_tasks.start_background_tasks_if_enabled()
     assert start.called is enabled
 
+
+def test_search_runs_fit_the_youtube_quota_day_three_times():
+    """할당량은 태평양 시간 자정에 다시 찬다. 8시간 간격이면 서머타임과 상관없이 하루에 정확히 세 회차다.
+
+    네 회차였을 때는 마지막 회차(한국 15시)가 할당량을 넘겨 늘 429 로 끊겼다.
+    """
+    from collections import Counter
+    from datetime import datetime, timedelta, timezone
+
+    from stelline.apis.search.tasks import SEARCH_CALLS_PER_RUN
+    from stelline.config import SEARCH_API_INTERVAL
+
+    try:
+        from zoneinfo import ZoneInfo
+        pacific = ZoneInfo("America/Los_Angeles")
+    except Exception:  # 윈도우에 tzdata 가 없으면
+        pytest.skip("시간대 정보가 없다")
+
+    start = int(datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp())
+    end = int(datetime(2028, 1, 1, tzinfo=timezone.utc).timestamp())
+    first = start - start % SEARCH_API_INTERVAL + SEARCH_API_INTERVAL
+    # 첫 검색 호출은 회차 시작 20초 뒤에 나간다(tasks.search_unverified_songs 의 sleep).
+    runs_per_quota_day = Counter(
+        (datetime.fromtimestamp(t, timezone.utc) + timedelta(seconds=20)).astimezone(pacific).date()
+        for t in range(first, end, SEARCH_API_INTERVAL)
+    )
+    full_days = list(runs_per_quota_day.items())[1:-1]  # 처음·마지막 날은 잘려 있다
+    assert full_days and {count for _, count in full_days} == {3}
+
+    daily_units = 3 * SEARCH_CALLS_PER_RUN * 100
+    assert daily_units <= 9000, "같은 프로젝트의 다른 사용분 몫으로 1,000 은 남겨야 한다"
+
+
+def test_one_search_run_never_exceeds_its_call_budget():
+    from stelline.apis.search import tasks
+
+    songs = [{"query": f"곡 {i}", "video_id": f"v{i}", "risk": 0} for i in range(200)]
+    with patch.object(tasks, "fetch_song_infos_from_db", return_value=songs), \
+         patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
+         patch.object(tasks, "update_song_risk"), \
+         patch.object(tasks, "crawl_search_results_for_missing_videos", side_effect=lambda found: found), \
+         patch.object(tasks.time, "sleep"), \
+         patch.object(tasks, "_youtube_video_ids_for_query", return_value=[]) as search:
+        result = tasks.search_unverified_songs()
+
+    assert search.call_count <= tasks.SEARCH_CALLS_PER_RUN
+    assert search.call_count >= tasks.SEARCH_CALLS_PER_RUN - 1
+    assert result["isQuotaExceeded"] is False
+
 # --- 오프라인 좌표 보완 ------------------------------------------------
 
 @pytest.mark.parametrize(

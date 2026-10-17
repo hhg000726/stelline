@@ -22,7 +22,7 @@ export const CONTENT_DEFAULTS = {
   "search_help_note": "인기도 순으로 정렬해서 들으면 검색 노출에 도움이 됩니다.",
   "search_help_list": "오리지널 곡은 본 채널 뮤비로 봐주세요.\n기억날 때마다 한 번씩 검색하고, 인기도 순으로 정렬 후 들어주세요.\n댓글과 공유까지 한다면 효과가 더 좋다는 말도 있습니다.\n한 번 막힌 영상이 계속 막히는 현상이 반복되고 있습니다.\n한 번 막혔던 영상도 생각날 때 한 번만 부탁드립니다.",
   "search_steps_hint": "그림을 누르면 크게 볼 수 있습니다.",
-  "search_query_note": "최근에 막혔던 곡 + 랜덤 25곡을 6시간마다 검색하고 있습니다.",
+  "search_query_note": "최근에 막혔던 곡 + 랜덤 30곡을 8시간마다 검색하고 있습니다.",
   "search_step_pc_1_label": "필터 클릭",
   "search_step_pc_1_image": "/search/1.PNG",
   "search_step_pc_2_label": "우선순위 · 인기도 순 클릭",

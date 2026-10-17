@@ -44,7 +44,12 @@ SESSION_COOKIE_SECURE = os.getenv(
 ).lower() == "true"
 
 API_CHECK_INTERVAL = 300
-SEARCH_API_INTERVAL = 6 * 3600
+# 검색 점검은 8시간마다(한국 시간 01·09·17시, UTC 기준 0·8·16시) 하루 세 번 돈다.
+# YouTube 할당량(프로젝트당 하루 10,000, 검색 한 번 100)은 태평양 시간 자정에 다시 차는데,
+# 8시간 간격이면 서머타임과 상관없이 할당 하루마다 정확히 세 회차가 들어간다.
+# 예전 6시간(네 회차 × 25회)은 할당량을 꽉 채워, 같은 프로젝트의 다른 사용분만큼
+# 마지막 회차(15시)가 늘 429 로 끊겼다.
+SEARCH_API_INTERVAL = 8 * 3600
 MAX_RESULTS = 50
 
 NCP_CLIENT_ID = os.getenv("NCP_CLIENT_ID")

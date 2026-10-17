@@ -4,7 +4,7 @@
  * 않는다. 바뀌는 것은 <Outlet /> 자리뿐이다.
  */
 import { Suspense } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "react-router";
 
 import { ErrorBoundary } from "./ErrorBoundary";
 import { RouteFallback } from "./Loading";

@@ -39,11 +39,13 @@ export default defineConfig({
     emptyOutDir: false,
     assetsDir: "app",
     sourcemap: false,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         // 해시가 없으면 배포한 뒤에도 옛 파일이 캐시된다.
         entryFileNames: "app/[name]-[hash].js",
-        chunkFileNames: "app/[name]-[hash].js",
+        // 이름과 해시는 마지막 '-' 하나로만 나뉘게 한다. 공용 조각은 모듈 이름을
+        // 따라가서(jsx-runtime 등) '-' 가 섞이므로 '_' 로 바꾼다.
+        chunkFileNames: (chunk) => `app/${chunk.name.replaceAll("-", "_")}-[hash].js`,
         assetFileNames: "app/[name]-[hash][extname]",
       },
     },

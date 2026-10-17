@@ -1,6 +1,6 @@
 /* 없는 주소. 서버는 모르는 주소에 404를 주므로 여기까지 오는 일은 드물지만,
  * 화면 안에서 잘못 옮겨 갔을 때 빈 화면이 되지 않게 둔다. */
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { usePageMeta } from "../lib/usePageMeta";
 

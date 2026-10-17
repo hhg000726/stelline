@@ -5,7 +5,7 @@
  * 화면 묶음은 React.lazy 로 나눠, 들어간 화면에 필요한 것만 받아 온다.
  */
 import { lazy } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router";
 
 import { Layout } from "./components/Layout";
 import { ContentProvider } from "./context/ContentContext";

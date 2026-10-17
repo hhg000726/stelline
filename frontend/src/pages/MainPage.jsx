@@ -3,7 +3,7 @@
  * 트윗 안내 · 이벤트 · 벅스 순위 세 칸을 각각 따로 불러온다(예전 index.js 와 같다).
  * 한 칸이 실패해도 나머지는 그대로 보이고, 값이 하나도 없는 칸은 통째로 사라진다.
  */
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { ContentText } from "../components/ContentText";
 import { Icon } from "../components/Icon";

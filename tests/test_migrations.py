@@ -66,3 +66,13 @@ def test_song_infos_primary_key_is_query(db, _schema):
         )
         pk_columns = {row["COLUMN_NAME"] for row in cursor.fetchall()}
     assert pk_columns == {"query"}
+
+
+def test_search_cover_fallback_columns_exist(db, _schema):
+    with db.cursor() as cursor:
+        cursor.execute(
+            """SELECT COLUMN_NAME FROM information_schema.COLUMNS
+               WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'song_infos'"""
+        )
+        columns = {row["COLUMN_NAME"] for row in cursor.fetchall()}
+    assert {"fallback_query", "last_checked_at"}.issubset(columns)

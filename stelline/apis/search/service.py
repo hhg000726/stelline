@@ -5,6 +5,7 @@ from flask import jsonify
 from stelline.apis.reports import handle_report_submission
 from stelline.database.connection import database_cursor
 from .tasks import (
+    fetch_cover_matches_from_db,
     fetch_recent_data_from_db,
     fetch_song_infos_from_db,
     fetch_songs_data_from_db,
@@ -19,12 +20,22 @@ def get_not_searched():
         "all_songs": all_songs,
         "searched_time": searched_time,
         "recent": recent,
+        "cover_matches": fetch_cover_matches_from_db(),
     })
 
 
 def get_song_infos():
     logging.info("곡 메타 정보 조회 요청")
-    return jsonify(fetch_song_infos_from_db())
+    songs = fetch_song_infos_from_db()
+    return jsonify([
+        {
+            "video_id": song["video_id"],
+            "query": song["query"],
+            "risk": song["risk"],
+            "fallback_query": song["fallback_query"],
+        }
+        for song in songs
+    ])
 
 
 def record_search():

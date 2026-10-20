@@ -60,7 +60,12 @@ def test_get_song_infos(client, db, clean_db):
         ("vid123", "테스트 곡", 5),
     )
     data = client.get("/api/search/songs").get_json()
-    assert data == [{"video_id": "vid123", "query": "테스트 곡", "risk": 5}]
+    assert data == [{
+        "video_id": "vid123",
+        "query": "테스트 곡",
+        "risk": 5,
+        "fallback_query": None,
+    }]
 
 
 def test_not_searched_returns_songs_and_recent(client, db, clean_db):
@@ -75,9 +80,17 @@ def test_not_searched_returns_songs_and_recent(client, db, clean_db):
         "INSERT INTO recent_data (video_id, query, searched_time) VALUES (%s, %s, %s)",
         ("vidB", "곡 B", now),
     )
+    _insert(
+        db,
+        "INSERT INTO song_infos (video_id, query, risk, fallback_query) VALUES (%s, %s, %s, %s)",
+        ("vidC", "곡 C", 28, "곡 C cover"),
+    )
     payload = client.get("/api/search/not_searched").get_json()
     assert {"query": "곡 A", "video_id": "vidA"} in payload["all_songs"]
     assert any(r["video_id"] == "vidB" for r in payload["recent"])
+    assert payload["cover_matches"] == [
+        {"query": "곡 C", "video_id": "vidC", "fallback_query": "곡 C cover"}
+    ]
 
 
 def test_record_search_increments_copy_count(client, db, clean_db):

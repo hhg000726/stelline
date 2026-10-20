@@ -141,7 +141,7 @@ def test_resolve_match_lowers_risk_when_video_present():
     with patch.object(search_tasks, "update_song_risk") as update:
         found = search_tasks._resolve_match("q", "vid1", ["vid1", "vid2"], song_risk=10)
     assert found is True
-    update.assert_called_once_with("q", 9)
+    update.assert_called_once_with("q", 9, clear_fallback=True)
 
 
 def test_resolve_match_raises_risk_when_video_missing():
@@ -154,7 +154,19 @@ def test_resolve_match_raises_risk_when_video_missing():
 def test_resolve_match_risk_never_negative():
     with patch.object(search_tasks, "update_song_risk") as update:
         search_tasks._resolve_match("q", "vid1", ["vid1"], song_risk=0)
-    update.assert_called_once_with("q", 0)
+    update.assert_called_once_with("q", 0, clear_fallback=True)
+
+
+def test_update_song_risk_records_when_the_song_was_checked():
+    context = MagicMock()
+    cursor = context.__enter__.return_value
+    with patch.object(search_tasks, "database_cursor", return_value=context):
+        search_tasks.update_song_risk("q", 27, clear_fallback=True)
+
+    sql, params = cursor.execute.call_args.args
+    assert "last_checked_at = CURRENT_TIMESTAMP" in sql
+    assert "fallback_query = NULL" in sql
+    assert params == (27, "q")
 
 
 # --- 관리자 폼 헬퍼 ---------------------------------------------------

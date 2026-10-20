@@ -420,6 +420,15 @@ def test_search_steps_open_on_the_tab_matching_the_device():
     assert "pointer: coarse" in page
 
 
+def test_search_page_separates_songs_found_only_with_cover_query():
+    page = source("pages", "SearchPage.jsx")
+    assert 'name: "cover"' in page
+    assert "cover 검색으로 발견" in page
+    assert "data.cover_matches" in page
+    assert "cover 추가 검색에서 발견" in page
+    assert "song.fallback_query" in page
+
+
 def test_search_steps_renumber_when_a_step_is_removed():
     """단계 하나를 지우면 STEP 1, STEP 3 처럼 번호가 비어 버린다."""
     grid = source("pages", "search", "StepGrid.jsx")

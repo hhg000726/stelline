@@ -121,7 +121,7 @@ export default function SearchPage() {
       if (openExternal("https://www.youtube.com/")) {
         toast("복사했어요. 새 탭에서 유튜브를 열었습니다.");
       } else {
-        toast("복사했어요. 새 탭이 열리지 않았다면 팝업 차단을 확인해 주세요.");
+        toast("팝업 차단을 확인해 주세요. PC에서 애드가드를 쓰면 이 사이트의 보호를 끄거나 팝업을 허용해 주세요.");
       }
     },
     [toast],

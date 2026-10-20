@@ -85,6 +85,11 @@
   background: var(--primary-tint);
 }
 
+.cover-results-panel {
+  display: grid;
+  gap: 12px;
+}
+
 .query-chip:hover {
   transform: none;
   border-color: var(--primary-outline);

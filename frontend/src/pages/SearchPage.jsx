@@ -170,7 +170,6 @@ export default function SearchPage() {
           한 칸에서 탭으로 바꿔 본다. 화면이 절반으로 짧아지고 둘의 관계도 분명해진다. */}
       <SectionPanel
         title="검색 노출 현황"
-        noteKey="search_songs_note"
         actions={
           <Segmented
             groupId="song-tabs"
@@ -201,24 +200,31 @@ export default function SearchPage() {
         {songs.status === "error" && <EmptyState isError>목록을 불러오지 못했습니다.</EmptyState>}
         {songs.status === "ready" && (
           <>
-            <SongCards
-              songs={songs.current}
-              emptyText="검색 안되는 노래가 없습니다."
-              onSelect={openYoutube}
-              {...tabPanelProps("song-tabs", "current", songTab === "current")}
-            />
-            <SongCards
-              songs={songs.recent}
-              emptyText="최근 7일 이내에 막혔던 곡이 없습니다."
-              onSelect={openYoutube}
-              {...tabPanelProps("song-tabs", "recent", songTab === "recent")}
-            />
-            <SongCards
-              songs={songs.cover}
-              emptyText="기본 검색에서 찾지 못해 cover를 붙여 다시 찾은 곡이 없습니다."
-              onSelect={openYoutube}
+            <div {...tabPanelProps("song-tabs", "current", songTab === "current")}>
+              <SongCards
+                songs={songs.current}
+                emptyText="검색 안되는 노래가 없습니다."
+                onSelect={openYoutube}
+              />
+            </div>
+            <div {...tabPanelProps("song-tabs", "recent", songTab === "recent")}>
+              <SongCards
+                songs={songs.recent}
+                emptyText="최근 7일 이내에 막혔던 곡이 없습니다."
+                onSelect={openYoutube}
+              />
+            </div>
+            <div
+              className="cover-results-panel"
               {...tabPanelProps("song-tabs", "cover", songTab === "cover")}
-            />
+            >
+              <ContentText contentKey="search_songs_note" />
+              <SongCards
+                songs={songs.cover}
+                emptyText="기본 검색에서 찾지 못해 cover를 붙여 다시 찾은 곡이 없습니다."
+                onSelect={openYoutube}
+              />
+            </div>
           </>
         )}
       </SectionPanel>

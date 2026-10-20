@@ -429,6 +429,14 @@ def test_search_page_separates_songs_found_only_with_cover_query():
     assert "song.fallback_query" in page
 
 
+def test_search_cover_explanation_is_scoped_to_its_tabpanel():
+    page = source("pages", "SearchPage.jsx")
+    assert 'noteKey="search_songs_note"' not in page
+    cover_panel_start = page.index('tabPanelProps("song-tabs", "cover", songTab === "cover")')
+    cover_panel_end = page.index("</div>", cover_panel_start)
+    assert 'ContentText contentKey="search_songs_note"' in page[cover_panel_start:cover_panel_end]
+
+
 def test_search_steps_renumber_when_a_step_is_removed():
     """단계 하나를 지우면 STEP 1, STEP 3 처럼 번호가 비어 버린다."""
     grid = source("pages", "search", "StepGrid.jsx")

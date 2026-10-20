@@ -71,7 +71,7 @@ export default function SearchPage() {
   });
 
   const toast = useToast();
-  const [songs, setSongs] = useState({ status: "loading", current: [], recent: [], updated: "" });
+  const [songs, setSongs] = useState({ status: "loading", current: [], recent: [], cover: [], updated: "" });
   const queries = useApiList("search/songs", {
     errorLabel: "JSON을 불러오는 중 오류 발생:",
     select: (data) => (Array.isArray(data) ? data : []),
@@ -91,12 +91,13 @@ export default function SearchPage() {
           status: "ready",
           current: shuffled(data.all_songs),
           recent: shuffled(data.recent),
+          cover: shuffled(data.cover_matches),
           updated: lastUpdatedText(data.searched_time),
         });
       })
       .catch((error) => {
         console.error("Error fetching songs:", error);
-        if (alive) setSongs({ status: "error", current: [], recent: [], updated: "" });
+        if (alive) setSongs({ status: "error", current: [], recent: [], cover: [], updated: "" });
       });
     return () => {
       alive = false;
@@ -121,7 +122,7 @@ export default function SearchPage() {
       if (openExternal("https://www.youtube.com/")) {
         toast("복사했어요. 새 탭에서 유튜브를 열었습니다.");
       } else {
-        toast("복사했어요. 새 탭이 열리지 않았다면 팝업 차단을 확인해 주세요.");
+        toast("팝업 차단을 확인해 주세요. PC에서 애드가드를 쓰면 이 사이트의 보호를 끄거나 팝업을 허용해 주세요.");
       }
     },
     [toast],
@@ -168,7 +169,7 @@ export default function SearchPage() {
       {/* 지금 막힌 곡과 최근에 막혔던 곡은 같은 종류의 목록이라, 두 칸을 따로 두는 대신
           한 칸에서 탭으로 바꿔 본다. 화면이 절반으로 짧아지고 둘의 관계도 분명해진다. */}
       <SectionPanel
-        title="막힌 곡 목록"
+        title="검색 노출 현황"
         noteKey="search_songs_note"
         actions={
           <Segmented
@@ -186,6 +187,11 @@ export default function SearchPage() {
                 name: "recent",
                 label: "최근 7일 ",
                 suffix: <span data-count="recent">{songs.status === "ready" ? songs.recent.length : ""}</span>,
+              },
+              {
+                name: "cover",
+                label: "cover 검색으로 발견 ",
+                suffix: <span data-count="cover">{songs.status === "ready" ? songs.cover.length : ""}</span>,
               },
             ]}
           />
@@ -206,6 +212,12 @@ export default function SearchPage() {
               emptyText="최근 7일 이내에 막혔던 곡이 없습니다."
               onSelect={openYoutube}
               {...tabPanelProps("song-tabs", "recent", songTab === "recent")}
+            />
+            <SongCards
+              songs={songs.cover}
+              emptyText="기본 검색에서 찾지 못해 cover를 붙여 다시 찾은 곡이 없습니다."
+              onSelect={openYoutube}
+              {...tabPanelProps("song-tabs", "cover", songTab === "cover")}
             />
           </>
         )}
@@ -278,11 +290,12 @@ export default function SearchPage() {
               <li className="query-item" key={`${item.video_id}-${item.query}`}>
                 <button
                   type="button"
-                  className="query-chip"
-                  title={item.query}
-                  onClick={() => openYoutube(item.query)}
+                  className={`query-chip${item.fallback_query ? " has-cover-match" : ""}`}
+                  title={item.fallback_query ? `${item.fallback_query} 검색어 복사 후 유튜브 열기` : item.query}
+                  onClick={() => openYoutube(item.fallback_query || item.query)}
                 >
-                  {item.query}
+                  <span>{item.query}</span>
+                  {item.fallback_query && <small>cover 추가 검색에서 발견</small>}
                 </button>
               </li>
             ))
@@ -299,26 +312,36 @@ export default function SearchPage() {
 function SongCards({ songs, emptyText, onSelect, ...panelProps }) {
   return (
     <div className="card-grid is-compact" {...panelProps}>
-      {songs.map((song) => (
-        <button
-          key={`${song.video_id}-${song.query}`}
-          type="button"
-          className="card is-link"
-          title={`${song.query} 복사하고 유튜브를 새 탭에서 열기`}
-          onClick={() => onSelect(song.query)}
-        >
-          <div className="thumb-wrap">
-            <img src={`https://img.youtube.com/vi/${song.video_id}/0.jpg`} alt="" loading="lazy" />
-            <span className="thumb-play">
-              <Icon name="play" />
-            </span>
-          </div>
-          <div className="info">
-            <h3>{song.query}</h3>
-            <span className="card-action">복사 &amp; 새 탭</span>
-          </div>
-        </button>
-      ))}
+      {songs.map((song) => {
+        const searchQuery = song.fallback_query || song.query;
+        return (
+          <button
+            key={`${song.video_id}-${song.query}`}
+            type="button"
+            className="card is-link"
+            title={`${searchQuery} 복사하고 유튜브를 새 탭에서 열기`}
+            onClick={() => onSelect(searchQuery)}
+          >
+            <div className="thumb-wrap">
+              <img src={`https://img.youtube.com/vi/${song.video_id}/0.jpg`} alt="" loading="lazy" />
+              <span className="thumb-play">
+                <Icon name="play" />
+              </span>
+            </div>
+            <div className="info">
+              <h3>{song.query}</h3>
+              {song.fallback_query && (
+                <span className="cover-match-note">
+                  기본 검색에서는 찾지 못했지만, ‘{song.fallback_query}’ 검색에서 찾았어요.
+                </span>
+              )}
+              <span className="card-action">
+                {song.fallback_query ? "cover 검색어 복사 & 새 탭" : "복사 & 새 탭"}
+              </span>
+            </div>
+          </button>
+        );
+      })}
       {songs.length === 0 && <EmptyState>{emptyText}</EmptyState>}
     </div>
   );

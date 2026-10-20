@@ -378,6 +378,17 @@ def test_copy_failures_are_reported_instead_of_doing_nothing(parts):
     assert "navigator.clipboard.writeText" not in text
 
 
+@pytest.mark.parametrize(
+    "parts",
+    [("pages", "main", "TwitsPanel.jsx"), ("pages", "SearchPage.jsx")],
+)
+def test_blocked_new_tabs_explain_adguard_and_popup_settings(parts):
+    """PC에서 애드가드가 새 탭을 막을 때 확인할 설정도 안내한다."""
+    text = source(*parts)
+    assert "PC에서 애드가드를 쓰면" in text
+    assert "팝업을 허용해 주세요" in text
+
+
 # --- 바깥 사이트로 나가는 자리는 링크로 -------------------------------------
 
 def test_outbound_targets_are_links_not_buttons():
@@ -407,6 +418,15 @@ def test_search_steps_open_on_the_tab_matching_the_device():
     page = source("pages", "SearchPage.jsx")
     assert "defaultMethodTab" in page
     assert "pointer: coarse" in page
+
+
+def test_search_page_separates_songs_found_only_with_cover_query():
+    page = source("pages", "SearchPage.jsx")
+    assert 'name: "cover"' in page
+    assert "cover 검색으로 발견" in page
+    assert "data.cover_matches" in page
+    assert "cover 추가 검색에서 발견" in page
+    assert "song.fallback_query" in page
 
 
 def test_search_steps_renumber_when_a_step_is_removed():

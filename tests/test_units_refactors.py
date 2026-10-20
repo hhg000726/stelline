@@ -58,7 +58,25 @@ def test_select_search_targets_prefers_the_riskiest_songs():
 def test_select_search_targets_stops_at_the_limit():
     songs = [_song(str(index), 10) for index in range(30)]
     _, targets = select_search_targets(songs)
-    assert len(targets) == SEARCH_TARGET_LIMIT
+    assert len(targets) == 15 == SEARCH_TARGET_LIMIT
+
+
+def test_select_search_targets_prioritizes_unchecked_and_stale_songs():
+    from datetime import datetime
+
+    songs = [
+        {**_song("recent-risk-28", 28), "last_checked_at": datetime(2026, 1, 3)},
+        {**_song("old-risk-1", 1), "last_checked_at": datetime(2026, 1, 1)},
+        {**_song("unchecked-risk-5", 5), "last_checked_at": None},
+        {**_song("unchecked-risk-28", 28), "last_checked_at": None},
+    ]
+    _, targets = select_search_targets(songs)
+    assert [song["query"] for song in targets] == [
+        "unchecked-risk-28",
+        "unchecked-risk-5",
+        "old-risk-1",
+        "recent-risk-28",
+    ]
 
 
 def test_select_search_targets_ignores_songs_without_risk():
@@ -339,14 +357,33 @@ def test_one_search_run_never_exceeds_its_call_budget():
     with patch.object(tasks, "fetch_song_infos_from_db", return_value=songs), \
          patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
          patch.object(tasks, "update_song_risk"), \
+         patch.object(tasks, "update_fallback_query", return_value=True), \
          patch.object(tasks, "crawl_search_results_for_missing_videos", side_effect=lambda found: found), \
          patch.object(tasks.time, "sleep"), \
          patch.object(tasks, "_youtube_video_ids_for_query", return_value=[]) as search:
         result = tasks.search_unverified_songs()
 
-    assert search.call_count <= tasks.SEARCH_CALLS_PER_RUN
-    assert search.call_count >= tasks.SEARCH_CALLS_PER_RUN - 1
+    assert search.call_count == tasks.SEARCH_CALLS_PER_RUN
     assert result["isQuotaExceeded"] is False
+
+
+def test_search_uses_cover_fallback_and_records_match_for_public_display():
+    from stelline.apis.search import tasks
+
+    song = {"query": "토아 제육감", "video_id": "video", "risk": 28}
+    with patch.object(tasks, "fetch_song_infos_from_db", return_value=[song]), \
+         patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
+         patch.object(tasks, "update_song_risk"), \
+         patch.object(tasks, "update_fallback_query", return_value=True) as save_fallback, \
+         patch.object(tasks, "crawl_search_results_for_missing_videos", side_effect=lambda found: found), \
+         patch.object(tasks.time, "sleep"), \
+         patch.object(tasks, "_youtube_video_ids_for_query", side_effect=[[], ["video"]]) as search:
+        result = tasks.search_unverified_songs()
+
+    assert [call.args[0] for call in search.call_args_list] == ["토아 제육감", "토아 제육감 cover"]
+    save_fallback.assert_called_once_with("토아 제육감", "토아 제육감 cover")
+    assert result["all_songs"] == []
+
 
 # --- 오프라인 좌표 보완 ------------------------------------------------
 

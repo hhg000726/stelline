@@ -5,7 +5,7 @@ import random
 import re
 import threading
 import time
-from collections import defaultdict
+from datetime import datetime
 
 try:
     import fcntl
@@ -31,8 +31,8 @@ MAX_RISK = 28
 # 1,000 을 같은 프로젝트의 다른 사용분 몫으로 남긴다(config.SEARCH_API_INTERVAL 참고).
 SEARCH_CALLS_PER_RUN = 30
 
-# 한 회차에 위험도 높은 곡으로 채울 수 있는 최대 곡 수.
-SEARCH_TARGET_LIMIT = 12
+# 실패한 우선 곡마다 기본 검색과 cover 검색을 한 번씩 보장하는 상한이다.
+SEARCH_TARGET_LIMIT = SEARCH_CALLS_PER_RUN // 2
 
 
 def read_last_search_timestamp():
@@ -64,10 +64,30 @@ last_search_timestamp = read_last_search_timestamp()
 def fetch_song_infos_from_db():
     try:
         with database_cursor() as cursor:
-            cursor.execute("SELECT * FROM song_infos")
+            cursor.execute(
+                """SELECT video_id, query, risk, fallback_query, last_checked_at
+                     FROM song_infos
+                    ORDER BY last_checked_at IS NOT NULL, last_checked_at ASC,
+                             risk DESC, query ASC"""
+            )
             return cursor.fetchall()
     except Exception:
         logging.exception("RDS 곡 정보 불러오기 실패")
+        return []
+
+
+def fetch_cover_matches_from_db():
+    try:
+        with database_cursor() as cursor:
+            cursor.execute(
+                """SELECT query, video_id, fallback_query
+                     FROM song_infos
+                    WHERE fallback_query IS NOT NULL
+                    ORDER BY query"""
+            )
+            return cursor.fetchall()
+    except Exception:
+        logging.exception("cover 검색으로 확인된 곡 불러오기 실패")
         return []
 
 
@@ -93,12 +113,39 @@ def fetch_recent_data_from_db():
         return []
 
 
-def update_song_risk(query, risk):
+def update_song_risk(query, risk, clear_fallback=False):
     try:
         with database_cursor() as cursor:
-            cursor.execute("UPDATE song_infos SET risk = %s WHERE query = %s", (risk, query))
+            if clear_fallback:
+                cursor.execute(
+                    """UPDATE song_infos
+                          SET risk = %s, last_checked_at = CURRENT_TIMESTAMP,
+                              fallback_query = NULL
+                        WHERE query = %s""",
+                    (risk, query),
+                )
+            else:
+                cursor.execute(
+                    """UPDATE song_infos
+                          SET risk = %s, last_checked_at = CURRENT_TIMESTAMP
+                        WHERE query = %s""",
+                    (risk, query),
+                )
     except Exception:
         logging.exception("RDS risk 업데이트 실패")
+
+
+def update_fallback_query(query, fallback_query):
+    try:
+        with database_cursor() as cursor:
+            cursor.execute(
+                "UPDATE song_infos SET fallback_query = %s WHERE query = %s",
+                (fallback_query, query),
+            )
+        return True
+    except Exception:
+        logging.exception("RDS cover 검색어 상태 업데이트 실패")
+        return False
 
 
 def _youtube_video_ids_for_query(query, api_key):
@@ -117,9 +164,9 @@ def _youtube_video_ids_for_query(query, api_key):
 
 
 def _resolve_match(query, video_id, video_ids, song_risk):
-    """영상이 검색 결과에 있으면 risk를 낮추고 True, 없으면 28로 올리고 False를 반환한다."""
+    """기본 검색에서 영상이 확인되면 위험도를 낮추고 cover 검색 상태를 지운다."""
     if video_id in video_ids:
-        update_song_risk(query, max(song_risk - 1, 0))
+        update_song_risk(query, max(song_risk - 1, 0), clear_fallback=True)
         return True
     update_song_risk(query, MAX_RISK)
     return False
@@ -179,26 +226,22 @@ def crawl_search_results_for_missing_videos(songs):
 
 
 def select_search_targets(song_infos):
-    """이번 회차에 검사할 곡을 고른다.
+    """오래 확인하지 않은 위험 곡부터 고르고, 남는 예산은 위험도 0 곡에 쓴다."""
+    def priority_key(info):
+        checked_at = info.get("last_checked_at")
+        return (
+            checked_at is not None,
+            checked_at or datetime.min,
+            -(info.get("risk") or 0),
+            info.get("query", ""),
+        )
 
-    위험도가 높은 곡부터 최대 12곡까지 채우고, 남는 할당량은 위험도 0인 곡으로 채운다.
-    반환값은 (위험도 0인 곡, 우선 검사 대상)이다.
-
-    예전에는 위험도 1~28을 각각 전체 목록에서 훑어 스물여덟 번을 돌았다.
-    한 번만 훑어 위험도별로 담아 두면 고르는 순서는 그대로면서 훨씬 싸다.
-    """
-    by_risk = defaultdict(list)
-    for info in song_infos:
-        by_risk[info.get("risk")].append(info)
-
-    search_targets = []
-    for risk_level in reversed(range(1, MAX_RISK + 1)):
-        search_targets.extend(by_risk.get(risk_level, ()))
-        if len(search_targets) >= SEARCH_TARGET_LIMIT:
-            search_targets = search_targets[:SEARCH_TARGET_LIMIT]
-            break
-
-    return list(by_risk.get(0, ())), search_targets
+    risk_zero_songs = [info for info in song_infos if info.get("risk") == 0]
+    search_targets = sorted(
+        (info for info in song_infos if info.get("risk", 0) > 0),
+        key=priority_key,
+    )
+    return risk_zero_songs, search_targets[:SEARCH_TARGET_LIMIT]
 
 
 def search_unverified_songs(by_admin=False):
@@ -261,28 +304,38 @@ def search_unverified_songs(by_admin=False):
         song = not_searched[idx]
         query = song["query"]
         video_id = song["video_id"]
+        fallback_query = f"{query} cover"
+
+        if len(fallback_query) > 512:
+            update_fallback_query(query, None)
+            idx += 1
+            continue
 
         try:
             logging.info(
-                "API 재시도 query=%s, video_id=%s, remainingQuotes=%s, not_searched=%s",
-                query,
+                "cover 검색 query=%s, video_id=%s, remainingQuotes=%s, not_searched=%s",
+                fallback_query,
                 video_id,
                 remaining_quotes,
                 len(not_searched),
             )
-            video_ids = _youtube_video_ids_for_query(query, selected_api_key)
-            if _resolve_match(query, video_id, video_ids, song["risk"]):
-                not_searched.pop(idx)
-            else:
-                idx += 1
+            video_ids = _youtube_video_ids_for_query(fallback_query, selected_api_key)
             remaining_quotes -= 1
+            if video_id in video_ids:
+                if update_fallback_query(query, fallback_query):
+                    not_searched.pop(idx)
+                else:
+                    idx += 1
+            else:
+                update_fallback_query(query, None)
+                idx += 1
         except requests.RequestException as exc:
             idx += 1
             is_quota_exceeded = True
-            logging.error("API 요청 실패: %s", exc)
+            logging.error("cover 검색 API 요청 실패: %s", exc)
             break
 
-    logging.info("[2차 검사 종료] remainingQuotes=%s, not_searched=%s", remaining_quotes, len(not_searched))
+    logging.info("[cover 검색 종료] remainingQuotes=%s, not_searched=%s", remaining_quotes, len(not_searched))
 
     not_searched = crawl_search_results_for_missing_videos(not_searched)
     logging.info("[최종 결과] 총 실패곡=%s", len(not_searched))

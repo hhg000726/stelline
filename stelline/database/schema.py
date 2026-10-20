@@ -142,4 +142,8 @@ MIGRATIONS = [
         # 고칠 수 있게 바꿨다(`congratulation_notify_prompt`). 잠깐 있었던 키를 지운다.
         "DELETE FROM site_contents WHERE content_key = 'congratulation_hero_subtitle'",
     ]),
+    ("014_search_cover_fallback", [
+        add_column_if_missing("song_infos", "fallback_query", "VARCHAR(512) NULL"),
+        add_column_if_missing("song_infos", "last_checked_at", "DATETIME NULL"),
+    ]),
 ]

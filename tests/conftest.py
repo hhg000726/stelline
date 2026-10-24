@@ -6,9 +6,13 @@
 """
 
 import os
+import tempfile
 
 import pytest
 
+# 테스트가 남기는 로그는 임시 폴더로 보낸다. 개발 폴더의 logs/ 에 섞이면 관리자 화면의
+# '운영 로그'가 테스트에서 일부러 낸 오류까지 보여 준다.
+os.environ.setdefault("LOG_DIR", tempfile.mkdtemp(prefix="stelline-test-logs-"))
 os.environ.setdefault("APP_ENV", "development")
 os.environ.setdefault("START_BACKGROUND_TASKS", "false")
 os.environ.setdefault("AUTO_CREATE_SCHEMA", "false")

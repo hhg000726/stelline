@@ -1,19 +1,22 @@
 """Flask 애플리케이션 초기화와 라우트 등록."""
 
-import logging
-from pathlib import Path
-
-from flask import Flask, send_from_directory
-from flask_cors import CORS
-
-from stelline.admin import admin_bp
-from stelline.apis import api_bp
-from stelline.auth import auth_bp
-from stelline.config import AUTO_CREATE_SCHEMA, SECRET_KEY, SESSION_COOKIE_SECURE
-from stelline.database.migrate import apply_migrations
 from stelline.logging_config import setup_logging
 
+# 다른 모듈보다 먼저 로그를 설정한다. 설정 로드나 FCM 초기화처럼 모듈을 불러오는 동안 남기는
+# 줄이 그보다 앞서 찍히면 파일로 가지 않고 화면(stderr)에만 나왔다 사라진다.
 setup_logging()
+
+import logging  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from flask import Flask, send_from_directory  # noqa: E402
+from flask_cors import CORS  # noqa: E402
+
+from stelline.admin import admin_bp  # noqa: E402
+from stelline.apis import api_bp  # noqa: E402
+from stelline.auth import auth_bp  # noqa: E402
+from stelline.config import AUTO_CREATE_SCHEMA, SECRET_KEY, SESSION_COOKIE_SECURE  # noqa: E402
+from stelline.database.migrate import apply_migrations  # noqa: E402
 
 app = Flask(__name__, static_folder="static", static_url_path="")
 app.secret_key = SECRET_KEY

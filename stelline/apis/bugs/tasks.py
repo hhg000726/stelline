@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 from stelline.config import API_CHECK_INTERVAL
 from stelline.database.connection import database_cursor
+from stelline.http_client import describe_request_error
 
 # 백그라운드 작업이 채우고 rank 엔드포인트가 읽는 최신 순위 데이터.
 recent_rank_data = {}
@@ -80,8 +81,11 @@ def run_bugs_rank_cycle(recent_data):
                     new_data["title"] = target["title"]
                     new_data["url_number"] = target["url_number"]
                     recent_data[name] = new_data
-                except Exception as exc:
-                    logging.error("bugs 데이터 업데이트 오류: %s", exc)
+                except requests.RequestException as exc:
+                    logging.error("Bugs 순위 갱신 실패: %s - %s", name, describe_request_error(exc))
+                except Exception:
+                    # 페이지 모양이 바뀌어 파싱이 깨진 경우가 대부분이다. 어느 줄인지 알아야 고친다.
+                    logging.exception("Bugs 순위 갱신 실패: %s", name)
         else:
             recent_data.clear()
 

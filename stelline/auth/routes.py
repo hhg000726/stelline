@@ -4,6 +4,7 @@ import secrets
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from stelline.config import ADMIN_PASSWORD, ADMIN_USERNAME
+from stelline.logging_config import events
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -24,9 +25,10 @@ def login():
             # 로그인 전에 쓰던 세션 값을 이어 쓰지 않는다(세션 고정 방지).
             session.clear()
             session['logged_in'] = True
-            logging.info('관리자 로그인 성공: username=%s', username)
+            # 누가 언제 관리자에 들어왔는지는 운영 기록에 남긴다. 실패는 경고라 오류·경고 목록에도 뜬다.
+            events.info('관리자 로그인 성공: username=%s', username)
             return redirect(url_for('admin.admin_index'))
-        logging.warning('관리자 로그인 실패: username=%s', username)
+        events.warning('관리자 로그인 실패: username=%s', username)
         flash('로그인 실패!')
 
     return render_template('auth/login.html')

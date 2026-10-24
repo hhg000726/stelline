@@ -13,7 +13,8 @@ def fetch_site_contents():
     실패해도 예외를 내지 않는다(`resolve_items` 가 기본값으로 답한다). 화면은 값을 못 받으면
     HTML에 적힌 기본값을 그대로 쓰므로, 어느 쪽으로 실패해도 빈 화면이 되지 않는다.
     """
-    logging.info("사이트 콘텐츠 조회 요청")
+    # 모든 화면이 열릴 때마다 부른다. INFO 로 두면 로그의 대부분이 이 줄이 된다.
+    logging.debug("사이트 콘텐츠 조회 요청")
     response = jsonify(resolve_items())
     # 관리자가 고치면 곧바로 보여야 한다. 매번 새로 확인하게 둔다.
     response.headers["Cache-Control"] = "no-cache"

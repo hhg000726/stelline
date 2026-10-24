@@ -11,6 +11,7 @@ from stelline.apis.bugs.tasks import start_rank_refresh
 from stelline.apis.search.tasks import start_search_scheduler
 from stelline.background_tasks.monitoring import start_monitoring
 from stelline.config import PROJECT_ROOT, START_BACKGROUND_TASKS
+from stelline.logging_config import events
 
 # gunicorn 워커를 여럿 띄우면 워커마다 앱을 불러 작업도 워커 수만큼 돈다.
 # 그러면 YouTube 할당량을 그만큼 더 쓰고, 조회수 달성 알림도 같은 사람에게 여러 번 나간다.
@@ -49,7 +50,8 @@ def start_background_tasks():
     start_monitoring()
     start_search_scheduler()
     start_rank_refresh()
-    logging.info("백그라운드 작업 스레드 등록 완료")
+    # 서버가 뜰 때마다 한 번 남는다. 배포·자동 업데이트로 다시 뜬 시각을 운영 기록에서 볼 수 있다.
+    events.info("서버 시작: 백그라운드 작업(조회수 감시·검색 점검·Bugs 순위)을 시작했습니다.")
 
 
 def start_background_tasks_if_enabled():

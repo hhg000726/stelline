@@ -345,12 +345,98 @@
     .readonly h3 { margin: 14px 0 6px; font-size: .92rem; }
     .readonly .table-scroll { max-height: 40vh; }
 
+    /* ---------- 운영 로그 ---------- */
+
+    /* 최근 하루 안에 오류·경고가 있으면 탭에서부터 눈에 띄게 한다. */
+    .admin-tab .tab-count.is-alert,
+    .admin-tab.is-on .tab-count.is-alert { background: var(--danger-soft); color: var(--danger); }
+
+    .status-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+
+    .status-item {
+      padding: 12px 14px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-card);
+      background: var(--surface-inset);
+    }
+
+    .status-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .status-head strong { font-size: .95rem; }
+    .status-line { margin: 5px 0 0; font-size: .84rem; line-height: 1.5; overflow-wrap: anywhere; }
+
+    /* 상태와 수준 표시. 색은 site.css 토큰만 쓴다(경고는 강조색). */
+    .badge {
+      flex: none;
+      padding: 1px 8px;
+      border-radius: 999px;
+      background: var(--surface-mute);
+      color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge.is-ok { background: var(--success-soft); color: var(--success); }
+    .badge.is-late, .badge.is-warn, .badge.is-warning { background: var(--highlight); color: var(--highlight-text); }
+    .badge.is-error { background: var(--danger-soft); color: var(--danger); }
+
+    .log-list { display: grid; gap: 6px; }
+
+    .log-item {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-control);
+      background: var(--surface-inset);
+    }
+
+    .log-item > summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      align-items: baseline;
+      padding: 8px 12px;
+      font-weight: 400;
+    }
+
+    .log-item > summary:hover { background: var(--primary-tint); }
+    .log-message { flex: 1 1 320px; min-width: 0; font-size: .84rem; overflow-wrap: anywhere; }
+    .log-meta { color: var(--muted-soft); font-size: .76rem; }
+
+    .log-detail {
+      margin: 0;
+      padding: 10px 12px;
+      max-height: 320px;
+      overflow: auto;
+      border-top: 1px solid var(--border-subtle);
+      color: var(--muted);
+      font-size: .76rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .event-list { margin: 0; padding: 0; list-style: none; }
+
+    .event-list li {
+      display: grid;
+      grid-template-columns: 118px 1fr;
+      gap: 10px;
+      padding: 7px 2px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: .84rem;
+    }
+
+    .event-list li:last-child { border-bottom: 0; }
+    .event-time { color: var(--muted-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .event-text { min-width: 0; overflow-wrap: anywhere; }
+    .event-text .badge { margin-right: 6px; }
+
     @media (max-width: 720px) {
       .admin-shell { padding-left: 12px; padding-right: 12px; }
       /* 좁은 화면에서는 머리말이 세 줄이 된다. 붙박이로 두면 화면을 너무 많이 먹는다. */
       .admin-bar { position: static; margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; }
       .admin-card { padding: 14px; border-radius: var(--radius-card); }
       .filter-row input { width: 100%; }
+      .event-list li { grid-template-columns: 1fr; gap: 2px; }
     }
   </style>
 </head>
@@ -383,6 +469,8 @@
       {% endfor %}
       <button type="button" class="admin-tab" data-group="content">사이트 문구·그림 <span class="tab-count">{{ content_rows|length }}</span></button>
       <button type="button" class="admin-tab" data-group="stats">읽기 전용 통계</button>
+      {% set problem_count = log_overview.problem_count_24h if log_overview else 0 %}
+      <button type="button" class="admin-tab" data-group="logs" title="최근 24시간 오류·경고 수">운영 로그 <span class="tab-count{% if problem_count or not log_overview %} is-alert{% endif %}">{{ problem_count if log_overview else '!' }}</span></button>
     </nav>
 
     {% for group in groups %}
@@ -586,6 +674,70 @@
         {% else %}<p class="hint">기록이 없습니다.</p>{% endif %}
       </section>
       {% endfor %}
+    </main>
+
+    <!-- 서버에 들어가지 않고도 "잘 돌고 있나"를 확인하는 자리. 서버 로그 파일에서 추린다
+         (stelline/admin/server_logs.py). -->
+    <main class="admin-group" data-group-panel="logs" hidden>
+      {% if log_overview %}
+      <p class="hint">서버 로그에서 최근 {{ log_overview.window_days }}일 치를 추렸습니다. 시각은 한국 시간이고, API 키 같은 값은 가려서 보여 줍니다. 새로 보려면 페이지를 새로고침하세요.</p>
+
+      <section class="admin-card" data-log-section="tasks">
+        <header><h2>작업 상태</h2></header>
+        <div class="status-grid">
+          {% for task in log_overview.tasks %}
+          <article class="status-item" data-task="{{ task.key }}">
+            <div class="status-head"><strong>{{ task.label }}</strong><span class="badge is-{{ task.state }}">{{ task.state_label }}</span></div>
+            <p class="hint">{{ task.schedule }}</p>
+            {% for line in task.lines %}<p class="status-line">{{ line }}</p>{% endfor %}
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="admin-card" data-log-section="problems">
+        <header>
+          <h2>오류·경고</h2>
+          <span class="count">최근 24시간 {{ log_overview.problem_count_24h }}건</span>
+          <p class="hint">같은 문구는 한 줄로 묶었습니다. 줄을 누르면 가장 최근 것의 자세한 내용이 열립니다.</p>
+        </header>
+        {% if log_overview.problems %}
+        <div class="log-list">
+          {% for problem in log_overview.problems %}
+          <details class="log-item">
+            <summary>
+              <span class="badge is-{{ 'error' if problem.is_error else 'warning' }}">{{ '오류' if problem.is_error else '경고' }}</span>
+              <span class="log-message">{{ problem.message }}</span>
+              <span class="log-meta">{% if problem.thread %}{{ problem.thread }} · {% endif %}{{ problem.count }}회{% if problem.count > 1 %} · 처음 {{ problem.first_text }}{% endif %} · 마지막 {{ problem.last_text }}</span>
+            </summary>
+            <pre class="log-detail">{{ problem.message }}{% if problem.detail %}
+{{ problem.detail }}{% endif %}</pre>
+          </details>
+          {% endfor %}
+        </div>
+        {% else %}<p class="hint">최근 {{ log_overview.window_days }}일 동안 오류·경고가 없습니다.</p>{% endif %}
+      </section>
+
+      <section class="admin-card" data-log-section="events">
+        <header>
+          <h2>운영 기록</h2>
+          <span class="count">{{ log_overview.events|length }}건</span>
+          <p class="hint">검색 점검 결과, 관리자 작업, 조회수 달성 알림, 사용자 제보, 서버 시작을 최근 것부터 보여 줍니다.</p>
+        </header>
+        {% if log_overview.events %}
+        <ol class="event-list">
+          {% for event in log_overview.events %}
+          <li>
+            <span class="event-time" title="{{ event.ago }}">{{ event.time_text }}</span>
+            <span class="event-text">{% if event.is_warning %}<span class="badge is-warning">경고</span>{% endif %}{% if event.thread %}<span class="badge">{{ event.thread }}</span>{% endif %}{{ event.message }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}<p class="hint">아직 남은 기록이 없습니다. 이 기록은 이번 업데이트부터 쌓입니다.</p>{% endif %}
+      </section>
+      {% else %}
+      <p class="flash error">서버 로그를 읽지 못했습니다. 서버의 logs 폴더와 app_error.log 를 확인하세요.</p>
+      {% endif %}
     </main>
   </div>
 

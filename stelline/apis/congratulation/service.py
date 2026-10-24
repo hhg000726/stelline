@@ -17,7 +17,8 @@ RECENT_QUERY = """
 
 
 def fetch_recent_congratulations():
-    logging.info("축하 목록 조회 요청")
+    # 요청 기록은 DEBUG 다. 화면을 열 때마다 생기고, 들어왔다는 사실은 nginx 접속 로그에 있다.
+    logging.debug("축하 목록 조회 요청")
     cutoff = datetime.now() - timedelta(days=1)
     try:
         with database_cursor() as cursor:
@@ -36,7 +37,7 @@ def fetch_recent_congratulations():
         }
         for item in song_counts
     ]
-    logging.info("축하 목록 조회 완료: count=%s", len(result))
+    logging.debug("축하 목록 조회 완료: count=%s", len(result))
     return jsonify(result)
 
 
@@ -50,7 +51,7 @@ def _read_token(action):
     세 엔드포인트가 같은 형식을 받고 같은 오류를 내므로 한곳에서 다룬다.
     """
     token = (request.get_json(silent=True) or {}).get("token")
-    logging.info("FCM 토큰 %s 요청 수신: token_present=%s", action, bool(token))
+    logging.debug("FCM 토큰 %s 요청 수신: token_present=%s", action, bool(token))
     if not token:
         logging.warning("FCM 토큰 %s 요청이 토큰 없이 도착했습니다.", action)
         return None, (jsonify({"error": "Token is missing"}), 400)
@@ -66,10 +67,11 @@ def register_token():
         with database_cursor() as cursor:
             cursor.execute("SELECT token FROM fcm_tokens WHERE token = %s", (token,))
             if cursor.fetchone():
-                logging.info("Token already exists: token_length=%s", len(token))
+                # 알림을 켜 둔 사람이 화면을 열 때마다 다시 보낸다. 새 구독만 INFO 로 남긴다.
+                logging.debug("FCM 토큰이 이미 등록되어 있음: token_length=%s", len(token))
             else:
                 cursor.execute("INSERT INTO fcm_tokens (token) VALUES (%s)", (token,))
-                logging.info("New token registered: token_length=%s", len(token))
+                logging.info("FCM 토큰 새로 등록: token_length=%s", len(token))
         return jsonify({"message": "Token registered"}), 200
     except Exception:
         logging.exception("FCM 토큰 등록 실패")
@@ -88,9 +90,10 @@ def unregister_token():
             rows_affected = cursor.rowcount
 
         if rows_affected > 0:
-            logging.info("Token successfully removed from DB.")
+            logging.info("FCM 토큰 삭제(알림 끄기)")
             return jsonify({"message": "Token unregistered successfully"}), 200
-        logging.warning("Attempted to unregister non-existent token in DB.")
+        # 이미 지워졌거나 다른 브라우저에서 끈 토큰이다. 서버가 손볼 일이 아니라 경고로 두지 않는다.
+        logging.info("FCM 토큰 삭제 요청: DB에 없는 토큰")
         return jsonify({"message": "Token not found in DB or already unregistered"}), 200
     except Exception:
         logging.exception("FCM 토큰 DB 삭제 실패")
@@ -106,7 +109,7 @@ def check_token():
         with database_cursor() as cursor:
             cursor.execute("SELECT token FROM fcm_tokens WHERE token = %s", (token,))
             is_valid = cursor.fetchone() is not None
-        logging.info("FCM 토큰 확인 성공: token_present=%s", is_valid)
+        logging.debug("FCM 토큰 확인 성공: token_present=%s", is_valid)
         return jsonify({"valid": is_valid}), 200
     except Exception:
         logging.exception("FCM 토큰 확인 실패")

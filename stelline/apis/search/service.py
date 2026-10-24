@@ -12,8 +12,9 @@ from .tasks import (
 )
 
 
+# 요청 기록은 DEBUG 다. 화면을 열 때마다 생기고, 들어왔다는 사실은 nginx 접속 로그에 있다.
 def get_not_searched():
-    logging.info("미검색곡 조회 요청")
+    logging.debug("미검색곡 조회 요청")
     all_songs, searched_time = fetch_songs_data_from_db()
     recent = fetch_recent_data_from_db()
     return jsonify({
@@ -25,7 +26,7 @@ def get_not_searched():
 
 
 def get_song_infos():
-    logging.info("곡 메타 정보 조회 요청")
+    logging.debug("곡 메타 정보 조회 요청")
     songs = fetch_song_infos_from_db()
     return jsonify([
         {
@@ -39,7 +40,7 @@ def get_song_infos():
 
 
 def record_search():
-    logging.info("검색 기록 카운트 증가 요청")
+    logging.debug("검색 기록 카운트 증가 요청")
     try:
         with database_cursor() as cursor:
             cursor.execute("UPDATE record_search SET copy_count = copy_count + 1")

@@ -16,7 +16,8 @@ import requests
 
 from stelline.config import PROJECT_ROOT, SEARCH_API_INTERVAL, SEARCH_API_KEY, TEMP_API_KEY
 from stelline.database.connection import database_cursor
-from stelline.http_client import SESSION
+from stelline.http_client import SESSION, describe_request_error
+from stelline.logging_config import events
 
 LAST_SEARCH_FILE = "last_search_time.txt"
 YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
@@ -33,6 +34,13 @@ SEARCH_CALLS_PER_RUN = 30
 
 # 실패한 우선 곡마다 기본 검색과 cover 검색을 한 번씩 보장하는 상한이다.
 SEARCH_TARGET_LIMIT = SEARCH_CALLS_PER_RUN // 2
+
+# 회차가 끝나면 운영 기록에 이 말로 시작하는 한 줄을 남긴다. 관리자 화면의 '운영 로그'가
+# 이 줄로 마지막 회차를 찾는다(admin/server_logs.py).
+SEARCH_EVENT_PREFIX = "검색 점검"
+SEARCH_DONE_EVENT = f"{SEARCH_EVENT_PREFIX} 완료"
+# '쿼터 초과'는 운영 점검 표(README_DEV)가 찾는 말이라 넣어 둔다.
+SEARCH_SKIPPED_EVENT = f"{SEARCH_EVENT_PREFIX} 결과 저장 안 함(쿼터 초과 등 API 오류)"
 
 
 def read_last_search_timestamp():
@@ -219,7 +227,7 @@ def crawl_search_results_for_missing_videos(songs):
                 not_searched.append({"query": query, "video_id": video_id})
 
         except requests.RequestException as exc:
-            logging.error("크롤링 실패: %s", exc)
+            logging.error("크롤링 실패: %s", describe_request_error(exc))
             return songs
 
     return not_searched
@@ -244,13 +252,33 @@ def select_search_targets(song_infos):
     return risk_zero_songs, search_targets[:SEARCH_TARGET_LIMIT]
 
 
+def summarize_search_run(stats):
+    """회차 결과를 관리자 화면에서 한 줄로 읽을 수 있게 줄인다."""
+    return (
+        f"{stats['mode']} · 우선 대상 {stats['priority_checked']}/{stats['priority_total']}곡(실패 {stats['priority_failed']})"
+        f" · 위험도 0 곡 {stats['zero_checked']}곡(실패 {stats['zero_failed']})"
+        f" · cover로 찾음 {stats['cover_found']}/{stats['cover_calls']}"
+        f" · 크롤링으로 찾음 {stats['crawl_found']}"
+        f" · 최종 실패 {stats['final_failed']}곡 · API {stats['calls_used']}/{SEARCH_CALLS_PER_RUN}회"
+    )
+
+
 def search_unverified_songs(by_admin=False):
     is_quota_exceeded = False
+    failure = ""
 
     song_infos = fetch_song_infos_from_db()
     logging.info("검색 시작")
     not_searched = []
     risk_zero_songs, search_targets = select_search_targets(song_infos)
+    # 회차가 끝나면 이 숫자들을 한 줄로 운영 기록에 남긴다(summarize_search_run).
+    stats = {
+        "mode": "관리자" if by_admin else "자동",
+        "priority_total": len(search_targets),
+        "priority_checked": 0, "priority_failed": 0,
+        "zero_checked": 0, "zero_failed": 0,
+        "cover_calls": 0, "cover_found": 0, "crawl_found": 0,
+    }
 
     remaining_quotes = SEARCH_CALLS_PER_RUN
 
@@ -258,19 +286,26 @@ def search_unverified_songs(by_admin=False):
         logging.info("관리자 즉시 검색 실행")
         selected_api_key = TEMP_API_KEY
     else:
-        logging.info("자동 즉시 검색 실행")
         if not SEARCH_API_KEY:
             logging.error("자동 검색용 YouTube API 키가 설정되지 않았습니다.")
-            return {"all_songs": [], "searched_time": time.time(), "isQuotaExceeded": True}
-        selected_api_key = random.choice(SEARCH_API_KEY)
+            return {
+                "all_songs": [], "searched_time": time.time(), "isQuotaExceeded": True,
+                "error": "자동 검색용 YouTube API 키가 설정되지 않음",
+            }
+        key_index = random.randrange(len(SEARCH_API_KEY))
+        selected_api_key = SEARCH_API_KEY[key_index]
+        # 키 값 대신 순번만 남긴다. 할당량이 어느 키에서 먼저 바닥나는지는 이것으로 볼 수 있다.
+        logging.info("자동 즉시 검색 실행: 검색 키 %s/%s", key_index + 1, len(SEARCH_API_KEY))
 
     logging.info("[1차 검사 시작] risk_zero_songs=%s, search_targets=%s", len(risk_zero_songs), len(search_targets))
 
     while remaining_quotes > len(not_searched) + 1:
         if search_targets:
             song = search_targets.pop(0)
+            kind = "priority"
         elif risk_zero_songs:
             song = risk_zero_songs.pop(random.randrange(len(risk_zero_songs)))
+            kind = "zero"
         else:
             break
 
@@ -288,12 +323,16 @@ def search_unverified_songs(by_admin=False):
                 len(not_searched),
             )
             video_ids = _youtube_video_ids_for_query(query, selected_api_key)
-            if not _resolve_match(query, video_id, video_ids, song["risk"]):
+            found = _resolve_match(query, video_id, video_ids, song["risk"])
+            if not found:
                 not_searched.append({"query": query, "video_id": video_id, "risk": song["risk"]})
             remaining_quotes -= 1
+            stats[f"{kind}_checked"] += 1
+            stats[f"{kind}_failed"] += 0 if found else 1
         except requests.RequestException as exc:
             is_quota_exceeded = True
-            logging.error("API 요청 실패: %s", exc)
+            failure = describe_request_error(exc)
+            logging.error("API 요청 실패: %s", failure)
             break
 
     logging.info("[1차 검사 종료] remainingQuotes=%s, not_searched=%s", remaining_quotes, len(not_searched))
@@ -321,9 +360,11 @@ def search_unverified_songs(by_admin=False):
             )
             video_ids = _youtube_video_ids_for_query(fallback_query, selected_api_key)
             remaining_quotes -= 1
+            stats["cover_calls"] += 1
             if video_id in video_ids:
                 if update_fallback_query(query, fallback_query):
                     not_searched.pop(idx)
+                    stats["cover_found"] += 1
                 else:
                     idx += 1
             else:
@@ -332,15 +373,28 @@ def search_unverified_songs(by_admin=False):
         except requests.RequestException as exc:
             idx += 1
             is_quota_exceeded = True
-            logging.error("cover 검색 API 요청 실패: %s", exc)
+            failure = describe_request_error(exc)
+            logging.error("cover 검색 API 요청 실패: %s", failure)
             break
 
     logging.info("[cover 검색 종료] remainingQuotes=%s, not_searched=%s", remaining_quotes, len(not_searched))
 
+    before_crawl = len(not_searched)
     not_searched = crawl_search_results_for_missing_videos(not_searched)
     logging.info("[최종 결과] 총 실패곡=%s", len(not_searched))
+    stats.update(
+        crawl_found=before_crawl - len(not_searched),
+        final_failed=len(not_searched),
+        calls_used=SEARCH_CALLS_PER_RUN - remaining_quotes,
+    )
 
-    return {"all_songs": not_searched, "searched_time": time.time(), "isQuotaExceeded": is_quota_exceeded}
+    return {
+        "all_songs": not_searched,
+        "searched_time": time.time(),
+        "isQuotaExceeded": is_quota_exceeded,
+        "error": failure,
+        "stats": stats,
+    }
 
 
 # 검사 한 회차는 API 할당량을 수십 번 쓰고 songs_data 를 비웠다가 다시 채운다.
@@ -394,17 +448,21 @@ def run_search_once(by_admin=False):
 
     try:
         new_songs = search_unverified_songs(by_admin)
+        summary = summarize_search_run(new_songs["stats"]) if new_songs.get("stats") else ""
 
         if new_songs.get("isQuotaExceeded"):
-            logging.info("쿼터 초과")
+            # 이번 회차 결과는 버리고 지난 목록을 그대로 둔다. 경고로 남겨 관리자 화면에 띄운다.
+            reason = new_songs.get("error") or "원인을 남기지 못함"
+            events.warning("%s: %s", SEARCH_SKIPPED_EVENT, f"{reason} · {summary}" if summary else reason)
         else:
             last_search_timestamp = new_songs["searched_time"]
             write_last_search_timestamp(last_search_timestamp)
             all_songs = new_songs["all_songs"]
             save_search_results_to_db(all_songs, new_songs["searched_time"])
             logging.info("검색 데이터 업데이트 완료!")
-    except Exception as exc:
-        logging.error("검색 업데이트 오류: %s", exc)
+            events.info("%s: %s", SEARCH_DONE_EVENT, summary or "요약 없음")
+    except Exception:
+        logging.exception("검색 업데이트 오류")
 
 
 # 주기적으로 검색 데이터 가져오기
@@ -477,4 +535,5 @@ def start_search_scheduler():
     hours, remainder = divmod(int(delay), 3600)
     minutes, seconds = divmod(remainder, 60)
     logging.info("첫 검색을 %d:%02d:%02d 만큼 지연..", hours, minutes, seconds)
-    threading.Thread(target=start_delayed_search, daemon=True, args=(delay,)).start()
+    # 스레드 이름은 로그 줄의 {search} 로 찍힌다. 관리자 화면이 이것으로 어느 작업의 줄인지 가른다.
+    threading.Thread(target=start_delayed_search, daemon=True, args=(delay,), name="search").start()

@@ -11,6 +11,7 @@ from flask import abort, flash, redirect, request, url_for
 
 from stelline.admin.routes import admin_bp, login_required, require_csrf
 from stelline.content import ContentError, IMAGE, TEXT, clear_item, get_item, reset_item, save_image, save_text
+from stelline.logging_config import events
 
 
 def _back_to(key):
@@ -27,12 +28,15 @@ def save_content(key):
         abort(404)
 
     action = request.form.get("action", "save")
+    done = None  # 저장까지 끝나면 운영 기록에 남길 동작 이름
     try:
         if action == "reset":
             reset_item(key)
+            done = "기본값으로 되돌림"
             flash(f"{item['title']}을(를) 기본값으로 되돌렸습니다.", "success")
         elif action == "clear":
             clear_item(key)
+            done = "비움"
             flash(f"{item['title']}을(를) 비웠습니다. 화면에서 그 자리가 사라집니다.", "success")
         elif item["type"] == TEXT:
             # 빈 칸을 보내면 "비움"이지만, 칸 자체가 없는 요청은 양식이 아니라 사고다.
@@ -40,6 +44,7 @@ def save_content(key):
             if "text" not in request.form:
                 raise ContentError("문구 항목입니다. 내용 칸과 함께 보내야 합니다.")
             saved = save_text(key, request.form["text"])
+            done = "문구 저장" if saved else "비움"
             if saved:
                 flash(f"{item['title']}을(를) 저장했습니다.", "success")
             else:
@@ -49,6 +54,7 @@ def save_content(key):
             # 상한보다 1바이트만 더 읽어 본다. 넘치는 파일을 통째로 메모리에 올리지 않는다.
             data = upload.read(item["max_bytes"] + 1) if upload else b""
             save_image(key, data)
+            done = "그림 올림"
             flash(f"{item['title']} 그림을 올렸습니다.", "success")
         else:
             abort(400)
@@ -57,4 +63,6 @@ def save_content(key):
     except Exception:
         logging.exception("사이트 콘텐츠 저장 실패: %s", key)
         flash(f"{item['title']}을(를) 저장하지 못했습니다. 잠시 뒤 다시 시도하세요.", "error")
+    if done:
+        events.info("관리자 사이트 문구·그림 %s: %s", done, item["title"])
     return _back_to(key)

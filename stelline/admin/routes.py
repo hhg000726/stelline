@@ -7,6 +7,7 @@ import secrets
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 from itsdangerous import BadSignature, URLSafeSerializer
 
+from stelline.admin.server_logs import build_overview
 from stelline.apis.search.tasks import start_admin_search
 from stelline.config import ADMIN_HTML_SNAPSHOT_PATH, APP_ENV, SECRET_KEY
 from stelline.content import CONTENT_GROUPS, admin_rows
@@ -14,6 +15,7 @@ from stelline.database.connection import get_connection
 from stelline.database.import_admin_html import import_snapshot, parse_snapshot
 from stelline.database.karaoke_seed import SeedError, import_seed_file, import_text
 from stelline.database.migrate import apply_migrations
+from stelline.logging_config import events
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -321,11 +323,28 @@ def where_clause(conditions):
     return " AND ".join(f"`{key}` <=> %s" for key, _ in conditions), [value for _, value in conditions]
 
 
-def apply_write(table_name, log_label, failure_message, write):
+def row_label(table_name, values):
+    """운영 기록에 남길 때 어느 행인지 알아볼 이름. 양식의 첫 값(제목·이름·검색어 등)을 쓴다.
+
+    사용자 제보는 사용자가 쓴 글이라 운영 기록에 옮겨 적지 않는다.
+    """
+    definition = CONTENT_TABLES[table_name]
+    if definition.get("group") == "reports":
+        return ""
+    for field in definition["fields"]:
+        value = values.get(field)
+        if value not in (None, ""):
+            text = str(value)
+            return f" — {text[:40]}{'…' if len(text) > 40 else ''}"
+    return ""
+
+
+def apply_write(table_name, log_label, failure_message, write, event=None):
     """관리자 쓰기 작업 하나를 실행하고 결과를 알린다.
 
     `write(cursor)`는 사용자에게 보여 줄 (문구, 종류)를 돌려준다. 어디서 실패하든
     롤백하고 같은 안내를 띄우므로, 라우트마다 뒷정리를 다시 적지 않는다.
+    저장까지 끝나면 `event`(무엇을 했는지)를 운영 기록에 남긴다.
     """
     connection = None
     try:
@@ -333,6 +352,8 @@ def apply_write(table_name, log_label, failure_message, write):
         with connection.cursor() as cursor:
             message = write(cursor)
         connection.commit()
+        if event and message[1] == "success":
+            events.info("관리자 %s", event)
     except Exception:
         logging.exception("%s: %s", log_label, table_name)
         if connection is not None:
@@ -372,6 +393,12 @@ def admin_index():
         {**group, "count": sum(len(data.get(name, [])) for name in group["forms"])}
         for group in TABLE_GROUP_VIEWS
     ]
+    # 로그를 못 읽어도 나머지 관리 화면은 그대로 써야 한다.
+    try:
+        log_overview = build_overview()
+    except Exception:
+        logging.exception("운영 로그 요약 실패")
+        log_overview = None
     return render_template(
         "admin/index.html",
         data=data,
@@ -383,6 +410,7 @@ def admin_index():
         csrf_token=csrf_token(),
         serialize_row=serialize_row,
         development_mode=APP_ENV == "development",
+        log_overview=log_overview,
     )
 
 
@@ -414,7 +442,7 @@ def force_search():
     """검색 점검 한 회차를 지금 띄운다. 끝까지 도는 데 수 분이 걸려 기다리지 않고 돌아온다."""
     require_csrf()
     if start_admin_search():
-        logging.info("관리자 요청 즉시 검색 시작")
+        events.info("관리자 요청으로 검색 점검 시작")
         flash("검색 점검을 시작했습니다. 끝나는 데 몇 분 걸립니다.", "success")
     else:
         flash("검색 점검이 이미 돌고 있습니다. 끝난 뒤 다시 시도하세요.", "error")
@@ -450,6 +478,7 @@ def add_row(table_name):
         "관리자 데이터 추가 실패",
         "저장하지 못했습니다. 필수 항목과 데이터 형식을 확인하세요.",
         write,
+        event=f"데이터 추가: {definition['title']}{row_label(table_name, dict(entries))}",
     )
 
 
@@ -492,11 +521,13 @@ def update_row(table_name):
         )
         return f"{definition['title']} 항목을 수정했습니다.", "success"
 
+    submitted = {field: request.form.get(field, "").strip() for field in definition["fields"]}
     return apply_write(
         table_name,
         "관리자 데이터 수정 실패",
         "수정하지 못했습니다. 값의 형식과 중복 여부를 확인하세요.",
         write,
+        event=f"데이터 수정: {definition['title']}{row_label(table_name, submitted)}",
     )
 
 
@@ -514,7 +545,12 @@ def delete_row(table_name):
         cursor.execute(f"DELETE FROM `{table_name}` WHERE {where}", condition_values)
         return "항목을 삭제했습니다.", "success"
 
-    return apply_write(table_name, "관리자 데이터 삭제 실패", "삭제하지 못했습니다.", write)
+    # 지운 행의 값은 서명된 행 토큰에 그대로 들어 있다(target_conditions 가 이미 검증했다).
+    deleted = load_row_token(request.form.get("row_token", ""))
+    return apply_write(
+        table_name, "관리자 데이터 삭제 실패", "삭제하지 못했습니다.", write,
+        event=f"데이터 삭제: {definition['title']}{row_label(table_name, deleted)}",
+    )
 
 
 @admin_bp.route("/karaoke/import", methods=["POST"])
@@ -538,6 +574,10 @@ def import_karaoke_songs():
         logging.exception("노래방 곡 일괄 등록 실패")
         flash("일괄 등록에 실패했습니다. 입력 형식과 DB 상태를 확인하세요.", "error")
     else:
+        events.info(
+            "관리자 노래방 곡 일괄 등록: %s건 (추가 %s, 갱신 %s%s)",
+            stats["total"], stats["inserted"], stats["updated"], ", 기존 곡 전체 삭제 후 등록" if stats["replaced"] else "",
+        )
         for warning in stats["warnings"][:5]:
             flash(warning, "error")
         flash(

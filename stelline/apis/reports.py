@@ -6,6 +6,7 @@ from flask import jsonify, request
 
 from stelline.apis.turnstile import verify_turnstile
 from stelline.database.connection import database_cursor
+from stelline.logging_config import events
 
 MAX_REPORT_LENGTH = 2000
 
@@ -18,7 +19,7 @@ def handle_report_submission(table, log_label):
     payload = request.get_json(silent=True) or {}
     raw_content = payload.get("content", "")
     content = raw_content.strip() if isinstance(raw_content, str) else ""
-    logging.info("%s 제출 요청: content_length=%s", log_label, len(content))
+    logging.debug("%s 제출 요청: content_length=%s", log_label, len(content))
 
     if not verify_turnstile(payload.get("captcha_token")):
         logging.warning("%s 캡차 인증 실패", log_label)
@@ -39,5 +40,6 @@ def handle_report_submission(table, log_label):
         logging.exception("%s 저장 실패", log_label)
         return jsonify({"error": "제보를 저장하지 못했습니다."}), 500
 
-    logging.info("%s 저장 완료: length=%s", log_label, len(content))
+    # 제보는 관리자가 처리해야 할 일이라 운영 기록에 남긴다. 내용은 관리자 화면의 표에서 본다.
+    events.info("%s 받음: %s자", log_label, len(content))
     return jsonify({"message": "제보가 접수되었습니다."}), 201

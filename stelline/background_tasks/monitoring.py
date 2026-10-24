@@ -11,9 +11,14 @@ import requests
 
 from stelline.config import API_CHECK_INTERVAL, API_KEY, MAX_RESULTS, PLAYLIST_ID, PROJECT_ID, SERVICE_ACCOUNT_FILE
 from stelline.database.connection import database_cursor
-from stelline.http_client import SESSION
+from stelline.http_client import SESSION, describe_request_error
+from stelline.logging_config import events
 
 SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"]
+
+# 관리자 화면의 '운영 로그'가 이 두 문구로 마지막 동기화와 실패를 찾는다(admin/server_logs.py).
+SYNC_DONE_MESSAGE = "YouTube 조회수 동기화 완료"
+SYNC_FAILED_MESSAGE = "조회수 감시 작업 실패"
 
 
 def get_access_token():
@@ -92,6 +97,7 @@ def send_milestone_notifications(cursor, access_token, song):
     }
 
     unregistered = []
+    sent = failed = 0
     for row in cursor.fetchall():
         try:
             response = SESSION.post(
@@ -101,15 +107,25 @@ def send_milestone_notifications(cursor, access_token, song):
                 timeout=10,
             )
         except requests.RequestException as exc:
-            logging.error("FCM 알림 요청 실패: %s", exc)
+            failed += 1
+            logging.error("FCM 알림 요청 실패: %s", describe_request_error(exc))
             continue
         if response.status_code == 404 and "UNREGISTERED" in response.text:
             unregistered.append((row["token"],))
         elif not response.ok:
-            logging.error("FCM 알림 실패 (%s): %s", response.status_code, response.text)
+            failed += 1
+            # 본문은 오류 설명이 담긴 JSON 이다. 토큰마다 같은 설명이 반복되므로 앞부분만 남긴다.
+            logging.error("FCM 알림 실패 (%s): %s", response.status_code, response.text[:300])
+        else:
+            sent += 1
 
     if unregistered:
         cursor.executemany("DELETE FROM fcm_tokens WHERE token = %s", unregistered)
+    # 구독자 모두에게 나가는 알림이라, 언제 무엇이 몇 명에게 갔는지는 운영 기록에 남긴다.
+    events.info(
+        "조회수 달성 알림: %s %s · 보냄 %s, 실패 %s, 해지된 토큰 정리 %s",
+        song["title"], data["body"], sent, failed, len(unregistered),
+    )
 
 
 def update_song_counts(cursor, songs, access_token):
@@ -166,9 +182,13 @@ def monitoring_process():
             access_token = get_access_token()
             with database_cursor() as cursor:
                 update_song_counts(cursor, songs, access_token)
-            logging.info("YouTube 조회수 동기화 완료")
+            logging.info("%s: 영상 %s개", SYNC_DONE_MESSAGE, len(songs))
+        except requests.RequestException as exc:
+            # 예외 문구에는 API 키가 든 요청 주소가 붙어 있다. 상태 코드와 사유만 남긴다.
+            # 어디서 났는지는 이 한 줄로 충분하므로 호출 경로(traceback)도 남기지 않는다.
+            logging.error("%s: %s", SYNC_FAILED_MESSAGE, describe_request_error(exc))
         except Exception:
-            logging.exception("조회수 감시 작업 실패")
+            logging.exception(SYNC_FAILED_MESSAGE)
         time.sleep(API_CHECK_INTERVAL)
 
 

@@ -75,7 +75,8 @@ def fetch_songs():
     전체가 수백 곡 규모라 클라이언트가 한 번 받아 두고 검색·필터를 처리한다.
     ETag를 붙여 두 번째 방문부터는 304로 끝난다.
     """
-    logging.info("노래방 번호 목록 조회 요청")
+    # 요청 기록은 DEBUG 다. 화면을 열 때마다 생기고, 들어왔다는 사실은 nginx 접속 로그에 있다.
+    logging.debug("노래방 번호 목록 조회 요청")
     try:
         with database_cursor() as cursor:
             cursor.execute(SONG_QUERY)
@@ -102,7 +103,7 @@ def fetch_songs():
     response.set_etag(hashlib.sha256(body.encode("utf-8")).hexdigest())
     response.cache_control.public = True
     response.cache_control.max_age = 60
-    logging.info("노래방 번호 목록 조회 완료: songs=%s, members=%s", len(payload["songs"]), len(payload["members"]))
+    logging.debug("노래방 번호 목록 조회 완료: songs=%s, members=%s", len(payload["songs"]), len(payload["members"]))
     return response.make_conditional(request)
 
 

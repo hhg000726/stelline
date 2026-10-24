@@ -5,6 +5,7 @@ from flask import jsonify
 
 from stelline.config import NCP_CLIENT_ID, NCP_CLIENT_SECRET
 from stelline.database.connection import database_cursor
+from stelline.http_client import describe_request_error
 
 
 def geocode_location(address, client_id, client_secret):
@@ -34,7 +35,7 @@ def geocode_location(address, client_id, client_secret):
         return None, None
 
     except requests.exceptions.RequestException as error:
-        logging.error("[Geocode] 요청 실패: %s - %s", address, error)
+        logging.error("[Geocode] 요청 실패: %s - %s", address, describe_request_error(error))
     except (ValueError, KeyError, TypeError) as error:
         logging.error("[Geocode] 응답 파싱 실패: %s - %s", address, error)
     except Exception as error:
@@ -56,7 +57,8 @@ def fetch_offline_events():
     (예전에는 커서를 연 채 호출해, 주소가 여러 개면 그동안 커넥션을 붙들고 있었다.)
     채워진 좌표는 마지막에 한 번에 저장한다.
     """
-    logging.info("오프라인 행사 데이터 조회 및 좌표 보완 요청")
+    # 화면을 열 때마다 불린다. 요청 기록은 nginx 접속 로그에 있으므로 평소에는 남기지 않는다.
+    logging.debug("오프라인 행사 데이터 조회 및 좌표 보완 요청")
     try:
         with database_cursor() as cursor:
             cursor.execute("SELECT * FROM offline")
@@ -79,7 +81,7 @@ def fetch_offline_events():
                     updates,
                 )
 
-        logging.info("오프라인 행사 데이터 조회 및 좌표 보완 완료: count=%s", len(data))
+        logging.debug("오프라인 행사 데이터 조회 및 좌표 보완 완료: count=%s", len(data))
         return jsonify(data), 200
     except Exception as exc:
         logging.exception("오프라인 행사 데이터 처리 실패")

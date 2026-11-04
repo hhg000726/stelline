@@ -289,8 +289,10 @@ def test_overview_of_an_empty_log_folder(tmp_path):
 # --- 관리자 화면 ---------------------------------------------------------
 
 def _admin_page(admin_client, log_dir):
+    # 표본 로그의 날짜는 고정이다. 실제 오늘을 기준으로 읽으면 7일 뒤부터 표본이 모두 잘려 이 테스트가 깨진다.
     with patch("stelline.admin.routes.get_connection"), \
          patch("stelline.admin.routes.load_table", return_value=[]), \
+         patch("stelline.admin.routes.build_overview", lambda: server_logs.build_overview(now=NOW)), \
          patch.object(server_logs, "LOG_DIR", str(log_dir)):
         return admin_client.get("/admin/").get_data(as_text=True)
 

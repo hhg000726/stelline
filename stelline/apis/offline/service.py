@@ -83,6 +83,7 @@ def fetch_offline_events():
 
         logging.debug("오프라인 행사 데이터 조회 및 좌표 보완 완료: count=%s", len(data))
         return jsonify(data), 200
-    except Exception as exc:
+    except Exception:
+        # DB 오류 문구에는 서버 주소나 계정 이름이 들어 있을 수 있다. 공개 API 라 응답에는 싣지 않고 로그에만 남긴다.
         logging.exception("오프라인 행사 데이터 처리 실패")
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "오프라인 행사 정보를 불러오지 못했습니다."}), 500

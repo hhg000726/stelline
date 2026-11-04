@@ -87,9 +87,10 @@ def fetch_songs():
                 " FROM karaoke_members ORDER BY display_order, name"
             )
             members = cursor.fetchall()
-    except Exception as exc:
+    except Exception:
+        # DB 오류 문구에는 서버 주소나 계정 이름이 들어 있을 수 있다. 공개 API 라 응답에는 싣지 않고 로그에만 남긴다.
         logging.exception("노래방 번호 목록 조회 실패")
-        return jsonify({"error": str(exc)}), 500
+        return jsonify({"error": "노래방 번호 목록을 불러오지 못했습니다."}), 500
 
     payload = {
         "songs": [_serialize_song(row) for row in songs],

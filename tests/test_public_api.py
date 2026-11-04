@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+import pymysql
 import pytest
 
 from stelline.apis import reports
@@ -41,6 +42,24 @@ def test_report_rejects_overlong_content(client, endpoint):
         resp = client.post(endpoint, json={"content": "x" * 2001, "captcha_token": "ok"})
     assert resp.status_code == 400
     assert "2000" in resp.get_json()["error"]
+
+
+@pytest.mark.parametrize(
+    "endpoint, cursor",
+    [
+        ("/api/karaoke/songs", "stelline.apis.karaoke.service.database_cursor"),
+        ("/api/offline/offline_api", "stelline.apis.offline.service.database_cursor"),
+    ],
+)
+def test_db_failure_keeps_error_text_out_of_public_response(client, caplog, endpoint, cursor):
+    """DB 오류 문구에는 서버 주소가 들어 있다. 응답에는 내보내지 않고, 원인은 로그로 찾을 수 있어야 한다."""
+    error = pymysql.err.OperationalError(2003, "Can't connect to MySQL server on 'db.internal.example'")
+    with patch(cursor, side_effect=error):
+        resp = client.get(endpoint)
+    assert resp.status_code == 500
+    assert resp.get_json()["error"]
+    assert "db.internal.example" not in resp.get_data(as_text=True)
+    assert "db.internal.example" in caplog.text
 
 
 def test_force_search_is_not_a_public_api(client):

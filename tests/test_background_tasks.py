@@ -1,6 +1,5 @@
 """백그라운드 작업의 DB 로직 검증 (실제 MySQL). 네트워크 호출은 하지 않는다."""
 
-import time
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -27,19 +26,29 @@ def test_remove_expired_data_deletes_only_stale_rows(db, clean_db):
         cursor.execute(
             "INSERT INTO events (title, link, expires_at) VALUES (%s, %s, %s)", ("유효", "l", future)
         )
-        cursor.execute(
-            "INSERT INTO recent_data (video_id, query, searched_time) VALUES (%s, %s, %s)",
-            ("old", "q", time.time() - 8 * 24 * 3600),
-        )
-        cursor.execute(
-            "INSERT INTO recent_data (video_id, query, searched_time) VALUES (%s, %s, %s)",
-            ("new", "q", time.time()),
-        )
         monitoring.remove_expired_data(cursor)
     db.commit()
 
     assert {r["title"] for r in _rows(db, "SELECT title FROM events")} == {"유효"}
-    assert {r["video_id"] for r in _rows(db, "SELECT video_id FROM recent_data")} == {"new"}
+
+
+def test_search_checks_older_than_the_retention_are_pruned(db, clean_db):
+    """검색 검사 기록은 검색 점검 회차가 끝날 때 보관 기간(90일)이 지난 것만 지운다."""
+    from stelline.apis.search import tasks as search_tasks
+    from stelline.apis.search.history import CHECK_RETENTION
+
+    now = datetime(2026, 11, 7, 3, 0)
+    with db.cursor() as cursor:
+        cursor.executemany(
+            "INSERT INTO search_checks (query, video_id, result, checked_at) VALUES (%s, %s, %s, %s)",
+            [
+                ("곡", "v", "blocked", now - CHECK_RETENTION - timedelta(minutes=1)),
+                ("곡", "v", "visible", now - CHECK_RETENTION + timedelta(minutes=1)),
+            ],
+        )
+    db.commit()
+    search_tasks.prune_old_checks(now)
+    assert [r["result"] for r in _rows(db, "SELECT result FROM search_checks")] == ["visible"]
 
 
 def test_update_song_counts_inserts_new_song(db, clean_db):

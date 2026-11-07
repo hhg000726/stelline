@@ -13,10 +13,10 @@ from stelline.config import APP_ENV
 from stelline.database.connection import get_connection
 from stelline.database.migrate import apply_migrations
 
+# 검색 점검 결과(songs_data·recent_data)는 더 쓰지 않으므로 가져오지 않는다. 예전 스냅샷의 그 칸은
+# 건너뛴다. song_infos 의 risk 도 이제 판정에 쓰지 않지만, 예전 스냅샷의 머리글에 있어 받아 둔다.
 IMPORT_COLUMNS = {
     "song_infos": ("video_id", "query", "risk"),
-    "songs_data": ("video_id", "query", "searched_time"),
-    "recent_data": ("video_id", "query", "searched_time"),
     "record_main": ("copy_count",),
     "record_search": ("total_plays", "total_play_time", "copy_count"),
     "targets": ("name", "title", "url_number", "expires_at"),

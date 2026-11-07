@@ -7,6 +7,7 @@ import secrets
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 from itsdangerous import BadSignature, URLSafeSerializer
 
+from stelline.admin.search_status import annotate_song_rows
 from stelline.admin.server_logs import build_overview
 from stelline.apis.search.tasks import start_admin_search
 from stelline.config import ADMIN_HTML_SNAPSHOT_PATH, APP_ENV, SECRET_KEY
@@ -95,10 +96,23 @@ CONTENT_TABLES = {
     "song_infos": {
         "title": "검색 점검 곡",
         "group": "search",
-        "description": "YouTube 검색 노출을 확인할 곡입니다. 위험도는 비워 두거나 0으로 입력하세요.",
-        "fields": ("query", "video_id", "risk"),
-        "labels": {"query": "검색어", "video_id": "영상 ID", "risk": "위험도"},
-        "list_fields": ("query", "video_id", "risk"),
+        "description": (
+            "YouTube 검색 노출을 확인할 곡입니다. 현재 상태·최근 7일·위험도는 검사 기록으로 계산하므로 고칠 칸이 없습니다."
+            " 검색어나 영상 ID를 바꾸면 검사 기록이 없는 곡이 되어 다음 회차에 먼저 검사합니다."
+            " 위험도는 최근 30일 중 기본 검색에서 안 보인 시간의 비율이며, 검사 순서에는 쓰지 않습니다."
+        ),
+        "fields": ("query", "video_id"),
+        "labels": {"query": "검색어", "video_id": "영상 ID"},
+        # 검색어가 기본키다. 표시용으로 덧붙인 칸(search_*)이 수정·삭제 조건에 섞이지 않는다.
+        "key_fields": ("query",),
+        # search_* 칸은 DB 열이 아니라 검사 기록에서 계산해 붙인 값이다(admin/search_status.py).
+        "list_fields": ("query", "video_id", "search_state", "search_checked", "search_week", "search_risk"),
+        "list_labels": {
+            "search_state": "현재 상태",
+            "search_checked": "마지막 검사",
+            "search_week": "최근 7일",
+            "search_risk": "위험도(30일)",
+        },
         "searchable": True,
     },
     "song_counts": {
@@ -170,7 +184,9 @@ TABLE_GROUPS = (
     ("reports", "사용자 제보"),
 )
 
-READ_ONLY_TABLES = ("songs_data", "recent_data", "record_main", "record_search", "record_karaoke", "fcm_tokens")
+# 검색 점검 결과는 '검색 점검 곡' 표에 곡마다 붙여 보여 준다. 예전 결과 표(songs_data·recent_data)는
+# 더 채우지 않으므로 여기서 뺐다.
+READ_ONLY_TABLES = ("record_main", "record_search", "record_karaoke", "fcm_tokens")
 
 # 값이 정해져 있는 열은 직접 입력 대신 선택 목록으로 보여준다.
 FIELD_CHOICES = {
@@ -228,7 +244,7 @@ def input_type(field):
         return "datetime-local"
     if field in {"release_date", "debut_date", "graduated_at"}:
         return "date"
-    if field in {"url_number", "risk", "latitude", "longitude", "sort_order", "display_order", "count"}:
+    if field in {"url_number", "latitude", "longitude", "sort_order", "display_order", "count"}:
         return "number"
     return "text"
 
@@ -371,6 +387,7 @@ def apply_write(table_name, log_label, failure_message, write, event=None):
 def admin_index():
     data, connection = {}, None
     missing_tables = []
+    search_overview = None
     try:
         connection = get_connection()
         for table_name in (*CONTENT_TABLES, *READ_ONLY_TABLES):
@@ -379,6 +396,13 @@ def admin_index():
             except Exception:
                 logging.exception("관리자 테이블 로드 실패: %s", table_name)
                 missing_tables.append(table_name)
+        # 검색 점검 곡 표에 곡마다 노출 상태를 붙인다(공개 화면과 같은 판정).
+        # 계산이 실패해도 곡 목록은 그대로 고칠 수 있어야 하므로 따로 막는다.
+        if data.get("song_infos"):
+            try:
+                data["song_infos"], search_overview = annotate_song_rows(data["song_infos"], connection)
+            except Exception:
+                logging.exception("검색 노출 상태 계산 실패")
     except Exception:
         logging.exception("관리자 DB 연결 실패")
         flash("DB 연결을 확인할 수 없습니다. 데이터베이스 상태와 접근 계정을 확인하세요.", "error")
@@ -411,6 +435,7 @@ def admin_index():
         serialize_row=serialize_row,
         development_mode=APP_ENV == "development",
         log_overview=log_overview,
+        search_overview=search_overview,
     )
 
 

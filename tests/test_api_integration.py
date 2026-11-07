@@ -1,7 +1,7 @@
 """실제 MySQL을 상대로 한 기능 API 통합 테스트."""
 
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 from stelline.apis import reports
@@ -52,45 +52,105 @@ def test_events_and_twits_listing(client, db, clean_db):
 
 
 # --- search 기능 ----------------------------------------------------
+# 노출 판정은 검사 기록(search_checks)에서만 나온다. 옛 열(risk·fallback_query)과
+# 옛 표(songs_data·recent_data)에 값이 남아 있어도 화면에 섞이면 안 된다.
 
-def test_get_song_infos(client, db, clean_db):
-    _insert(
-        db,
-        "INSERT INTO song_infos (video_id, query, risk) VALUES (%s, %s, %s)",
-        ("vid123", "테스트 곡", 5),
-    )
-    data = client.get("/api/search/songs").get_json()
-    assert data == [{
-        "video_id": "vid123",
-        "query": "테스트 곡",
-        "risk": 5,
-        "fallback_query": None,
-    }]
+def _utc_now():
+    return datetime.now(timezone.utc).replace(tzinfo=None, microsecond=0)
 
 
-def test_not_searched_returns_songs_and_recent(client, db, clean_db):
-    now = time.time()
+def _song(db, query, video_id, **legacy):
+    columns = ["query", "video_id", *legacy]
     _insert(
         db,
-        "INSERT INTO songs_data (video_id, query, searched_time) VALUES (%s, %s, %s)",
-        ("vidA", "곡 A", now),
+        f"INSERT INTO song_infos ({', '.join(columns)}) VALUES ({', '.join(['%s'] * len(columns))})",
+        (query, video_id, *legacy.values()),
     )
+
+
+def _check(db, query, video_id, result, hours_ago, fallback_query=None):
     _insert(
         db,
-        "INSERT INTO recent_data (video_id, query, searched_time) VALUES (%s, %s, %s)",
-        ("vidB", "곡 B", now),
+        "INSERT INTO search_checks (query, video_id, result, fallback_query, checked_at) VALUES (%s, %s, %s, %s, %s)",
+        (query, video_id, result, fallback_query, _utc_now() - timedelta(hours=hours_ago)),
     )
-    _insert(
-        db,
-        "INSERT INTO song_infos (video_id, query, risk, fallback_query) VALUES (%s, %s, %s, %s)",
-        ("vidC", "곡 C", 28, "곡 C cover"),
-    )
+
+
+def _seed_search_history(db):
+    _song(db, "곡 A", "vidA", risk=0)                                   # 두 회차 전 마지막 검사에서 막힘
+    _check(db, "곡 A", "vidA", "visible", 40)
+    _check(db, "곡 A", "vidA", "blocked", 16)
+    _song(db, "곡 B", "vidB", risk=28)                                  # 막혔다가 지금은 보임
+    _check(db, "곡 B", "vidB", "blocked", 48)
+    _check(db, "곡 B", "vidB", "visible", 8)
+    _song(db, "곡 C", "vidC", risk=0, fallback_query="옛 값")           # 지금 cover 로만 찾힘
+    _check(db, "곡 C", "vidC", "cover_only", 8, "곡 C cover")
+    _song(db, "곡 D", "vidD", risk=28, fallback_query="옛 값")          # 기록 없음(옛 열은 무시)
+    _song(db, "곡 E", "vidE")                                          # 9일 전에 막혔고 그 뒤 정상
+    _check(db, "곡 E", "vidE", "blocked", 24 * 9)
+    _check(db, "곡 E", "vidE", "visible", 24 * 5)
+    # 옛 표에 남은 값은 판정에 쓰지 않는다.
+    _insert(db, "INSERT INTO songs_data (video_id, query, searched_time) VALUES (%s, %s, %s)", ("vidE", "곡 E", time.time()))
+
+
+def test_search_status_judges_each_song_by_its_own_records(client, db, clean_db):
+    _seed_search_history(db)
+    payload = client.get("/api/search/status").get_json()
+
+    songs = {song["query"]: song for song in payload["songs"]}
+    # state: 마지막 검사 결과('지금 막힘'·'cover 검색으로 발견' 탭), recent: 7일 안에 검색이 안 된 적('최근 7일' 탭)
+    assert {query: (song["state"], song["recent"]) for query, song in songs.items()} == {
+        "곡 A": ("blocked", True),
+        "곡 B": ("visible", True),
+        "곡 C": ("cover_only", True),
+        "곡 D": ("unchecked", False),
+        "곡 E": ("visible", False),
+    }
+    assert songs["곡 E"]["retry"] is True  # 9일 전 막힘: 화면의 7일은 지났지만 재시도(14일)는 한다
+    assert songs["곡 A"]["week"]["checks"] == 2 and songs["곡 A"]["week"]["blocked"] == 1
+    assert [r["result"] for r in songs["곡 A"]["week"]["results"]] == ["visible", "blocked"]
+    assert songs["곡 C"]["fallback_query"] == "곡 C cover"
+    assert songs["곡 D"]["fallback_query"] is None and songs["곡 D"]["checked_at"] is None
+    assert songs["곡 E"]["week"]["checks"] == 1  # 9일 전 기록은 7일 밖이다
+    assert payload["summary"]["checked_in_window"] == 4
+    assert (payload["summary"]["blocked"], payload["summary"]["recent"], payload["summary"]["cover_only"]) == (1, 3, 1)
+    assert payload["window_days"] == 7
+    # 화면의 '다음 검색' 시각과 간격은 서버 설정에서 온다.
+    schedule = payload["schedule"]
+    assert (schedule["interval_hours"], schedule["run_hours_kst"]) == (8, [1, 9, 17])
+    assert schedule["next_run_at"] % (8 * 3600) == 0 and schedule["next_run_at"] > payload["generated_at"]
+    assert payload["last_checked_at"] == max(s["checked_at"] for s in songs.values() if s["checked_at"])
+
+
+def test_not_searched_keeps_its_shape_for_outside_readers(client, db, clean_db):
+    _seed_search_history(db)
     payload = client.get("/api/search/not_searched").get_json()
-    assert {"query": "곡 A", "video_id": "vidA"} in payload["all_songs"]
-    assert any(r["video_id"] == "vidB" for r in payload["recent"])
-    assert payload["cover_matches"] == [
-        {"query": "곡 C", "video_id": "vidC", "fallback_query": "곡 C cover"}
-    ]
+
+    assert set(payload) == {"all_songs", "searched_time", "recent", "cover_matches"}
+    assert payload["all_songs"] == [{"query": "곡 A", "video_id": "vidA"}]
+    # 최근 7일 안에 '막힘'이 있었던 곡. searched_time 은 마지막으로 막힌 시각(epoch 초).
+    assert [r["query"] for r in payload["recent"]] == ["곡 A", "곡 B"]
+    blocked_b = (_utc_now() - timedelta(hours=48)).replace(tzinfo=timezone.utc).timestamp()
+    assert abs(payload["recent"][1]["searched_time"] - blocked_b) < 5
+    assert payload["cover_matches"] == [{"query": "곡 C", "video_id": "vidC", "fallback_query": "곡 C cover"}]
+    assert payload["searched_time"] > 0
+
+
+def test_song_list_keeps_old_keys_with_the_new_risk(client, db, clean_db):
+    _seed_search_history(db)
+    data = {song["query"]: song for song in client.get("/api/search/songs").get_json()}
+
+    assert list(data) == ["곡 A", "곡 B", "곡 C", "곡 D", "곡 E"]  # 가나다순
+    assert set(data["곡 A"]) == {"video_id", "query", "risk", "fallback_query", "state", "checked_at"}
+    assert data["곡 D"]["risk"] is None            # 기록이 없으면 모른다(옛 열의 28 을 쓰지 않는다)
+    assert data["곡 D"]["fallback_query"] is None  # 옛 열의 값을 쓰지 않는다
+    assert data["곡 A"]["risk"] == round(100 * 16 / 40)  # 40시간 동안 마지막 16시간이 막힘
+
+
+def test_search_status_is_empty_but_well_formed_without_records(client, db, clean_db):
+    payload = client.get("/api/search/status").get_json()
+    assert payload["songs"] == [] and payload["last_checked_at"] is None
+    assert client.get("/api/search/not_searched").get_json()["searched_time"] == 0
 
 
 def test_record_search_increments_copy_count(client, db, clean_db):

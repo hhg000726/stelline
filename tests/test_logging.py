@@ -366,60 +366,61 @@ def test_monitoring_failure_is_one_line_without_the_key(caplog):
 
 
 def test_search_run_counts_what_it_checked():
-    songs = [
-        {"query": "우선 곡", "video_id": "p", "risk": 28},
-        {"query": "위험도 0 곡", "video_id": "z", "risk": 0},
+    now = datetime(2026, 11, 7, 0, 0)
+    songs = [{"query": "막힌 곡", "video_id": "b"}, {"query": "정상 곡", "video_id": "v"}]
+    checks = [
+        {"id": 1, "query": "막힌 곡", "video_id": "b", "result": "blocked", "fallback_query": None,
+         "checked_at": now - timedelta(hours=8)},
+        {"id": 2, "query": "정상 곡", "video_id": "v", "result": "visible", "fallback_query": None,
+         "checked_at": now - timedelta(days=10)},
     ]
-    with patch.object(tasks, "fetch_song_infos_from_db", return_value=songs), \
-         patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
-         patch.object(tasks, "update_song_risk"), \
-         patch.object(tasks, "update_fallback_query", return_value=True), \
-         patch.object(tasks, "crawl_search_results_for_missing_videos", side_effect=lambda found: found), \
-         patch.object(tasks.time, "sleep"), \
-         patch.object(tasks, "_youtube_video_ids_for_query", side_effect=[[], ["z"], ["p"]]):
-        result = tasks.search_unverified_songs()
+    # 순회 몫(정상 곡)이 먼저, 그다음 재시도(막힌 곡). 막힌 곡은 cover 검색에서 찾는다.
+    with patch.object(tasks, "fetch_search_songs", return_value=songs),          patch.object(tasks, "fetch_search_checks", return_value=checks),          patch.object(tasks, "utc_now", return_value=now),          patch.object(tasks, "record_check", return_value=True),          patch.object(tasks, "prune_old_checks"),          patch.object(tasks, "find_videos_on_search_page", return_value=set()),          patch.object(tasks, "SEARCH_API_KEY", ["key"]),          patch.object(tasks.time, "sleep"),          patch.object(tasks, "_youtube_video_ids_for_query", side_effect=[["v"], [], ["b"]]):
+        result = tasks.run_search_checks()
 
+    assert result["error"] == ""
     assert tasks.summarize_search_run(result["stats"]) == (
-        "자동 · 우선 대상 1/1곡(실패 1) · 위험도 0 곡 1곡(실패 0) · cover로 찾음 1/1"
-        f" · 크롤링으로 찾음 0 · 최종 실패 0곡 · API 3/{tasks.SEARCH_CALLS_PER_RUN}회"
+        "자동 · 검사 2곡(정상 1 · cover로만 1 · 막힘 0) · 재시도 1/1곡 · 순회 1곡(처음 검사 0)"
+        f" · cover로 찾음 1/1 · 크롤링으로 찾음 0 · API 3/{tasks.SEARCH_CALLS_PER_RUN}회 · 순회할 곡 없음"
     )
 
 
-def _run_once(new_songs):
-    with patch.object(tasks, "search_unverified_songs", return_value=new_songs), \
-         patch.object(tasks, "write_last_search_timestamp"), \
-         patch.object(tasks, "save_search_results_to_db") as save:
+def _run_once(outcome):
+    with patch.object(tasks, "run_search_checks", return_value=outcome):
         tasks.run_search_once()
-    return save
 
 
 STATS = {
-    "mode": "자동", "priority_total": 15, "priority_checked": 15, "priority_failed": 9,
-    "zero_checked": 5, "zero_failed": 0, "cover_calls": 9, "cover_found": 1, "crawl_found": 4,
-    "final_failed": 4, "calls_used": 29,
+    "mode": "자동", "checked": 20, "visible": 9, "cover_only": 3, "blocked": 8,
+    "retry_total": 23, "retry_checked": 14, "sweep_checked": 6, "first_time": 2,
+    "cover_calls": 11, "cover_found": 3, "crawl_found": 0, "calls_used": 29,
+    "unchecked_left": 0, "sweep_wait_days": 16.84,
 }
+SUMMARY = (
+    "자동 · 검사 20곡(정상 9 · cover로만 3 · 막힘 8) · 재시도 14/23곡 · 순회 6곡(처음 검사 2)"
+    f" · cover로 찾음 3/11 · 크롤링으로 찾음 0 · API 29/{tasks.SEARCH_CALLS_PER_RUN}회"
+    " · 순회 다음 차례는 16.8일 전 검사한 곡"
+)
 
 
 def test_search_run_leaves_one_summary_event(caplog):
     with caplog.at_level(logging.INFO):
-        save = _run_once({"all_songs": [], "searched_time": 1.0, "isQuotaExceeded": False, "error": "", "stats": STATS})
-    save.assert_called_once()
+        _run_once({"stats": STATS, "error": ""})
     assert "검색 데이터 업데이트 완료!" in caplog.text  # 운영 점검 표가 찾는 줄은 그대로 둔다
-    assert _event_messages(caplog) == [
-        "검색 점검 완료: 자동 · 우선 대상 15/15곡(실패 9) · 위험도 0 곡 5곡(실패 0) · cover로 찾음 1/9"
-        f" · 크롤링으로 찾음 4 · 최종 실패 4곡 · API 29/{tasks.SEARCH_CALLS_PER_RUN}회"
-    ]
+    assert _event_messages(caplog) == [f"검색 점검 완료: {SUMMARY}"]
+
+
+def test_search_summary_says_how_many_songs_have_no_record_yet():
+    assert tasks.summarize_search_run({**STATS, "unchecked_left": 117}).endswith("· 기록 없는 곡 117곡 남음")
 
 
 def test_search_run_cut_short_by_the_api_is_a_warning_with_the_reason(caplog):
+    """결과는 곡마다 바로 저장하므로, 끊긴 회차도 그때까지 검사한 곡은 남는다(경고 문구가 그렇게 말한다)."""
     with caplog.at_level(logging.INFO):
-        save = _run_once({
-            "all_songs": [], "searched_time": 1.0, "isQuotaExceeded": True,
-            "error": "HTTP 429 rateLimitExceeded (www.googleapis.com)", "stats": STATS,
-        })
-    save.assert_not_called()
+        _run_once({"stats": STATS, "error": "HTTP 429 rateLimitExceeded (www.googleapis.com)"})
     [record] = [r for r in caplog.records if r.name == "stelline.events"]
     assert record.levelno == logging.WARNING
-    assert record.getMessage().startswith(
-        "검색 점검 결과 저장 안 함(쿼터 초과 등 API 오류): HTTP 429 rateLimitExceeded (www.googleapis.com) · 자동 · 우선 대상"
+    assert record.getMessage() == (
+        "검색 점검 중단(쿼터 초과 등 API 오류, 그때까지 검사한 곡은 저장함):"
+        f" HTTP 429 rateLimitExceeded (www.googleapis.com) · {SUMMARY}"
     )

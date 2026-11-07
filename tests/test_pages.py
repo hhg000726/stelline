@@ -632,6 +632,13 @@ def test_search_page_takes_the_schedule_from_the_server():
     assert not re.search(r"\d+시간마다", defaults)
 
 
+def test_search_coverage_line_does_not_count_unchecked_songs():
+    """'검색 전 N곡'은 보는 사람에게 쓸모가 없어 뺐다(2026-11). 검사 범위 한 줄만 남긴다."""
+    page = source("pages", "SearchPage.jsx")
+    assert "summary.checked_in_window" in page
+    assert "summary.unchecked" not in page
+
+
 def test_search_cards_show_the_record_behind_the_judgment():
     page = source("pages", "SearchPage.jsx")
     assert "function WeekRecord" in page

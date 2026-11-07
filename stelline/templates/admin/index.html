@@ -351,6 +351,31 @@
     .admin-tab .tab-count.is-alert,
     .admin-tab.is-on .tab-count.is-alert { background: var(--danger-soft); color: var(--danger); }
 
+    /* 검색 점검: 숫자 줄과 다음 검색. 긴 설명은 문장 대신 마우스를 올리면 보이는 title 에 둔다. */
+    .search-stats { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; }
+    .search-stats div { display: flex; gap: 6px; align-items: baseline; cursor: help; }
+    .search-stats dt { color: var(--muted-soft); font-size: .8rem; }
+    .search-stats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .next-add { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+    .next-add input { flex: 1 1 240px; }
+    .next-title { display: flex; gap: 6px; align-items: baseline; margin: 12px 0 4px; font-size: .88rem; }
+    .next-title span { color: var(--muted-soft); font-size: .8rem; font-weight: 600; }
+    .next-list { margin: 0; padding-left: 2em; }
+    .next-list li { padding: 3px 0; font-size: .86rem; }
+    .next-list li::marker { color: var(--muted-soft); font-variant-numeric: tabular-nums; }
+    .next-list.is-maybe { color: var(--muted); }
+    .next-list li > * { vertical-align: middle; }
+    .next-list .next-query { margin: 0 6px; }
+    .next-list form { display: inline; }
+    .next-list button { padding: 2px 8px; font-size: .76rem; }
+    .next-reason { padding: 1px 7px; border-radius: 999px; font-size: .72rem; font-weight: 700; background: var(--surface-subtle); color: var(--muted); }
+    .next-reason.is-first { background: var(--primary-tint); color: var(--primary-strong); }
+    .next-reason.is-retry { background: var(--danger-soft); color: var(--danger); }
+    .inline-form { display: inline; }
+    .link-button { padding: 0 4px; border: 0; background: none; box-shadow: none; color: var(--primary-strong); font: inherit; cursor: pointer; }
+    .last-run { margin-top: 10px; }
+    .last-run summary { cursor: pointer; font-size: .86rem; }
+
     .status-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 
     .status-item {
@@ -477,20 +502,77 @@
     <main class="admin-group" data-group-panel="{{ group.key }}"{% if not loop.first %} hidden{% endif %}>
       {% for table_name, form in group.forms.items() %}
       {% set rows = data.get(table_name, []) %}
+      {% if table_name == 'song_infos' and search_views %}
+      {# 다음 회차 순서. 공개 화면의 '다음 검색'과 실제 회차가 쓰는 것과 같은 계산이다(tasks.plan_next_run).
+         조정하면 저장하자마자 이 목록이 다시 계산된다. #}
+      {% set next_run = search_views.next_run %}
+      <section class="admin-card" data-search-next>
+        <header>
+          <h2>다음 검색</h2>
+          <span class="count">{{ next_run.when }}</span>
+          <p class="hint">조정은 다음 회차에 한 번만 적용되고, 저장하면 아래 목록이 바로 다시 계산됩니다.</p>
+        </header>
+        <form class="next-add" method="post" action="{{ url_for('admin.adjust_next_search') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <input type="hidden" name="action" value="first">
+          <input name="query" list="search-song-queries" placeholder="검색어를 골라 맨 앞에 넣기" required>
+          <datalist id="search-song-queries">{% for query in next_run.queries %}<option value="{{ query }}">{% endfor %}</datalist>
+          <button class="secondary" type="submit">먼저 검사</button>
+        </form>
+        {# 최소 목록: 앞 곡이 모두 막혀도(cover 검색까지 2회씩) 반드시 검색한다.
+           최대 목록: 앞 곡들이 정상으로 나오면 순서대로 이어서 검색한다. 둘 다 지금 바로 정해진다. #}
+        {% for title, part, start in [
+            ('최소 목록 · 반드시 검색', next_run['items'][:next_run.sure], 1),
+            ('최대 목록 · 앞 곡이 정상이면 이어서', next_run['items'][next_run.sure:], next_run.sure + 1),
+        ] if part %}
+        <h3 class="next-title">{{ title }} <span>{{ part|length }}곡</span></h3>
+        <ol class="next-list{% if start > 1 %} is-maybe{% endif %}" start="{{ start }}">
+          {% for item in part %}
+          <li>
+            <span class="next-reason is-{{ item.reason }}">{{ item.reason_label }}</span>
+            <span class="next-query" title="지금 상태: {{ item.state_label }}">{{ item.query }}</span>
+            <form method="post" action="{{ url_for('admin.adjust_next_search') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="query" value="{{ item.query }}">
+              {% if item.reason == 'first' %}
+              <button class="secondary" type="submit" name="action" value="cancel">요청 취소</button>
+              {% else %}
+              <button class="secondary" type="submit" name="action" value="skip">이번에 빼기</button>
+              {% endif %}
+            </form>
+          </li>
+          {% endfor %}
+        </ol>
+        {% endfor %}
+        {% if next_run.skipped %}
+        <p class="hint">이번에 빼는 곡:
+          {% for query in next_run.skipped %}
+          <form class="inline-form" method="post" action="{{ url_for('admin.adjust_next_search') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="query" value="{{ query }}">
+            <button class="link-button" type="submit" name="action" value="cancel" title="빼기 취소">{{ query }} ✕</button>
+          </form>
+          {% endfor %}
+        </p>
+        {% endif %}
+        {% if search_views.last_run %}
+        <details class="last-run">
+          <summary>지난 검색 {{ search_views.last_run.when }} · {{ search_views.last_run.songs|length }}곡 ({{ search_views.last_run.counts }})</summary>
+          <p class="hint">{% for query, label in search_views.last_run.songs %}{{ query }}({{ label }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+        </details>
+        {% endif %}
+      </section>
+      {% endif %}
       <section class="admin-card" data-table="{{ table_name }}">
         <header>
           <h2>{{ form.title }}</h2>
           <span class="count">{{ rows|length }}개</span>
           <p class="hint">{{ form.description }}</p>
-          {% if table_name == 'song_infos' and search_overview %}
-          {# 공개 검색 화면과 같은 판정에서 나온 숫자다(admin/search_status.py). #}
-          <p class="hint" data-search-overview>
-            {% for label, count in search_overview.tabs %}{{ label }} <strong>{{ count }}</strong>{% if not loop.last %} · {% endif %}{% endfor %}
-            <br>재시도 대상(최근 {{ search_overview.retry_days }}일 안에 검색이 안 된 적이 있는 곡) <strong>{{ search_overview.retry_count }}</strong>곡
-            {% if search_overview.retry_wait_hours is not none %} · 그중 가장 오래 기다린 곡은 {{ search_overview.retry_wait_hours }}시간 전에 시도{% endif %}
-            <br>최근 {{ search_overview.window_days }}일 동안 {{ search_overview.songs }}곡 중 <strong>{{ search_overview.checked_in_window }}</strong>곡 검사
-            {% if search_overview.sweep_wait_days is not none %} · 나머지 곡은 가장 오래된 것이 {{ search_overview.sweep_wait_days }}일 전에 검사(한 바퀴 도는 기간){% endif %}
-          </p>
+          {% if table_name == 'song_infos' and search_views %}
+          {# 공개 검색 화면과 같은 판정에서 나온 숫자다(admin/search_status.py). 설명은 마우스를 올리면 보인다. #}
+          <dl class="search-stats" data-search-overview>
+            {% for label, value, hint in search_views.stats %}<div title="{{ hint }}"><dt>{{ label }}</dt><dd>{{ value }}</dd></div>{% endfor %}
+          </dl>
           {% endif %}
         </header>
 

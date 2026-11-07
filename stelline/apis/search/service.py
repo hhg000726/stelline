@@ -5,13 +5,26 @@ from flask import jsonify
 from stelline.apis.reports import handle_report_submission
 from stelline.config import SEARCH_API_INTERVAL
 from stelline.database.connection import database_cursor
-from .history import BLOCKED, COVER_ONLY, RECENT_WINDOW, summarize_statuses, to_epoch
-from .tasks import load_song_statuses, next_search_run_epoch, search_run_hours_kst
+from .history import BLOCKED, COVER_ONLY, RECENT_WINDOW, last_run, summarize_statuses, to_epoch
+from .tasks import load_search_state, load_song_statuses, plan_next_run, search_run_hours_kst
 
 
 def _sorted_statuses():
     statuses, now = load_song_statuses()
     return sorted(statuses.values(), key=lambda status: status.query), now
+
+
+def _next_run_json(state):
+    plan = plan_next_run(state)
+    return {
+        "at": to_epoch(plan["starts_at"]),
+        # 앞 sure 곡은 반드시 검사하고, 그 뒤는 앞 곡들의 결과에 따라 순서대로 검사한다(history.run_reach).
+        "sure": plan["sure"],
+        "songs": [
+            {"query": status.query, "reason": reason, "state": status.state}
+            for status, reason in plan["order"]
+        ],
+    }
 
 
 def _last_checked_at(statuses):
@@ -45,19 +58,25 @@ def _song_json(status):
 
 # 요청 기록은 DEBUG 다. 화면을 열 때마다 생기고, 들어왔다는 사실은 nginx 접속 로그에 있다.
 def get_search_status():
-    """검색 화면이 쓰는 곡별 노출 상태. 판정은 history.py 한 곳에서만 한다."""
+    """검색 화면이 쓰는 곡별 노출 상태와 지난·다음 회차. 판정은 history.py 한 곳에서만 한다."""
     logging.debug("검색 노출 상태 조회 요청")
-    statuses, now = _sorted_statuses()
+    state = load_search_state()
+    statuses = sorted(state["statuses"].values(), key=lambda status: status.query)
+    previous = last_run(state["checks"], state["statuses"])
     return jsonify({
-        "generated_at": to_epoch(now),
+        "generated_at": to_epoch(state["now"]),
         "last_checked_at": _last_checked_at(statuses),
         "window_days": RECENT_WINDOW.days,
-        # 검색 일정. 화면은 이 값으로 '다음 검색' 시각을 보여 주고, 간격을 글자로 적어 두지 않는다.
+        # 검색 일정. 화면은 간격을 글자로 적어 두지 않고 이 값을 보여 준다.
         "schedule": {
             "interval_hours": SEARCH_API_INTERVAL // 3600,
             "run_hours_kst": search_run_hours_kst(),
-            "next_run_at": next_search_run_epoch(to_epoch(now)),
         },
+        "last_run": previous and {
+            "started_at": to_epoch(previous["started_at"]),
+            "songs": [{"query": query, "result": result} for query, result in previous["songs"]],
+        },
+        "next_run": _next_run_json(state),
         "summary": summarize_statuses(statuses),
         "songs": [_song_json(status) for status in statuses],
     })

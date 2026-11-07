@@ -252,13 +252,16 @@ def test_summary_counts_states_and_the_recent_tab():
 class FakeRun:
     """API·DB·크롤링을 가짜로 바꾼 회차. 기록된 결과와 검색한 검색어를 모은다."""
 
-    def __init__(self, songs, checks=(), api=None, page_hits=()):
+    def __init__(self, songs, checks=(), api=None, page_hits=(), requests=()):
         self.songs = songs
         self.checks = list(checks)
         self.api = api or (lambda query: [])
         self.page_hits = set(page_hits)
+        self.requests = list(requests)
         self.recorded = []
         self.queries = []
+        self.run_started = set()
+        self.cleared = None
 
     def search(self, query, api_key):
         self.queries.append(query)
@@ -267,13 +270,19 @@ class FakeRun:
             raise result
         return result
 
-    def record(self, status, result, fallback_query=None):
+    def record(self, status, result, fallback_query=None, run_started_at=None):
         self.recorded.append((status.query, result, fallback_query))
+        self.run_started.add(run_started_at)
         return True
+
+    def clear(self, queries, before):
+        self.cleared = (list(queries), before)
 
     def run(self):
         with patch.object(tasks, "fetch_search_songs", return_value=self.songs), \
              patch.object(tasks, "fetch_search_checks", return_value=self.checks), \
+             patch.object(tasks, "fetch_search_requests", return_value=self.requests), \
+             patch.object(tasks, "clear_applied_requests", side_effect=self.clear), \
              patch.object(tasks, "utc_now", return_value=NOW), \
              patch.object(tasks, "record_check", side_effect=self.record), \
              patch.object(tasks, "prune_old_checks"), \
@@ -342,6 +351,91 @@ def test_run_without_an_api_key_records_nothing():
     with patch.object(tasks, "SEARCH_API_KEY", []), patch.object(tasks, "record_check") as record:
         outcome = tasks.run_search_checks()
     assert outcome["error"] and not record.called
+
+
+# --- 다음 회차: 최소·최대 목록과 관리자 조정 ------------------------------------------
+
+def test_run_reach_gives_the_minimum_and_maximum_songs_per_run():
+    """앞 곡이 모두 못 찾히면 cover 검색까지 2회씩이라 15곡, 모두 찾히면 29곡(30번째는 cover 몫으로 남긴다)."""
+    assert history.run_reach(30) == (15, 29)
+    assert history.run_reach(40) == (20, 39)
+
+
+def test_run_reach_matches_what_a_run_actually_checks():
+    every_fails = FakeRun([_song(f"곡 {i:03d}") for i in range(100)])
+    every_fails.run()
+    every_found = FakeRun([_song(f"곡 {i:03d}") for i in range(100)], api=lambda q: [f"v-{q}"])
+    every_found.run()
+    basic = lambda run: [q for q in run.queries if not q.endswith(" cover")]  # noqa: E731
+    assert (len(basic(every_fails)), len(basic(every_found))) == history.run_reach(tasks.SEARCH_CALLS_PER_RUN)
+
+
+def test_admin_first_requests_go_to_the_front_and_skips_drop_out():
+    statuses = _statuses({
+        "막힘": [(BLOCKED, 8)],
+        "정상1": [(VISIBLE, 24 * 9)],
+        "정상2": [(VISIBLE, 24 * 8)],
+        "새 곡": [],
+    })
+    order = history.search_order(statuses.values(), 30, first=["정상2", "없는 곡"], skip={"막힘"})
+    assert [(s.query, reason) for s, reason in order] == [
+        ("정상2", history.REASON_FIRST),   # 관리자 요청이 맨 앞(목록에 없는 검색어는 무시)
+        ("새 곡", history.REASON_SWEEP),
+        ("정상1", history.REASON_SWEEP),
+    ]
+
+
+def test_split_requests_keeps_the_order_they_were_made():
+    rows = [
+        {"query": "b", "action": "first", "requested_at": NOW - timedelta(minutes=1)},
+        {"query": "a", "action": "first", "requested_at": NOW - timedelta(minutes=5)},
+        {"query": "c", "action": "skip", "requested_at": NOW},
+    ]
+    assert history.split_requests(rows) == (["a", "b"], {"c"})
+
+
+def test_last_run_groups_records_by_run_start():
+    run_9 = NOW - timedelta(hours=2)
+    run_1 = NOW - timedelta(hours=10)
+    checks = [
+        {**_check("a", BLOCKED, run_1 + timedelta(minutes=1)), "run_started_at": run_1},
+        {**_check("a", VISIBLE, run_9 + timedelta(minutes=1)), "run_started_at": run_9},
+        {**_check("b", COVER_ONLY, run_9 + timedelta(minutes=2), fallback_query="b cover"), "run_started_at": run_9},
+        {**_check("old", BLOCKED, run_9 + timedelta(minutes=3), video_id="옛 영상"), "run_started_at": run_9},
+    ]
+    statuses = build_statuses([_song("a"), _song("b"), _song("old")], checks, NOW)
+    assert history.last_run(checks, statuses) == {"started_at": run_9, "songs": [("a", VISIBLE), ("b", COVER_ONLY)]}
+    assert history.last_run([], statuses) is None
+
+
+def test_a_run_tags_its_records_and_clears_only_the_requests_it_used():
+    requests = [
+        {"query": "요청 곡", "action": "first", "requested_at": NOW - timedelta(hours=1)},
+        {"query": "뺄 곡", "action": "skip", "requested_at": NOW - timedelta(hours=1)},
+    ]
+    checks = [_check("뺄 곡", BLOCKED, _ago(hours=8))]
+    run = FakeRun([_song("요청 곡"), _song("뺄 곡")], checks, api=lambda q: [f"v-{q}"], requests=requests)
+    outcome = run.run()
+    assert run.queries[0] == "요청 곡" and "뺄 곡" not in run.queries
+    assert run.run_started == {NOW}  # 이 회차의 기록은 모두 회차 시작 시각으로 묶인다
+    assert run.cleared == (["요청 곡", "뺄 곡"], NOW)
+    assert outcome["stats"]["requested_checked"] == 1
+    assert "관리자 요청 1곡" in tasks.summarize_search_run(outcome["stats"])
+
+
+def test_plan_next_run_is_computed_for_the_next_run_start():
+    """다음 회차 순서는 예상이 아니라 그 회차가 시작할 시각 기준으로 실제 회차와 똑같이 계산한다."""
+    checks = [_check(f"곡{i:02d}", BLOCKED, _ago(hours=8 + i)) for i in range(20)]
+    state = {
+        "songs": [_song(f"곡{i:02d}") for i in range(20)] + [_song("새 곡")],
+        "checks": checks,
+        "requests": [{"query": "곡05", "action": "first", "requested_at": NOW}],
+        "now": NOW,
+    }
+    plan = tasks.plan_next_run(state)
+    assert plan["starts_at"] == datetime(2026, 11, 7, 8, 0)  # NOW(03:00 UTC) 다음 8시간 경계
+    assert plan["sure"] == 15 and len(plan["order"]) == 21
+    assert [s.query for s, _ in plan["order"][:3]] == ["곡05", "새 곡", "곡19"]
 
 
 # --- 검색 일정: 글자로 적지 않고 설정값에서 계산한다 ------------------------------

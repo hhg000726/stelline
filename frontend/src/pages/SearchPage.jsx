@@ -6,7 +6,8 @@
  *   - 최근 7일: 7일 안에 검색이 안 된(막힘·cover로만) 적이 있는 곡(recent). 지금 상태는 카드에 적는다.
  *     막힌 곡은 '지금 막힘'과 여기 둘 다 나온다. 두 탭은 '지금'과 '지난 7일'이라는 다른 질문에 답한다.
  *   - cover 검색으로 발견: 마지막 검사에서 cover 를 붙여야만 찾은 곡(state).
- *   - 카드마다 최근 7일 검사 결과와 마지막 검사 시각을 붙여, 왜 그 탭에 있는지 보이게 한다.
+ *   - 카드마다 최근 7일 검사 결과(점)와 마지막 검사 시각을 붙여, 왜 그 탭에 있는지 보이게 한다.
+ *   - 제목 아래 '마지막 검색'·'다음 검색' 칩을 펼치면 그 회차의 곡 목록이 나온다(search/RunPill.jsx).
  *   - 아래 검색어 리스트도 같은 응답을 쓴다.
  *   - search/record → 카드를 누를 때 기록(실패해도 화면은 그대로 진행)
  */
@@ -26,6 +27,7 @@ import { api } from "../lib/api";
 import { copyText } from "../lib/clipboard";
 import { openExternal } from "../lib/openExternal";
 import { usePageMeta } from "../lib/usePageMeta";
+import { LastRunDetails, NextRunDetails, RunPill, shortTime } from "./search/RunPill";
 import { StepGrid } from "./search/StepGrid";
 import "../styles/search.css";
 
@@ -51,11 +53,8 @@ const SONG_TABS = [
 
 const RESULT_LABELS = { blocked: "막힘", cover_only: "cover로만", visible: "정상" };
 
-/* '최근 7일' 탭 카드에 붙이는 지금 상태. cover로만인 곡은 카드의 cover 안내가 같은 말을 한다. */
-const STATE_NOTES = {
-  blocked: { className: "is-blocked", text: "지금도 검색이 안 돼요" },
-  visible: { className: "is-visible", text: "지금은 기본 검색에서 보여요" },
-};
+/* '최근 7일' 탭 카드의 썸네일 위에 붙이는 지금 상태. 본문에 문장으로 적으면 카드가 길어진다. */
+const STATE_BADGES = { blocked: "지금 막힘", cover_only: "cover로만", visible: "지금 정상" };
 
 /* 카드에 늘어놓는 검사 결과 점의 최대 개수. 더 있으면 최근 것만 보이고 개수는 글로 센다. */
 const MAX_MARKS = 12;
@@ -82,6 +81,11 @@ function absoluteTime(epochSeconds) {
   return epochSeconds ? new Date(epochSeconds * 1000).toLocaleString() : "";
 }
 
+/* 화면 낭독기에만 읽히는 글. 눈에는 점·색으로 보이는 것을 말로 옮긴다. */
+function ScreenReaderText({ children }) {
+  return <span className="search-sr-only">{children}</span>;
+}
+
 /* "3시간 전"처럼 지금부터 얼마나 지났는지. 판정이 언제 것인지 한눈에 보이게 한다. */
 function timeAgo(epochSeconds) {
   if (!epochSeconds) return "";
@@ -92,7 +96,7 @@ function timeAgo(epochSeconds) {
 }
 
 function emptyStatus(phase) {
-  return { phase, songs: [], summary: null, lastCheckedAt: null, windowDays: 7, schedule: null };
+  return { phase, songs: [], summary: null, lastCheckedAt: null, windowDays: 7, schedule: null, lastRun: null, nextRun: null };
 }
 
 /* "N시간마다(한국 시간 HH·HH·HH시)". 간격을 화면에 글자로 적지 않고 서버 설정에서 받는다. */
@@ -131,6 +135,8 @@ export default function SearchPage() {
           lastCheckedAt: data.last_checked_at || null,
           windowDays: data.window_days || 7,
           schedule: data.schedule || null,
+          lastRun: data.last_run || null,
+          nextRun: data.next_run || null,
         });
       })
       .catch((error) => {
@@ -179,15 +185,13 @@ export default function SearchPage() {
 
   const ready = status.phase === "ready";
   const summary = status.summary;
-  /* 검사는 모든 곡을 매번 하지 않는다(최근에 막힌 곡은 자주, 나머지는 돌아가며). 그 사실을 숨기지 않는다.
-   * 검색 간격도 여기서 서버 설정 그대로 보여 준다. */
-  const schedule = scheduleText(status.schedule);
+  /* 검사는 모든 곡을 매번 하지 않는다. 그 사실은 숫자 한 줄로만 적고, 일정과 방식은 '다음 검색'
+   * 칩을 펼치면 보이게 한다(설명 문장이 길면 목록보다 먼저 읽히지 않는다). */
   const coverage = ready && summary
-    ? `최근 ${status.windowDays}일 동안 ${summary.songs}곡 중 ${summary.checked_in_window}곡 검색`
-      + (summary.unchecked ? ` · 아직 검색 전 ${summary.unchecked}곡` : "")
-      + (schedule ? ` · ${schedule} 검색해요.` : "")
-      + " 막혔던 곡은 자주, 나머지는 돌아가며 확인해요."
+    ? `최근 ${status.windowDays}일 ${summary.checked_in_window}/${summary.songs}곡 검색`
+      + (summary.unchecked ? ` · 검색 전 ${summary.unchecked}곡` : "")
     : undefined;
+  const lastRunTime = status.lastRun?.started_at || status.lastCheckedAt;
 
   return (
     <>
@@ -199,17 +203,16 @@ export default function SearchPage() {
             {/* 설명 문장 뒤에 시각을 이어 붙이면 어디까지가 문장인지 알 수 없다.
                 이름표를 붙여 따로 세운다. */}
             <div className="page-meta">
+              {/* 칩에 마우스를 올리거나 누르면 그 회차에 검색한(할) 곡이 펼쳐진다. */}
               {ready && (
-                <span id="last-updated" className="meta-pill" title={absoluteTime(status.lastCheckedAt)}>
-                  <span>마지막 검색</span>
-                  <strong>{status.lastCheckedAt ? absoluteTime(status.lastCheckedAt) : "없음"}</strong>
-                </span>
+                <RunPill label="마지막 검색" value={lastRunTime ? shortTime(lastRunTime) : "없음"}>
+                  <LastRunDetails lastRun={status.lastRun} />
+                </RunPill>
               )}
-              {ready && status.schedule?.next_run_at && (
-                <span className="meta-pill" title={scheduleText(status.schedule)}>
-                  <span>다음 검색</span>
-                  <strong>{absoluteTime(status.schedule.next_run_at)}</strong>
-                </span>
+              {ready && status.nextRun?.at && (
+                <RunPill label="다음 검색" value={shortTime(status.nextRun.at)}>
+                  <NextRunDetails nextRun={status.nextRun} scheduleText={scheduleText(status.schedule)} />
+                </RunPill>
               )}
             </div>
           </div>
@@ -253,7 +256,7 @@ export default function SearchPage() {
               <span className="week-mark is-blocked" aria-hidden="true" />막힘
               <span className="week-mark is-cover_only" aria-hidden="true" />cover로만
               <span className="week-mark is-visible" aria-hidden="true" />정상
-              <span className="search-legend-note">카드의 점 하나가 검색 한 번이에요(왼쪽이 먼저).</span>
+              <span className="search-legend-note">· 점 1개 = 최근 7일 검색 1번</span>
             </p>
             <div {...tabPanelProps("song-tabs", "current", songTab === "current")}>
               <SongCards
@@ -361,22 +364,24 @@ export default function SearchPage() {
   );
 }
 
-/* 검색어 하나. 지금 막혔거나 cover로만 찾히는 곡은 위 현황과 같은 말로 표시한다. */
+/* 검색어 하나. 지금 막혔거나 cover로만 찾히는 곡은 위 현황과 같은 색 점으로 표시한다.
+ * (칩마다 두 번째 줄에 문장을 달면 332개 목록이 두 배로 길어진다. 말은 화면 낭독기와 title 에 둔다.) */
 function QueryChip({ song, onSelect }) {
   const isCover = song.state === "cover_only" && song.fallback_query;
   const isBlocked = song.state === "blocked";
   const className = ["query-chip", isCover ? "has-cover-match" : "", isBlocked ? "is-blocked" : ""].filter(Boolean).join(" ");
+  const note = isCover ? "cover를 붙여야 검색돼요" : isBlocked ? "지금 막힘" : "";
   return (
     <li className="query-item">
       <button
         type="button"
         className={className}
-        title={isCover ? `${song.fallback_query} 검색어 복사 후 유튜브 열기` : song.query}
+        title={isCover ? `${note} · ‘${song.fallback_query}’ 복사 후 유튜브 열기` : note || song.query}
         onClick={() => onSelect(isCover ? song.fallback_query : song.query)}
       >
+        {note && <span className={`week-mark is-${song.state}`} aria-hidden="true" />}
         <span>{song.query}</span>
-        {isCover && <small>cover 추가 검색에서 발견</small>}
-        {isBlocked && <small>지금 막힘</small>}
+        {note && <ScreenReaderText>{note}</ScreenReaderText>}
       </button>
     </li>
   );
@@ -403,7 +408,7 @@ function SongCards({ songs, emptyText, windowDays, onSelect, showState = false }
 
 function SongCard({ song, windowDays, onSelect, showState }) {
   const searchQuery = song.fallback_query || song.query;
-  const stateNote = showState ? STATE_NOTES[song.state] : null;
+  const badge = showState ? STATE_BADGES[song.state] : null;
   return (
     <button
       type="button"
@@ -413,50 +418,43 @@ function SongCard({ song, windowDays, onSelect, showState }) {
     >
       <div className="thumb-wrap">
         <img src={`https://img.youtube.com/vi/${song.video_id}/0.jpg`} alt="" loading="lazy" />
+        {badge && <span className={`card-badge state-badge is-${song.state}`}>{badge}</span>}
         <span className="thumb-play">
           <Icon name="play" />
         </span>
       </div>
       <div className="info">
         <h3>{song.query}</h3>
-        {song.fallback_query && (
-          <span className="cover-match-note">
-            기본 검색에서는 찾지 못했지만, ‘{song.fallback_query}’ 검색에서 찾았어요.
-          </span>
-        )}
-        {stateNote && <span className={`state-note ${stateNote.className}`}>{stateNote.text}</span>}
+        {/* 복사되는 검색어가 제목과 달라지는 이유만 짧게 적는다. 복사할 검색어는 title 에 있다. */}
+        {song.fallback_query && <span className="cover-match-note">cover를 붙여야 검색돼요</span>}
         <WeekRecord week={song.week} windowDays={windowDays} />
         <span className="meta">
-          <span title={absoluteTime(song.checked_at)}>{song.checked_at ? `${timeAgo(song.checked_at)} 검색` : "검색 기록 없음"}</span>
-          <span className="card-action">{song.fallback_query ? "cover 검색어 복사 & 새 탭" : "복사 & 새 탭"}</span>
+          <span title={absoluteTime(song.checked_at)}>{song.checked_at ? timeAgo(song.checked_at) : "검색 전"}</span>
+          <span className="card-action">복사 & 새 탭</span>
         </span>
       </div>
     </button>
   );
 }
 
-/* 최근 7일 검사 결과. 점은 보기 좋으라고 두는 것이고, 같은 내용을 글로도 적는다(화면 낭독기는 글을 읽는다). */
+/* 최근 7일 검사 결과를 점으로(점 하나가 검색 한 번, 왼쪽이 먼저). 같은 내용의 글은 화면 낭독기와
+ * 마우스를 올렸을 때(title)만 보인다. 카드마다 같은 문장을 적으면 점과 글이 같은 말을 두 번 한다. */
 function WeekRecord({ week, windowDays }) {
   const checks = week?.checks || 0;
-  if (!checks) return <span className="week-record is-empty">최근 {windowDays}일 검색 기록 없음</span>;
+  if (!checks) return <span className="week-record is-empty">최근 {windowDays}일 기록 없음</span>;
   const results = Array.isArray(week.results) ? week.results.slice(-MAX_MARKS) : [];
   const parts = ["blocked", "cover_only", "visible"]
     .filter((result) => week[result])
     .map((result) => `${RESULT_LABELS[result]} ${week[result]}`);
+  const summary = `최근 ${windowDays}일 ${checks}번 검색: ${parts.join(", ")}`;
   return (
-    <span className="week-record">
+    <span className="week-record" title={summary}>
       <span className="week-marks" aria-hidden="true">
         {results.map((entry) => (
-          <span
-            key={`${entry.at}-${entry.result}`}
-            className={`week-mark is-${entry.result}`}
-            title={`${absoluteTime(entry.at)} ${RESULT_LABELS[entry.result] || ""}`}
-          />
+          <span key={`${entry.at}-${entry.result}`} className={`week-mark is-${entry.result}`} />
         ))}
       </span>
-      <span>
-        최근 {windowDays}일 {checks}번 · {parts.join(" · ")}
-      </span>
+      <ScreenReaderText>{summary}</ScreenReaderText>
     </span>
   );
 }

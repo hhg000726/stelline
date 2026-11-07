@@ -145,12 +145,15 @@ def test_record_check_appends_one_row_with_the_result_and_utc_time():
     cursor = context.__enter__.return_value
     with patch.object(search_tasks, "database_cursor", return_value=context), \
          patch.object(search_tasks, "utc_now", return_value=datetime(2026, 11, 7, 0, 5)):
-        saved = search_tasks.record_check(SongStatus("q", "vid"), "cover_only", "q cover")
+        saved = search_tasks.record_check(
+            SongStatus("q", "vid"), "cover_only", "q cover", run_started_at=datetime(2026, 11, 7, 0, 0),
+        )
 
     sql, params = cursor.execute.call_args.args
     assert saved is True
     assert sql.split()[:3] == ["INSERT", "INTO", "search_checks"]
-    assert params == ("q", "vid", "cover_only", "q cover", datetime(2026, 11, 7, 0, 5))
+    # 마지막 값은 회차 시작 시각. 화면의 '마지막 검색'이 이것으로 한 회차를 묶는다.
+    assert params == ("q", "vid", "cover_only", "q cover", datetime(2026, 11, 7, 0, 5), datetime(2026, 11, 7, 0, 0))
 
 
 def test_record_check_failure_does_not_stop_the_run():

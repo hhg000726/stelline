@@ -430,14 +430,23 @@ def test_search_page_keeps_the_three_tabs_and_filters_by_the_server_judgment():
     assert 'pick: (song) => song.state === "blocked"' in page
     assert "pick: (song) => song.recent === true" in page
     assert 'pick: (song) => song.state === "cover_only"' in page
-    assert "cover 추가 검색에서 발견" in page
+    assert "cover를 붙여야 검색돼요" in page
     assert "song.fallback_query" in page
+
+
+def test_search_runs_open_their_song_lists_on_hover_or_tap():
+    """'마지막 검색'·'다음 검색' 칩을 펼치면 그 회차의 곡이 나온다. 다음 검색은 서버가 정한 최소·최대 목록."""
+    page = source("pages", "SearchPage.jsx")
+    pill = source("pages", "search", "RunPill.jsx")
+    assert "status.lastRun" in page and "status.nextRun" in page
+    assert "onMouseEnter" in pill and "aria-expanded" in pill and '"Escape"' in pill
+    assert "nextRun.sure" in pill and "최소 목록" in pill and "최대 목록" in pill
 
 
 def test_search_page_takes_the_schedule_from_the_server():
     """검색 간격을 화면에 글자로 적어 두면 설정을 바꿀 때 어긋난다. 서버가 주는 값만 쓴다."""
     page = source("pages", "SearchPage.jsx")
-    assert "schedule.interval_hours" in page and "schedule.next_run_at" in page
+    assert "schedule.interval_hours" in page and "status.nextRun.at" in page
     assert not re.search(r"\d+시간마다", page)
     defaults = source("lib", "contentDefaults.js")
     assert not re.search(r"\d+시간마다", defaults)

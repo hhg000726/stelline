@@ -7,9 +7,10 @@ import secrets
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 from itsdangerous import BadSignature, URLSafeSerializer
 
-from stelline.admin.search_status import annotate_song_rows
+from stelline.admin.search_status import search_tab_views
 from stelline.admin.server_logs import build_overview
-from stelline.apis.search.tasks import start_admin_search
+from stelline.apis.search.history import REQUEST_FIRST, REQUEST_SKIP
+from stelline.apis.search.tasks import clear_search_request, set_search_request, start_admin_search
 from stelline.config import ADMIN_HTML_SNAPSHOT_PATH, APP_ENV, SECRET_KEY
 from stelline.content import CONTENT_GROUPS, admin_rows
 from stelline.database.connection import get_connection
@@ -97,9 +98,8 @@ CONTENT_TABLES = {
         "title": "검색 점검 곡",
         "group": "search",
         "description": (
-            "YouTube 검색 노출을 확인할 곡입니다. 현재 상태·최근 7일·위험도는 검사 기록으로 계산하므로 고칠 칸이 없습니다."
-            " 검색어나 영상 ID를 바꾸면 검사 기록이 없는 곡이 되어 다음 회차에 먼저 검사합니다."
-            " 위험도는 최근 30일 중 기본 검색에서 안 보인 시간의 비율이며, 검사 순서에는 쓰지 않습니다."
+            "YouTube 검색 노출을 확인할 곡입니다. 상태·7일·위험도(30일 중 안 보인 시간 비율)는 검사 기록에서"
+            " 계산합니다. 검색어나 영상 ID를 바꾸면 다음 회차에 먼저 검사합니다."
         ),
         "fields": ("query", "video_id"),
         "labels": {"query": "검색어", "video_id": "영상 ID"},
@@ -387,7 +387,7 @@ def apply_write(table_name, log_label, failure_message, write, event=None):
 def admin_index():
     data, connection = {}, None
     missing_tables = []
-    search_overview = None
+    search_views = None
     try:
         connection = get_connection()
         for table_name in (*CONTENT_TABLES, *READ_ONLY_TABLES):
@@ -396,11 +396,12 @@ def admin_index():
             except Exception:
                 logging.exception("관리자 테이블 로드 실패: %s", table_name)
                 missing_tables.append(table_name)
-        # 검색 점검 곡 표에 곡마다 노출 상태를 붙인다(공개 화면과 같은 판정).
+        # 검색 점검 탭: 곡마다 노출 상태, 숫자 줄, 지난·다음 회차(공개 화면과 같은 판정·순서 계산).
         # 계산이 실패해도 곡 목록은 그대로 고칠 수 있어야 하므로 따로 막는다.
         if data.get("song_infos"):
             try:
-                data["song_infos"], search_overview = annotate_song_rows(data["song_infos"], connection)
+                search_views = search_tab_views(data["song_infos"], connection)
+                data["song_infos"] = search_views["rows"]
             except Exception:
                 logging.exception("검색 노출 상태 계산 실패")
     except Exception:
@@ -435,7 +436,7 @@ def admin_index():
         serialize_row=serialize_row,
         development_mode=APP_ENV == "development",
         log_overview=log_overview,
-        search_overview=search_overview,
+        search_views=search_views,
     )
 
 
@@ -471,6 +472,55 @@ def force_search():
         flash("검색 점검을 시작했습니다. 끝나는 데 몇 분 걸립니다.", "success")
     else:
         flash("검색 점검이 이미 돌고 있습니다. 끝난 뒤 다시 시도하세요.", "error")
+    return redirect(url_for("admin.admin_index"))
+
+
+# 다음 회차 조정. 저장하자마자 다음 회차 순서를 다시 계산해 보여 준다(관리자·공개 화면 모두 볼 때마다 계산).
+NEXT_SEARCH_ACTIONS = {
+    REQUEST_FIRST: "먼저 검사",
+    REQUEST_SKIP: "이번에 빼기",
+    "cancel": "요청 취소",
+}
+
+
+@admin_bp.route("/search/next", methods=["POST"])
+@login_required
+def adjust_next_search():
+    require_csrf()
+    action = request.form.get("action", "")
+    query = request.form.get("query", "").strip()
+    if action not in NEXT_SEARCH_ACTIONS or not query:
+        abort(400, "조정할 곡과 방법을 고르세요.")
+    connection = None
+    try:
+        connection = get_connection()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM song_infos WHERE query = %s", (query,))
+            known = cursor.fetchone() is not None
+    except Exception:
+        logging.exception("다음 검색 조정 대상 확인 실패")
+        known = None
+    finally:
+        if connection is not None:
+            connection.close()
+    if known is None:
+        flash("DB 연결을 확인할 수 없어 조정하지 못했습니다.", "error")
+        return redirect(url_for("admin.admin_index"))
+    if not known and action != "cancel":
+        flash("검색 점검 곡 목록에 없는 검색어입니다. 목록에 있는 검색어를 고르세요.", "error")
+        return redirect(url_for("admin.admin_index"))
+
+    try:
+        if action == "cancel":
+            clear_search_request(query)
+        else:
+            set_search_request(query, action)
+    except Exception:
+        logging.exception("다음 검색 조정 저장 실패")
+        flash("다음 검색을 조정하지 못했습니다.", "error")
+        return redirect(url_for("admin.admin_index"))
+    events.info("관리자 다음 검색 조정: %s — %s", NEXT_SEARCH_ACTIONS[action], query)
+    flash(f"{NEXT_SEARCH_ACTIONS[action]}: {query}. 다음 검색 순서를 다시 계산했습니다.", "success")
     return redirect(url_for("admin.admin_index"))
 
 

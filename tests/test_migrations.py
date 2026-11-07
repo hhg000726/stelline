@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from stelline.database.connection import get_connection
 from stelline.database.migrate import apply_migrations
-from stelline.database.schema import MIGRATIONS, backfill_search_checks
+from stelline.database.schema import MIGRATIONS, backfill_search_checks, backfill_search_run_started_at
 from tests.conftest import requires_db
 
 pytestmark = requires_db
@@ -12,6 +12,7 @@ pytestmark = requires_db
 EXPECTED_TABLES = {
     "song_infos",
     "search_checks",
+    "search_requests",
     "songs_data",
     "recent_data",
     "record_main",
@@ -139,6 +140,30 @@ def test_backfill_runs_only_once(db, clean_db):
     _legacy_rows(db)
     first = _run_backfill(db)
     assert _run_backfill(db) == first
+
+
+def test_016_fills_the_run_start_of_older_records(db, clean_db):
+    """016 전 기록은 모두 정기 회차(UTC 0·8·16시 시작)에서 나왔으므로 검사 시각을 그 경계로 내린다."""
+    with db.cursor() as cursor:
+        cursor.executemany(
+            "INSERT INTO search_checks (query, video_id, result, checked_at) VALUES (%s, %s, %s, %s)",
+            [
+                ("09시 회차", "v", "blocked", datetime(2026, 11, 7, 0, 10, 29)),
+                ("17시 회차", "v", "visible", datetime(2026, 11, 6, 8, 2, 21)),
+            ],
+        )
+        cursor.execute(
+            "INSERT INTO search_checks (query, video_id, result, checked_at, run_started_at) VALUES (%s, %s, %s, %s, %s)",
+            ("새 기록", "v", "visible", datetime(2026, 11, 7, 3, 5), datetime(2026, 11, 7, 3, 0)),
+        )
+        backfill_search_run_started_at(cursor)
+        cursor.execute("SELECT query, run_started_at FROM search_checks ORDER BY query")
+        rows = {row["query"]: row["run_started_at"] for row in cursor.fetchall()}
+    assert rows == {
+        "09시 회차": datetime(2026, 11, 7, 0, 0),
+        "17시 회차": datetime(2026, 11, 6, 8, 0),
+        "새 기록": datetime(2026, 11, 7, 3, 0),  # 이미 있는 값(관리자 즉시 실행 등)은 건드리지 않는다
+    }
 
 
 def test_backfilled_records_feed_the_new_judgment(client, db, clean_db):

@@ -63,6 +63,16 @@ CHECK_RETENTION = timedelta(days=90)
 # 재시도를 앞세워 15%(12시간)로 정했다.
 SWEEP_SHARE = 0.15
 
+# 관리자가 다음 회차를 조정한 요청(search_requests.action). 다음 회차에 한 번만 적용한다.
+REQUEST_FIRST = "first"  # 다음 회차 맨 앞에서 검사한다(요청한 순서대로)
+REQUEST_SKIP = "skip"    # 다음 회차 순서에서 뺀다
+REQUEST_ACTIONS = (REQUEST_FIRST, REQUEST_SKIP)
+
+# 다음 회차 순서에서 곡마다 붙는 이유. 화면과 관리자 표가 이 이름으로 표시한다.
+REASON_FIRST = "first"   # 관리자 요청
+REASON_RETRY = "retry"   # 최근 14일 안에 검색이 안 된 적이 있어 다시 시도
+REASON_SWEEP = "sweep"   # 나머지 곡 순회
+
 COVER_SUFFIX = " cover"
 
 
@@ -193,20 +203,88 @@ def _oldest_first(status):
     return (status.checked_at is not None, status.checked_at or datetime.min, status.query)
 
 
-def select_search_targets(statuses, calls_per_run):
-    """이번 회차에 검사할 순서. 앞에서부터 예산이 허락하는 만큼 검사한다.
+def budget_allows_another(remaining, pending_covers):
+    """기본 검색을 한 곡 더 해도 되는지. 못 찾은 곡마다 cover 검색 한 번씩을 남겨 둔다.
 
+    조건이 `> pending_covers` 이면 이번 곡도 못 찾았을 때 그 곡의 cover 몫이 모자라므로 하나 더 남긴다.
+    실제 회차(tasks.run_search_checks)와 다음 회차 범위(run_reach)가 이 규칙 하나를 함께 쓴다.
+    """
+    return remaining > pending_covers + 1
+
+
+def run_reach(calls_per_run):
+    """한 회차가 기본 검색을 몇 곡까지 하는지: (반드시 하는 곡 수, 많아야 하는 곡 수).
+
+    못 찾은 곡은 cover 검색까지 2회를 쓰므로, 앞에서 검사한 곡이 모두 못 찾히면 가장 적게(30회면 15곡),
+    모두 찾히면 가장 많이(29곡) 검사한다. 순서는 select_search_targets 가 미리 정하므로, 다음 회차에
+    검사할 곡은 '앞 15곡은 반드시, 그 뒤는 앞 곡들의 결과에 따라 순서대로'로 정확히 말할 수 있다.
+    """
+    def reach(every_song_fails):
+        remaining, pending_covers, songs = calls_per_run, 0, 0
+        while budget_allows_another(remaining, pending_covers):
+            remaining -= 1
+            songs += 1
+            pending_covers += every_song_fails
+        return songs
+
+    return reach(True), reach(False)
+
+
+def search_order(statuses, calls_per_run, first=(), skip=()):
+    """이번 회차에 검사할 순서와 곡마다 이유: [(status, reason), ...]. 앞에서부터 예산이 허락하는 만큼 검사한다.
+
+    0. 관리자가 '먼저 검사'로 고른 곡(first, 요청한 순서대로)
     1. 순회 몫(sweep_reserve 곡): 재시도 대상이 아닌 곡 가운데 기록이 없거나 가장 오래전에 검사한 곡
     2. 재시도 대상 전부: 가장 오래전에 시도한 곡부터. 예산이 모자라면 남은 곡은 다음 회차에 먼저 온다
     3. 예산이 남으면 나머지 순회 곡
 
-    순회 몫을 맨 앞에 두는 것은 재시도 대상이 예산보다 많아도 그 몫만큼은 확인하게 하려는 것이다.
-    위험도는 보지 않는다.
+    관리자가 '이번에 빼기'로 고른 곡(skip)은 순서에서 뺀다. 순회 몫을 재시도 앞에 두는 것은 재시도 대상이
+    예산보다 많아도 그 몫만큼은 확인하게 하려는 것이다. 위험도는 보지 않는다.
     """
-    retry = sorted((s for s in statuses if is_retry_target(s)), key=_oldest_first)
-    sweep = sorted((s for s in statuses if not is_retry_target(s)), key=_oldest_first)
+    by_query = {status.query: status for status in statuses}
+    requested = [by_query[query] for query in dict.fromkeys(first) if query in by_query and query not in skip]
+    taken = {status.query for status in requested} | set(skip)
+    rest = [status for status in by_query.values() if status.query not in taken]
+    retry = sorted((s for s in rest if is_retry_target(s)), key=_oldest_first)
+    sweep = sorted((s for s in rest if not is_retry_target(s)), key=_oldest_first)
     reserved = sweep_reserve(calls_per_run)
-    return sweep[:reserved] + retry + sweep[reserved:]
+    return (
+        [(s, REASON_FIRST) for s in requested]
+        + [(s, REASON_SWEEP) for s in sweep[:reserved]]
+        + [(s, REASON_RETRY) for s in retry]
+        + [(s, REASON_SWEEP) for s in sweep[reserved:]]
+    )
+
+
+def select_search_targets(statuses, calls_per_run, first=(), skip=()):
+    """search_order 에서 곡만 꺼낸 것."""
+    return [status for status, _ in search_order(statuses, calls_per_run, first, skip)]
+
+
+def last_run(checks, statuses):
+    """가장 최근 회차에 검사한 곡과 결과: {"started_at", "songs": [(검색어, 결과), ...]}. 기록이 없으면 None.
+
+    회차는 기록의 회차 시작 시각(run_started_at)으로 묶는다. 지금 목록에 없거나 영상 ID 가 바뀐 곡의
+    기록은 다른 대상을 검사한 것이라 뺀다.
+    """
+    stamped = [row for row in checks if row.get("run_started_at")]
+    if not stamped:
+        return None
+    started_at = max(row["run_started_at"] for row in stamped)
+    results = {}
+    for row in sorted(stamped, key=lambda r: (r["checked_at"], r.get("id") or 0)):
+        status = statuses.get(row["query"])
+        if row["run_started_at"] == started_at and status is not None and status.video_id == row["video_id"]:
+            results[row["query"]] = row["result"]  # 같은 곡이 두 번 있으면 나중 결과가 남는다
+    return {"started_at": started_at, "songs": sorted(results.items())}
+
+
+def split_requests(requests):
+    """search_requests 행을 (먼저 검사할 검색어 목록, 뺄 검색어 집합)으로. 먼저 검사는 요청한 순서를 지킨다."""
+    ordered = sorted(requests, key=lambda r: (r["requested_at"], r["query"]))
+    first = [r["query"] for r in ordered if r["action"] == REQUEST_FIRST]
+    skip = {r["query"] for r in ordered if r["action"] == REQUEST_SKIP}
+    return first, skip
 
 
 def summarize_statuses(statuses):

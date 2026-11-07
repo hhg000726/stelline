@@ -489,6 +489,14 @@ def test_the_built_document_preloads_the_page_it_was_opened_on(client):
     assert 'link.crossOrigin = ""' in html
 
 
+def test_early_fetching_does_not_wait_for_the_font_stylesheet(client):
+    """문서 안의 스크립트는 앞에 놓인 CSS 를 다 받을 때까지 실행되지 않는다. 다른 사이트의 글꼴 CSS 뒤에 두면
+    미리 부르기가 그만큼 늦게 출발한다(운영에서 48ms, 휴대폰에서는 더 길다)."""
+    head = client.get("/").get_data(as_text=True).split("</head>")[0]
+    assert head.index("window.__stellineEarly") < head.index("fonts.googleapis.com/css2")
+    assert head.index('setAttribute("data-theme"') < head.index("fonts.googleapis.com/css2")
+
+
 def test_the_document_shows_a_skeleton_before_the_bundle_runs(client):
     """번들을 받는 동안 빈 바탕만 보이면 멈춘 것처럼 보인다."""
     root = client.get("/").get_data(as_text=True).split('<div id="root">')[1].split("</body>")[0]

@@ -17,9 +17,6 @@
   <meta property="og:description" content="스텔라이브를 좋아해서 만든 비공식 팬 사이트입니다.">
   <meta property="og:image" content="/og-image.png">
   <meta name="twitter:card" content="summary_large_image">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
   <!-- 테마는 화면이 그려지기 전에 정해져야 한다. 본문 뒤나 번들 안에서 켜면
        밝은 화면이 한 번 번쩍인다. 그래서 이 한 조각만 <head>에 그대로 둔다.
        (버튼과 나머지 동작은 React 의 ThemeProvider 가 이어받는다.) -->
@@ -78,6 +75,12 @@
       if (path === "/search" || path === "/congratulation") hint("preconnect", "https://img.youtube.com");
     })();
   </script>
+  <!-- 글꼴은 맨 뒤에 둔다. 다른 사이트의 CSS 라 받는 데 오래 걸릴 수 있는데, 문서 안의 스크립트는 앞에 놓인
+       CSS 를 다 받을 때까지 실행되지 않는다. 위 두 스크립트를 이 뒤에 두었더니 미리 부르기가 글꼴 CSS 를
+       기다렸다(운영에서 48ms, 휴대폰에서는 더 길다). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
 </head>
 
 <body>

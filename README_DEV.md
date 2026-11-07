@@ -96,7 +96,8 @@ CI(GitHub Actions, `.github/workflows/deploy.yml`)는 MySQL 서비스 컨테이�
 2. CI 가 초록이 된 뒤 합칩니다. `main` 에 직접 push 하면 테스트와 배포가 같은 실행에서 이어져,
    테스트가 실패해야만 배포가 멈춥니다(검토할 틈이 없습니다).
 3. 화면 소스를 고쳤으면 빌드 결과물도 같은 커밋에 넣습니다.
-4. 스키마를 바꿨으면 운영 DB 백업 → `python -m stelline.database.migrate` 를 **직접** 실행합니다(자동 적용 안 됨).
+4. 스키마를 바꿨으면, 운영에는 `main` 배포 때 `deploy/deploy.sh` 가 `python -m stelline.database.migrate` 를
+   **자동으로** 실행합니다. 데이터를 지우거나 바꾸는 마이그레이션이면 합치기 전에 운영 DB를 백업하고, PR 설명에 그렇게 적습니다.
 
 ## 운영 점검 루틴
 

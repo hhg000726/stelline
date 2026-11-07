@@ -346,6 +346,22 @@ def test_failed_admin_login_is_a_warning_event(client, caplog):
     assert "틀린 비밀번호" not in caplog.text
 
 
+def test_failed_login_cannot_forge_lines_in_the_operations_log(client, caplog):
+    """아이디 칸은 누구나 채운다. 줄바꿈을 그대로 옮겨 적으면 '운영 로그' 탭이 가짜 줄을 진짜로 읽는다."""
+    forged = "x\n2026-11-07 17:10:00,000 [INFO] {search} 검색 점검 완료: 가짜 회차\r\n" + "가" * 5000
+    with caplog.at_level(logging.INFO, logger="stelline.events"):
+        client.post("/auth/login", data={"username": forged, "password": "틀린 비밀번호"})
+    [record] = [r for r in caplog.records if r.name == "stelline.events"]
+    line = RedactingFormatter(LINE_FORMAT).format(record)
+
+    assert "\n" not in line and "\r" not in line
+    # 요청 하나가 로그 파일마다 수천 글자씩 쌓이지 않게 아이디는 잘라서 남긴다.
+    assert len(record.getMessage()) < 100
+    [entry] = server_logs.parse_entries(line + "\n")
+    assert entry["level"] == "WARNING"
+    assert entry["message"].startswith("관리자 로그인 실패: username=x ")
+
+
 # --- 백그라운드 작업이 남기는 줄 ------------------------------------------
 
 def test_monitoring_failure_is_one_line_without_the_key(caplog):

@@ -256,7 +256,7 @@ export default function SearchPage() {
               <span className="week-mark is-blocked" aria-hidden="true" />막힘
               <span className="week-mark is-cover_only" aria-hidden="true" />cover로만
               <span className="week-mark is-visible" aria-hidden="true" />정상
-              <span className="search-legend-note">· 점 1개 = 최근 7일 검색 1번</span>
+              <span className="search-legend-note">점 1개 = 최근 7일 검색 1번</span>
             </p>
             <div {...tabPanelProps("song-tabs", "current", songTab === "current")}>
               <SongCards

@@ -344,6 +344,38 @@ def test_congratulation_badge_marks_exact_milestones_only():
     assert "tenThousands >= 100" not in page
 
 
+def test_open_page_notifications_read_what_the_server_sends():
+    """서버는 제목·내용을 notification 이 아니라 data 에 담아 보낸다(background_tasks/monitoring.py).
+
+    화면을 열어 둔 사람의 알림이 notification 만 읽으면 늘 '새 알림 / 내용 없음'이 뜬다.
+    서비스 워커(화면을 닫아 둔 사람)와 같은 자리에서 읽어야 한다.
+    """
+    worker = (STATIC_ROOT / "firebase-messaging-sw.js").read_text(encoding="utf-8")
+    hook = source("pages", "congratulation", "useNotifications.js")
+    for key in ("payload.data?.title", "payload.data?.body"):
+        assert key in worker
+        assert key in hook
+
+
+# --- 불러오기·보내기 실패 ---------------------------------------------------
+
+def test_failed_lists_show_an_error_instead_of_a_broken_card():
+    """실패 응답({"error": …})을 목록으로 받으면 오류 문구 한 줄이 카드 한 장으로 그려진다."""
+    assert "response.ok" in source("lib", "useApiList.js")
+    # 오프라인 화면은 서버 실패를 '진행 중인 이벤트가 없다'로 잘못 말하지 않는다.
+    assert "response.ok" in source("pages", "OfflinePage.jsx")
+
+
+def test_report_errors_do_not_show_a_json_parse_message():
+    """배포 중 502처럼 HTML 이 오는 실패에서 "Unexpected token '<'" 가 그대로 보이면 안 된다."""
+    assert ".json().catch(" in source("lib", "api.js")
+
+
+def test_a_script_that_failed_once_can_be_loaded_again():
+    """실패한 태그가 남아 있으면 다시 부를 때 그 태그의 load 를 기다리다 캡차·지도가 영영 뜨지 않는다."""
+    assert "script.remove()" in source("lib", "loadScript.js")
+
+
 # --- 복사·알림 말풍선 -------------------------------------------------------
 
 def test_copy_and_toast_helpers_live_in_one_place():
@@ -542,3 +574,34 @@ def test_header_stacks_the_brand_above_the_menu_on_narrow_screens(client):
     narrow = css.split("@media (max-width: 720px)")[-1]
     header = narrow.split(".site-header {")[1].split("}")[0]
     assert "flex-direction: column" in header
+
+
+def test_a_main_panel_without_its_pair_takes_the_whole_row(client):
+    """벅스 대상이 없으면 이벤트 칸이 왼쪽 절반에만 서서 제목이 여러 줄로 접히고 오른쪽 절반이 비었다."""
+    css = client.get("/assets/site.css").get_data(as_text=True)
+    wide = css.split("@media (min-width: 900px)")[1].split("@media")[0]
+    assert ".info-stack.is-split > .section-panel:only-child" in wide
+    assert ".info-stack.is-split > .is-full + .section-panel:last-child" in wide
+
+
+def test_narrow_tabs_drop_the_count_before_breaking_the_name(client):
+    """휴대폰 폭에서 세 탭이 한 줄에 안 들어가 '지금 / 막힘'처럼 이름 한가운데가 끊겼다."""
+    css = client.get("/assets/site.css").get_data(as_text=True)
+    narrow = css.split("@media (max-width: 720px)")[-1]
+    tab = narrow.split(".section-actions > .segmented button {")[1].split("}")[0]
+    assert "flex-wrap: wrap" in tab
+    assert "word-break: keep-all" in tab
+
+
+def test_karaoke_toolbar_does_not_spread_over_four_rows_on_phones():
+    """화면 위에 붙어 다니는 칸이라, '필터'·'여러 곡'이 한 줄씩 차지하면 그만큼 목록이 가려진다."""
+    narrow = source("styles", "karaoke.css").split("@media (max-width: 640px)")[1]
+    assert ".kara-toolbar-end { display: contents; }" in narrow
+
+
+def test_karaoke_symbol_buttons_have_names():
+    """기호(☆·+)만 있는 단추는 낭독기가 '흰 별'처럼 기호 이름을 읽는다."""
+    for parts in (("pages", "karaoke", "SongCard.jsx"), ("pages", "karaoke", "MultiPickDialog.jsx")):
+        text = source(*parts)
+        assert "aria-label={`${song.title} 즐겨찾기`}" in text
+        assert "aria-label={`${song.title} 부를 곡 목록에 담기`}" in text

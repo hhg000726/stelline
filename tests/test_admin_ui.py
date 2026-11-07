@@ -130,6 +130,13 @@ class KaraokeListViewTest(unittest.TestCase):
         self.assertIn("row.querySelector('[data-copy-row]')", html)
         self.assertIn('copyButton.addEventListener', html)
 
+    def test_wide_tables_scroll_in_their_own_box_on_phones(self):
+        """격자 칸이 표 폭만큼 넓어지면 휴대폰에서 페이지 전체가 옆으로 밀리고 양식 칸까지 잘렸다."""
+        html = self._render()
+        self.assertIn('.admin-group > * { min-width: 0; }', html)
+        # 문구·그림 탭은 접힌 줄의 '지금 값'(한 줄로 자름) 때문에 1500px 까지 늘어났다.
+        self.assertIn('.content-list > .content-item { min-width: 0; }', html)
+
 
 if __name__ == '__main__':
     unittest.main()

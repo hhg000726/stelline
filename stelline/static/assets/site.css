@@ -1166,6 +1166,11 @@ button svg {
   }
 
   .info-stack.is-split > .is-full { grid-column: 1 / -1; }
+
+  /* 나란히 둘 짝이 없으면 한 줄을 통째로 쓴다. 칸은 값이 없으면 스스로 사라지는데(벅스 대상이
+   * 없을 때 등), 남은 칸이 왼쪽 절반에만 서면 제목이 몇 줄로 접히고 오른쪽 절반이 빈다. */
+  .info-stack.is-split > .section-panel:only-child,
+  .info-stack.is-split > .is-full + .section-panel:last-child { grid-column: 1 / -1; }
 }
 
 .empty-state {
@@ -1751,6 +1756,19 @@ tr:last-child td { border-bottom: 0; }
   }
 
   .section-actions { width: 100%; }
+
+  /* 탭 묶음도 줄을 통째로 쓰고, 탭마다 남는 자리를 나눠 갖는다. 휴대폰 폭에서는 세 탭이 한 줄에
+   * 들어가지 않아, 줄어든 탭 안에서 '지금 / 막힘'처럼 이름이 두 줄로 끊겼다. 자리가 모자라면
+   * 곡 수부터 이름 아래로 내리고(flex-wrap), 그래도 모자랄 때만 띄어쓰기에서 이름을 끊는다. */
+  .section-actions > .segmented { flex: 1 1 auto; }
+
+  .section-actions > .segmented button {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-inline: 8px;
+    word-break: keep-all;
+  }
 
   /* 좁은 화면에서 스위치가 제목 줄 오른쪽에 끼면 글자가 잘린다. 한 줄을 통째로 쓴다. */
   .switch-row {

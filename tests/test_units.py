@@ -7,6 +7,7 @@ import pytest
 
 from stelline import app as flask_app
 from stelline.apis import turnstile
+from stelline.apis.bugs import tasks as bugs_tasks
 from stelline.apis.bugs.tasks import scrape_bugs_favorite
 from stelline.apis.offline.service import geocode_location
 from stelline.apis.search import tasks as search_tasks
@@ -133,6 +134,24 @@ def test_scrape_bugs_favorite_returns_none_on_http_error():
         "stelline.apis.bugs.tasks.requests.get", return_value=_bugs_response("", status=503)
     ):
         assert scrape_bugs_favorite("대상 곡", 42) is None
+
+
+def test_bugs_refresh_drops_targets_that_were_removed():
+    """지운(또는 만료돼 지워진) 대상의 순위가 다른 대상이 남아 있다는 이유로 메인 화면에 계속 남으면 안 된다."""
+    recent = {"지운 대상": {"rank": 3}, "남은 대상": {"rank": 5}}
+    targets = [{"name": "남은 대상", "title": "투표", "url_number": 42}]
+    with patch("stelline.apis.bugs.tasks.requests.get", return_value=_bugs_response(BUGS_HTML)):
+        bugs_tasks.refresh_rank_data(recent, targets)
+    assert set(recent) == {"남은 대상"}
+
+
+def test_bugs_refresh_keeps_the_last_rank_when_a_page_fails_once():
+    """대상은 그대로인데 이번에만 못 읽었으면, 칸이 사라지지 않게 지난 순위를 둔다."""
+    recent = {"대상 곡": {"rank": 2, "title": "투표", "url_number": 42}}
+    targets = [{"name": "대상 곡", "title": "투표", "url_number": 42}]
+    with patch("stelline.apis.bugs.tasks.requests.get", return_value=_bugs_response("", status=503)):
+        bugs_tasks.refresh_rank_data(recent, targets)
+    assert recent == {"대상 곡": {"rank": 2, "title": "투표", "url_number": 42}}
 
 
 # --- 검색 검사 기록 저장 --------------------------------------------------

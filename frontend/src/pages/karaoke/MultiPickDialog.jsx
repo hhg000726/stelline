@@ -174,6 +174,7 @@ export function MultiPickDialog({
                         type="button"
                         className={`icon-btn${fav ? " is-on" : ""}`}
                         aria-pressed={fav}
+                        aria-label={`${song.title} 즐겨찾기`}
                         title="즐겨찾기"
                         onClick={() => onToggleFavorite(song)}
                       >
@@ -183,6 +184,7 @@ export function MultiPickDialog({
                         type="button"
                         className={`icon-btn${inList ? " is-on" : ""}`}
                         aria-pressed={inList}
+                        aria-label={`${song.title} 부를 곡 목록에 담기`}
                         title="부를 곡 목록에 담기"
                         onClick={() => onToggleSetlist(song)}
                       >

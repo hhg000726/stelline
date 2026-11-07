@@ -17,7 +17,11 @@ export function useApiList(path, { options, errorLabel, select = toArray } = {})
   useEffect(() => {
     let alive = true;
     api(path, options)
-      .then((response) => response.json())
+      .then((response) => {
+        // 실패 응답({"error": …})을 목록으로 받으면 오류 문구 한 줄이 카드 하나로 그려진다.
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
       .then((data) => {
         if (alive) setState({ status: "ready", items: select(data) });
       })

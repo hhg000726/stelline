@@ -146,6 +146,9 @@
 
 .search-legend-note { color: var(--muted-soft); }
 
+/* 앞 범례와 이어 읽히게 붙이는 점. 좁은 화면에서는 설명이 제 줄로 내려가므로 뺀다(아래). */
+.search-legend-note::before { content: "· "; }
+
 /* '최근 7일' 탭 카드의 지금 상태. 본문에 문장을 늘리지 않고 썸네일 위에 작게 얹는다. */
 .state-badge.is-blocked { background: var(--danger-solid); }
 .state-badge.is-visible { background: var(--success-solid); }
@@ -314,4 +317,9 @@
 
 @media (max-width: 720px) {
   .query-search { width: 100%; }
+
+  /* 범례 셋과 설명이 한 줄에 들어가지 않아, 줄 맨 앞에 '·' 가 홀로 선 채 설명만 다음 줄로 넘어갔다.
+   * 설명은 처음부터 제 줄에 둔다. */
+  .search-legend-note { flex-basis: 100%; }
+  .search-legend-note::before { content: none; }
 }

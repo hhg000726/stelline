@@ -124,14 +124,15 @@ export default function KaraokePage() {
   const songByKey = useMemo(() => new Map(songs.map((song) => [song.key, song])), [songs]);
   const songById = useMemo(() => new Map(songs.map((song) => [song.id, song])), [songs]);
 
-  // 저장해 둔 목록에서 지금은 사라진 곡은 정리한다.
+  // 저장해 둔 목록에서 지금은 사라진 곡은 화면에서 뺀다. 저장소는 여기서 고치지 않는다.
+  // 저장해 둔 곡 목록(캐시)으로 먼저 그린 순간에도 이 효과가 돌기 때문에, 여기서 지워 버리면
+  // 서버에서 막 다시 생긴 곡까지 잃을 수 있다. 저장소는 다음에 목록을 바꿀 때 함께 맞춰진다.
   useEffect(() => {
     if (data.status !== "ready" || !songs.length) return;
     setSetlist((prev) => {
       const kept = prev.filter((key) => songByKey.has(key));
       return kept.length === prev.length ? prev : kept;
     });
-    // 저장소도 함께 맞춘다. 다음 방문에 없는 곡을 또 들고 오지 않게 한다.
   }, [data.status, songs.length, songByKey]);
 
   /* ---------- 주소 표시줄 ----------

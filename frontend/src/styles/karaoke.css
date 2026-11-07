@@ -930,6 +930,19 @@ button.num-btn:active {
     justify-content: flex-end;
   }
 
+  /* 휴대폰 폭에서는 오른쪽 끝 묶음(결과 수·뽑기 단추)이 제자리에서 다시 접혀, '필터'와 '여러 곡'이
+   * 저마다 한 줄을 차지하며 도구 모음이 네 줄이 됐다. 화면 위에 붙어 다니는 칸이라 그만큼 목록이
+   * 가려진다. 묶음을 풀어 [필터 … 랜덤 한 곡·여러 곡]을 한 줄에 두고, 결과 수는 맨 아래 한 줄로 내린다. */
+  .kara-toolbar-end { display: contents; }
+
+  .kara-toolbar-end button:first-of-type { margin-left: auto; }
+
+  .kara-toolbar-end .results-count {
+    order: 1;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
   .kara-chip-unit {
     min-width: 100%;
   }

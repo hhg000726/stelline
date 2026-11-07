@@ -107,7 +107,7 @@ CI(GitHub Actions, `.github/workflows/deploy.yml`)는 MySQL 서비스 컨테이�
 | 5분마다 | 조회수 감시·만료 데이터 정리 | 자동(서버 백그라운드) | 관리자 화면 `운영 로그` 탭의 `조회수 감시` 가 `정상`. 서버에서는 `logs/app_info.log` 에 `YouTube 조회수 동기화 완료` 가 5분 간격으로 찍힘 |
 | 8시간마다(01·09·17시, `config.SEARCH_API_INTERVAL`) | 검색 점검 | 자동(서버 백그라운드) | `운영 로그` 탭의 `검색 점검` 이 `정상`이고 마지막 회차 요약(검사 곡 수·재시도 m/n곡·순회·API 횟수)이 보임. 로그로는 `검색 점검 완료` 또는 `쿼터 초과`. `검색 점검 곡` 표 위 요약의 '한 바퀴 도는 기간'이 계속 늘면 예산이 곡 수에 비해 모자란 것 |
 | push/PR 마다 | 테스트·빌드 일치 검사·배포 | 자동(GitHub Actions) | Actions 가 초록 |
-| 배포 직후 | 공개 화면 5개·관리자 로그인이 열리는지 | 사람 | `https://stel-line.vercel.app/`, `/search`, `/karaoke`, `/congratulation`, `/offline`, `/admin/` |
+| 배포 직후 | 공개 화면 5개·관리자 로그인이 열리는지, 두 앱 서버가 떠 있는지 | 사람 | `https://stel-line.vercel.app/`, `/search`, `/karaoke`, `/congratulation`, `/offline`, `/admin/`. 서버에서 `systemctl is-active stelline stelline-standby` 가 둘 다 `active`(README 의 `핫 스탠바이`) |
 | 주 1회 | `운영 로그` 탭의 오류·경고 훑기, 관리자 화면의 사용자 제보 3종 처리 | 사람 | 같은 오류가 반복되지 않음, 제보가 쌓이지 않음 |
 | 월 1회 | `npm audit`, `pip list --outdated`, 운영 DB 백업이 실제로 복원되는지 | 사람 | 고위험 취약점 0, 메이저 판올림은 PR 로 따로 |
 | 오류·장애 시 | `운영 로그` 탭(또는 서버의 `app_error.log`) → 최근 배포 커밋 → 필요하면 `git revert` 로 되돌린 PR | 사람 | 되돌린 뒤 위 "배포 직후" 점검 통과 |

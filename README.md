@@ -243,7 +243,8 @@ rewrite 해 보내고, 브라우저 쪽 https 는 Vercel 이 맡습니다. 그�
 기존 nginx 설정에서 `root .../stelline/static`와 `try_files $uri $uri/ ...`를 사용하면
 `static/search/`가 디렉터리로 먼저 선택되어 `/search`에서 403이 발생할 수 있습니다.
 배포 workflow는 기존 `default` 사이트 링크를 이 설정으로 교체하므로, Flask가 `127.0.0.1:5000` 에
-떠 있어야 합니다(아래 `앱 프로세스(systemd)`).
+떠 있어야 합니다(아래 `앱 프로세스(systemd)`). 앱으로 보내는 곳은 모두 `upstream stelline_app` 하나로,
+평소에는 본 서버(5000)만 받고 본 서버가 연결을 거절할 때만 대기 서버(5001)가 받습니다(아래 `핫 스탠바이`).
 Vercel 원본 프록시를 계속 사용할 때는 Vercel 프로젝트 쪽 `vercel.json`(이 저장소에는 없습니다)의 rewrite 대상 IP와 위 Nginx의
 `server_name`을 함께 맞춰야 합니다. 이 Nginx 설정은 배포마다 workflow가 설치하므로,
 서버에서만 수동 수정하지 말고 저장소 설정도 함께 변경하세요.
@@ -260,11 +261,48 @@ Vercel 원본 프록시를 계속 사용할 때는 Vercel 프로젝트 쪽 `verc
 - 앱 출력은 `journalctl -u stelline`, 앱 로그는 서버의 `~/stelline/logs/` 에 있습니다.
   관리자 화면의 `운영 로그` 탭에서 요약해 볼 수 있습니다(`README_DEV.md` 의 `로그`).
 
-nginx 설정과 달리 **이 두 파일은 배포 때 자동으로 설치되지 않습니다.** 고쳤으면 서버에 직접 옮기세요.
+nginx 설정과 달리 **이 파일들은 배포 때 자동으로 설치되지 않습니다.** 고쳤으면 서버에 직접 옮기세요.
 
 ```bash
 sudo install -m 644 deploy/systemd/stelline.service /etc/systemd/system/stelline.service
-sudo systemctl daemon-reload && sudo systemctl restart stelline
+sudo install -m 644 deploy/systemd/stelline-standby.service /etc/systemd/system/stelline-standby.service
+sudo systemctl daemon-reload && sudo systemctl restart stelline stelline-standby
+install -m 644 deploy/deploy.sh ~/deploy.sh
+```
+
+### 핫 스탠바이(무중단 배포)
+
+같은 서버에 앱을 두 벌 띄웁니다. 바깥 장비 없이 nginx·systemd 만 씁니다.
+
+| | 본 서버 | 대기 서버 |
+| --- | --- | --- |
+| 서비스 | `stelline.service` | `stelline-standby.service` |
+| 주소 | `127.0.0.1:5000` | `127.0.0.1:5001` |
+| 평소 요청 | 전부 받음 | 받지 않음(떠 있기만 함) |
+| 백그라운드 작업 | 돌림 | 돌리지 않음(`START_BACKGROUND_TASKS=false`) |
+| 로그 | `~/stelline/logs/` | `~/stelline/logs/standby/` |
+
+- **넘어가는 때**: nginx 는 본 서버가 연결을 거절하면(재시작·장애) 같은 요청을 곧바로 대기 서버로 넘기고,
+  10초(`fail_timeout`) 뒤 다시 본 서버로 돌아옵니다. 방문자에게는 끊김이 보이지 않습니다.
+- **배포 순서**(`deploy/deploy.sh`): 준비(pull·설치·마이그레이션) → ① 대기 서버를 새 코드로 다시 띄워 응답 확인
+  → ② 본 서버를 다시 띄움(그 몇 초 동안 대기 서버가 받음) → 본 서버가 응답하면 요청이 돌아옴.
+  새 코드가 대기 서버에서 뜨지 않으면 ①에서 멈추고 본 서버는 손대지 않아, 옛 코드로 계속 받습니다.
+- 대기 서버를 설치하기 전에는 배포 스크립트가 예전처럼 본 서버만 다시 띄웁니다(몇 초 끊김).
+- 백그라운드 작업은 본 서버만 돌립니다. 대기 서버가 돌리면 작업 로그가 본 서버의 `logs/` 에 남지 않아
+  관리자 화면 `운영 로그` 가 비고, 배포 때마다 작업을 맡는 쪽이 바뀝니다. 본 서버를 다시 띄우는 몇 초 동안은
+  작업도 쉽니다(5분 간격 조회수 감시에는 영향이 없습니다).
+- 로그를 같은 폴더에 쌓으면 두 프로세스가 저마다 자정에 파일을 넘기며 서로 덮어써서, 대기 서버는 `logs/standby/` 에 둡니다.
+  대기 서버가 받은 짧은 동안의 관리자 화면 `운영 로그` 에는 대기 서버의 로그가 보입니다.
+- 막지 못하는 것: 서버 자체(재부팅·nginx 재시작)와 DB 장애. 새벽의 자동 보안 업데이트(06:40 무렵)가 공유
+  라이브러리를 바꾸면 두 서비스와 nginx 를 함께 다시 띄워 몇 초 끊길 수 있습니다.
+- 메모리는 한 벌에 60MB 남짓 더 씁니다(서버 954MB 중 여유 470MB 남짓, 2026-11 확인).
+
+처음 한 번 설치:
+
+```bash
+sudo install -m 644 deploy/systemd/stelline-standby.service /etc/systemd/system/stelline-standby.service
+sudo systemctl daemon-reload && sudo systemctl enable --now stelline-standby
+curl -fsS -o /dev/null http://127.0.0.1:5001/ && echo "대기 서버 응답 확인"
 install -m 644 deploy/deploy.sh ~/deploy.sh
 ```
 

@@ -110,7 +110,7 @@ def test_deployment_nginx_forwards_vercel_origin_requests_to_the_app():
     assert "location /api/" in vercel_server
     assert "location /admin" in vercel_server
     assert "location /auth" in vercel_server
-    assert "proxy_pass http://127.0.0.1:5000;" in vercel_server
+    assert "proxy_pass http://stelline_app;" in vercel_server
     assert "return 404;" in next(block for block in server_blocks if "listen 80 default_server;" in block)
 
 
@@ -170,7 +170,56 @@ def test_production_process_is_supervised_single_worker_and_local_only():
     assert not any(command.startswith(("pkill", "nohup")) for command in commands)
 
     nginx = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
-    assert set(re.findall(r"proxy_pass (\S+);", nginx)) == {"http://127.0.0.1:5000"}
+    assert set(re.findall(r"proxy_pass (\S+);", nginx)) == {"http://stelline_app"}
+
+
+def test_nginx_sends_requests_to_the_standby_only_while_the_main_server_is_down():
+    """평소에는 본 서버(5000)만 받는다. 본 서버가 연결을 거절하면(재시작·장애) 같은 요청을 대기 서버(5001)로 넘긴다."""
+    nginx = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    upstream = re.search(r"(?s)upstream stelline_app \{(.*?)\}", nginx).group(1)
+    servers = re.findall(r"^\s*server (\S+)([^;]*);", upstream, re.M)
+    assert servers == [("127.0.0.1:5000", " max_fails=1 fail_timeout=10s"), ("127.0.0.1:5001", " backup")]
+    # 다음 서버로 넘기는 조건을 좁히지 않는다(기본값 error timeout 이 연결 거절을 받아 넘긴다).
+    directives = [line for line in nginx.splitlines() if not line.lstrip().startswith("#")]
+    assert not any("proxy_next_upstream" in line for line in directives)
+
+
+def test_standby_server_runs_the_same_app_without_background_tasks():
+    """대기 서버는 같은 코드·같은 .env 로 5001 에 떠 있기만 한다.
+
+    백그라운드 작업을 함께 돌리면 대기 서버가 먼저 잠금을 잡았을 때 작업 로그가 본 서버의 logs/ 에 남지 않아
+    관리자 화면 '운영 로그'가 빈다. 로그를 같은 폴더에 쌓으면 두 프로세스가 저마다 자정에 파일을 넘기며 서로 덮어쓴다.
+    """
+    main_unit = (PROJECT_ROOT / "deploy" / "systemd" / "stelline.service").read_text(encoding="utf-8")
+    standby = (PROJECT_ROOT / "deploy" / "systemd" / "stelline-standby.service").read_text(encoding="utf-8")
+    exec_start = next(line for line in standby.splitlines() if line.startswith("ExecStart="))
+    assert exec_start == next(line for line in main_unit.splitlines() if line.startswith("ExecStart=")).replace(
+        "127.0.0.1:5000", "127.0.0.1:5001"
+    )
+    assert "Environment=START_BACKGROUND_TASKS=false" in standby
+    assert "Environment=LOG_DIR=/home/ubuntu/stelline/logs/standby" in standby
+    for line in ("WorkingDirectory=/home/ubuntu/stelline", "Restart=always", "User=ubuntu"):
+        assert line in standby
+
+
+def test_deploy_restarts_the_standby_first_and_the_main_server_last():
+    """새 코드는 대기 서버에서 먼저 확인한다. 뜨지 않으면 본 서버는 손대지 않아 옛 코드로 계속 받는다.
+    본 서버를 다시 띄우는 몇 초 동안은 대기 서버가 받는다. 대기 서버를 설치하기 전에는 본 서버만 다시 띄운다."""
+    script = (PROJECT_ROOT / "deploy" / "deploy.sh").read_text(encoding="utf-8")
+    commands = [line.strip() for line in script.splitlines() if line.strip() and not line.strip().startswith("#")]
+    standby_branch = commands[commands.index("if systemctl cat stelline-standby.service >/dev/null 2>&1; then"):
+                              commands.index("else")]
+    assert [c for c in standby_branch if c.startswith(("sudo systemctl restart", "wait_until_up"))] == [
+        "sudo systemctl restart stelline-standby",
+        "wait_until_up stelline-standby 5001",
+        "sudo systemctl restart stelline",
+        "wait_until_up stelline 5000",
+    ]
+    after_else = commands[commands.index("else"):]
+    fallback = after_else[:after_else.index("fi")]
+    assert "sudo systemctl restart stelline" in fallback and "wait_until_up stelline 5000" in fallback
+    # 마이그레이션은 두 서버를 다시 띄우기 전에 한 번만 한다.
+    assert commands.index("python -m stelline.database.migrate") < commands.index("sudo systemctl restart stelline-standby")
 
 def test_removed_frontend_files_are_gone(client):
     """예전 화면 파일이 남아 있으면 어느 쪽이 진짜인지 알 수 없다."""

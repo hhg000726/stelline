@@ -4,6 +4,7 @@ import random
 import re
 import threading
 import time
+from datetime import datetime, timezone
 
 try:
     import fcntl
@@ -21,11 +22,16 @@ from .history import (
     BLOCKED,
     CHECK_RETENTION,
     COVER_ONLY,
+    REASON_FIRST,
+    REQUEST_ACTIONS,
     VISIBLE,
+    budget_allows_another,
     build_statuses,
     cover_query,
     is_retry_target,
-    select_search_targets,
+    run_reach,
+    search_order,
+    split_requests,
     utc_now,
 )
 
@@ -38,7 +44,7 @@ YT_INITIAL_DATA_RE = re.compile(r"ytInitialData\s*=\s*({.*?});", re.DOTALL)
 # 하루 9,000 을 넘으면 안 된다. 할당량 10,000 중 1,000 은 같은 프로젝트의 다른 사용분 몫이다
 # (config.SEARCH_API_INTERVAL 참고, 테스트가 확인한다). 지금은 3회 × 30 = 90회.
 # 몇 곡을 검사할지는 이 예산이 정한다. 기본 검색에서 못 찾은 곡마다 cover 검색을 한 번씩
-# 할 수 있게 남겨 두며, history.select_search_targets 가 정한 순서대로 검사한다.
+# 할 수 있게 남겨 두며, history.search_order 가 정한 순서(관리자 요청 포함)대로 검사한다.
 # 회차 수나 이 값이 바뀌면 재시도·순회가 얼마나 자주 돌아오는지만 달라지고 판정 기준은 그대로다.
 # 하루 90회를 2·3·4·6회로 나눠 본 모의 실험(2026-11)에서 8시간 × 30회가 막힌 곡 재시도가 가장 빨랐다.
 SEARCH_CALLS_PER_RUN = 30
@@ -84,7 +90,7 @@ def fetch_search_songs():
 def read_search_checks(cursor, since):
     """since(UTC) 뒤의 검사 기록. 관리자 화면처럼 이미 연결을 연 쪽도 같은 질의를 쓴다."""
     cursor.execute(
-        """SELECT id, query, video_id, result, fallback_query, checked_at
+        """SELECT id, query, video_id, result, fallback_query, checked_at, run_started_at
              FROM search_checks
             WHERE checked_at >= %s
             ORDER BY checked_at, id""",
@@ -102,21 +108,105 @@ def fetch_search_checks(since):
         return []
 
 
+def read_search_requests(cursor):
+    cursor.execute("SELECT query, action, requested_at FROM search_requests ORDER BY requested_at, query")
+    return cursor.fetchall()
+
+
+def fetch_search_requests():
+    """관리자가 다음 회차를 조정한 요청. 못 읽으면 조정 없이 돈다(요청은 지워지지 않고 남는다)."""
+    try:
+        with database_cursor() as cursor:
+            return read_search_requests(cursor)
+    except Exception:
+        logging.exception("다음 검색 조정 요청 불러오기 실패")
+        return []
+
+
+def set_search_request(query, action):
+    """다음 회차 조정을 남긴다. 곡마다 하나라 새 요청이 예전 요청을 바꾼다."""
+    if action not in REQUEST_ACTIONS:
+        raise ValueError(f"모르는 조정: {action}")
+    with database_cursor() as cursor:
+        cursor.execute(
+            """INSERT INTO search_requests (query, action, requested_at) VALUES (%s, %s, %s)
+               ON DUPLICATE KEY UPDATE action = VALUES(action), requested_at = VALUES(requested_at)""",
+            (query, action, utc_now()),
+        )
+
+
+def clear_search_request(query):
+    with database_cursor() as cursor:
+        cursor.execute("DELETE FROM search_requests WHERE query = %s", (query,))
+
+
+def clear_applied_requests(queries, before):
+    """이번 회차에 쓴 요청을 지운다. 회차가 돌던 중에 새로 들어온 요청(before 뒤)은 다음 회차 몫이라 남긴다."""
+    if not queries:
+        return
+    try:
+        with database_cursor() as cursor:
+            cursor.executemany(
+                "DELETE FROM search_requests WHERE query = %s AND requested_at <= %s",
+                [(query, before) for query in queries],
+            )
+    except Exception:
+        logging.exception("다음 검색 조정 요청 정리 실패")
+
+
+def load_search_state(now=None):
+    """곡 목록, 검사 기록, 관리자 요청, 그리고 곡마다 상태.
+
+    지난 회차에 무엇을 검사했는지는 기록이, 다음 회차 순서는 곡 목록·기록·요청이 다시 필요하다
+    (다음 회차가 시작하는 시각 기준으로 상태를 다시 계산한다, plan_next_run).
+    """
+    now = now or utc_now()
+    songs = fetch_search_songs()
+    checks = fetch_search_checks(now - CHECK_RETENTION)
+    return {
+        "songs": songs, "checks": checks, "requests": fetch_search_requests(), "now": now,
+        "statuses": build_statuses(songs, checks, now),
+    }
+
+
+def plan_next_run(state):
+    """다음 정기 회차가 검사할 순서. 예상이 아니라, 그 회차가 시작할 시각 기준으로 실제 회차와 똑같이 계산한다.
+
+    순서 앞 `sure` 곡은 반드시 검사하고, 그 뒤는 앞 곡들의 결과에 따라(못 찾으면 cover 검색으로 2회씩 쓴다)
+    `most` 곡까지 순서대로 검사한다. 그사이 관리자 즉시 실행이나 곡·요청 변경이 있으면 순서도 그에 맞게 바뀐다.
+    """
+    starts_at = datetime.fromtimestamp(next_search_run_epoch(state["now"].replace(tzinfo=timezone.utc).timestamp()),
+                                       timezone.utc).replace(tzinfo=None)
+    statuses = build_statuses(state["songs"], state["checks"], starts_at)
+    first, skip = split_requests(state["requests"])
+    order = search_order(statuses.values(), SEARCH_CALLS_PER_RUN, first, skip)
+    sure, most = run_reach(SEARCH_CALLS_PER_RUN)
+    return {
+        "starts_at": starts_at,
+        "order": order[:most],
+        "sure": min(sure, len(order)),
+        "skipped": sorted(skip & set(statuses)),
+    }
+
+
 def load_song_statuses(now=None):
     """곡마다 현재 상태·최근 7일·위험도. 화면·API·관리자·검색 대상 선정이 모두 이것 하나를 쓴다."""
-    now = now or utc_now()
-    statuses = build_statuses(fetch_search_songs(), fetch_search_checks(now - CHECK_RETENTION), now)
-    return statuses, now
+    state = load_search_state(now)
+    return state["statuses"], state["now"]
 
 
-def record_check(status, result, fallback_query=None):
-    """곡 하나의 검사 결과를 바로 저장한다. 실패해도 회차는 계속 돈다(그 곡은 다음 회차에 다시 대상)."""
+def record_check(status, result, fallback_query=None, run_started_at=None):
+    """곡 하나의 검사 결과를 바로 저장한다. 실패해도 회차는 계속 돈다(그 곡은 다음 회차에 다시 대상).
+
+    run_started_at 은 그 곡을 검사한 회차가 시작한 시각이다. 화면이 '마지막 검색'에서 무엇을
+    검사했는지 보여 줄 때 이 값으로 회차를 묶는다.
+    """
     try:
         with database_cursor() as cursor:
             cursor.execute(
-                """INSERT INTO search_checks (query, video_id, result, fallback_query, checked_at)
-                   VALUES (%s, %s, %s, %s, %s)""",
-                (status.query, status.video_id, result, fallback_query, utc_now()),
+                """INSERT INTO search_checks (query, video_id, result, fallback_query, checked_at, run_started_at)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                (status.query, status.video_id, result, fallback_query, utc_now(), run_started_at),
             )
         return True
     except Exception:
@@ -207,9 +297,11 @@ def summarize_search_run(stats):
         upcoming = f"순회 다음 차례는 {stats['sweep_wait_days']:.1f}일 전 검사한 곡"
     else:
         upcoming = "순회할 곡 없음"
+    requested = f" · 관리자 요청 {stats['requested_checked']}곡" if stats.get("requested_checked") else ""
     return (
         f"{stats['mode']} · 검사 {stats['checked']}곡"
         f"(정상 {stats[VISIBLE]} · cover로만 {stats[COVER_ONLY]} · 막힘 {stats[BLOCKED]})"
+        f"{requested}"
         f" · 재시도 {stats['retry_checked']}/{stats['retry_total']}곡"
         f" · 순회 {stats['sweep_checked']}곡(처음 검사 {stats['first_time']})"
         f" · cover로 찾음 {stats['cover_found']}/{stats['cover_calls']}"
@@ -241,6 +333,7 @@ def run_search_checks(by_admin=False):
     stats = {
         "mode": "관리자" if by_admin else "자동",
         "checked": 0, VISIBLE: 0, COVER_ONLY: 0, BLOCKED: 0,
+        "requested_checked": 0,
         "retry_total": 0, "retry_checked": 0, "sweep_checked": 0, "first_time": 0,
         "cover_calls": 0, "cover_found": 0, "crawl_found": 0,
         "calls_used": 0, "unchecked_left": 0, "sweep_wait_days": None,
@@ -251,22 +344,30 @@ def run_search_checks(by_admin=False):
         logging.error("검색용 YouTube API 키가 설정되지 않았습니다.")
         return {"stats": stats, "error": "검색용 YouTube API 키가 설정되지 않음"}
 
-    statuses, now = load_song_statuses()
+    state = load_search_state()
+    statuses, now = state["statuses"], state["now"]
     if not statuses:
         # DB 가 끊겨도 목록 읽기는 빈 목록을 돌려준다. 그대로 '완료'라고 남기면 아무것도 안 했는데
         # 정상으로 보이므로 경고로 남긴다(관리자 화면 '운영 로그'에 '확인 필요'로 뜬다).
         return {"stats": stats, "error": "검사할 곡을 불러오지 못함(DB 연결 또는 곡 목록 확인)"}
-    targets = select_search_targets(statuses.values(), SEARCH_CALLS_PER_RUN)
+    # 관리자 요청까지 반영한 순서. 화면의 '다음 검색'(plan_next_run)과 같은 함수로 정한다.
+    first, skip = split_requests(state["requests"])
+    order = search_order(statuses.values(), SEARCH_CALLS_PER_RUN, first, skip)
+    reasons = {status.query: reason for status, reason in order}
+    targets = [status for status, _ in order]
     stats["retry_total"] = sum(1 for status in targets if is_retry_target(status))
     checked = set()
 
+    # 이 회차의 기록은 모두 회차 시작 시각(now)으로 묶는다. 화면의 '마지막 검색'이 이것으로 회차를 고른다.
     def record(status, result, fallback_query=None):
-        if record_check(status, result, fallback_query):
+        if record_check(status, result, fallback_query, run_started_at=now):
             checked.add(status.query)
             stats["checked"] += 1
             stats[result] += 1
-            # status 는 이번 검사 전에 계산한 값이라, 고를 때 어느 쪽(재시도/순회)이었는지 그대로 센다.
-            if is_retry_target(status):
+            # status 는 이번 검사 전에 계산한 값이라, 고를 때 어느 쪽(요청/재시도/순회)이었는지 그대로 센다.
+            if reasons.get(status.query) == REASON_FIRST:
+                stats["requested_checked"] += 1
+            elif is_retry_target(status):
                 stats["retry_checked"] += 1
             else:
                 stats["sweep_checked"] += 1
@@ -277,10 +378,9 @@ def run_search_checks(by_admin=False):
     missing = []  # 기본 검색에서 못 찾은 곡. cover 검색을 기다린다.
     logging.info("[기본 검색 시작] 곡 %s", len(targets))
 
-    # 못 찾은 곡마다 cover 검색 한 번을 남겨 둔다. 조건이 `> len(missing)` 이면 마지막 검사에서
-    # 또 못 찾았을 때 그 곡의 cover 검색 몫이 모자라므로 하나 더 남긴다.
+    # 못 찾은 곡마다 cover 검색 한 번을 남겨 둔다(history.budget_allows_another — 다음 회차 예상과 같은 규칙).
     queue = list(targets)
-    while queue and remaining > len(missing) + 1:
+    while queue and budget_allows_another(remaining, len(missing)):
         status = queue.pop(0)
         time.sleep(20)
         try:
@@ -341,6 +441,12 @@ def run_search_checks(by_admin=False):
     logging.info("[최종 결과] 총 실패곡=%s", len(still_missing) - len(found_on_page))
 
     prune_old_checks(now)
+    # 쓴 요청만 지운다. '먼저 검사'는 실제로 검사한 곡만(못 한 곡은 다음 회차에도 맨 앞), '이번에 빼기'는
+    # 회차가 실제로 돌았을 때만. 회차 도중 새로 들어온 요청은 다음 회차 몫이라 남긴다(requested_at > now).
+    clear_applied_requests(
+        [query for query in first if query in checked] + (sorted(skip) if checked else []),
+        before=now,
+    )
     stats["calls_used"] = SEARCH_CALLS_PER_RUN - remaining
     sweep_left = [s for s in targets if s.query not in checked and not is_retry_target(s)]
     stats["unchecked_left"] = sum(1 for s in sweep_left if s.checked_at is None)

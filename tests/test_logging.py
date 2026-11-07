@@ -375,7 +375,17 @@ def test_search_run_counts_what_it_checked():
          "checked_at": now - timedelta(days=10)},
     ]
     # 순회 몫(정상 곡)이 먼저, 그다음 재시도(막힌 곡). 막힌 곡은 cover 검색에서 찾는다.
-    with patch.object(tasks, "fetch_search_songs", return_value=songs),          patch.object(tasks, "fetch_search_checks", return_value=checks),          patch.object(tasks, "utc_now", return_value=now),          patch.object(tasks, "record_check", return_value=True),          patch.object(tasks, "prune_old_checks"),          patch.object(tasks, "find_videos_on_search_page", return_value=set()),          patch.object(tasks, "SEARCH_API_KEY", ["key"]),          patch.object(tasks.time, "sleep"),          patch.object(tasks, "_youtube_video_ids_for_query", side_effect=[["v"], [], ["b"]]):
+    with patch.object(tasks, "fetch_search_songs", return_value=songs), \
+         patch.object(tasks, "fetch_search_checks", return_value=checks), \
+         patch.object(tasks, "fetch_search_requests", return_value=[]), \
+         patch.object(tasks, "clear_applied_requests"), \
+         patch.object(tasks, "utc_now", return_value=now), \
+         patch.object(tasks, "record_check", return_value=True), \
+         patch.object(tasks, "prune_old_checks"), \
+         patch.object(tasks, "find_videos_on_search_page", return_value=set()), \
+         patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
+         patch.object(tasks.time, "sleep"), \
+         patch.object(tasks, "_youtube_video_ids_for_query", side_effect=[["v"], [], ["b"]]):
         result = tasks.run_search_checks()
 
     assert result["error"] == ""

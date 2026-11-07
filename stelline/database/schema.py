@@ -7,6 +7,9 @@ LEGACY_MAX_RISK = 28
 # 015 를 만들 때(2026-11) 한 회차는 10분 남짓 걸렸고 회차 사이는 8시간이었다. recent_data 의 시각과
 # 곡의 마지막 검사 시각이 이만큼 안에 있으면 같은 회차의 같은 검사로 본다.
 LEGACY_SAME_RUN = timedelta(hours=1)
+# 016 전에 쌓인 검사 기록이 나온 정기 회차의 간격. 지금 설정(config.SEARCH_API_INTERVAL)을 읽지 않는 것은,
+# 나중에 간격을 바꿔도 이미 지난 기록은 그때의 간격으로 회차를 정해야 하기 때문이다.
+LEGACY_RUN_INTERVAL = 8 * 3600
 
 
 def migrate_song_infos_primary_key(cursor):
@@ -107,6 +110,22 @@ def backfill_search_checks(cursor):
                VALUES (%s, %s, %s, %s, %s)""",
             rows,
         )
+
+
+def backfill_search_run_started_at(cursor):
+    """016 전에 쌓인 검사 기록에 회차 시작 시각을 채운다.
+
+    그때까지의 기록(015 로 옮긴 것 포함)은 모두 정기 회차에서 나왔다. 정기 회차는 UTC 기준 8시간
+    경계에서 시작하므로 검사 시각을 그 경계로 내린다. 한 회차는 10분 남짓이라 경계를 넘지 않는다.
+    """
+    cursor.execute("SELECT id, checked_at FROM search_checks WHERE run_started_at IS NULL")
+    updates = []
+    for row in cursor.fetchall():
+        epoch = int(row["checked_at"].replace(tzinfo=timezone.utc).timestamp())
+        started = datetime.fromtimestamp(epoch - epoch % LEGACY_RUN_INTERVAL, timezone.utc).replace(tzinfo=None)
+        updates.append((started, row["id"]))
+    if updates:
+        cursor.executemany("UPDATE search_checks SET run_started_at = %s WHERE id = %s", updates)
 
 
 def drop_column_if_present(table, column):
@@ -235,5 +254,18 @@ MIGRATIONS = [
              INDEX search_checks_checked_at_idx (checked_at)
            ) CHARACTER SET utf8mb4""",
         backfill_search_checks,
+    ]),
+    ("016_search_runs_and_requests", [
+        # 검사 기록마다 그 곡을 검사한 회차의 시작 시각. 화면의 '마지막 검색'이 이것으로 한 회차를 묶는다.
+        add_column_if_missing("search_checks", "run_started_at", "DATETIME NULL"),
+        backfill_search_run_started_at,
+        # 관리자가 다음 회차를 조정한 내용. 곡마다 하나(검색어가 기본키)이고 한 번 쓰면 지운다.
+        #   first: 다음 회차 맨 앞에서 검사한다. 그 곡을 실제로 검사하면 지운다.
+        #   skip : 다음 회차 순서에서 뺀다. 그 회차가 돌고 나면 지운다.
+        """CREATE TABLE IF NOT EXISTS search_requests (
+             query VARCHAR(512) PRIMARY KEY,
+             action VARCHAR(8) NOT NULL,
+             requested_at DATETIME NOT NULL
+           ) CHARACTER SET utf8mb4""",
     ]),
 ]

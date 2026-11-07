@@ -36,6 +36,7 @@ from stelline.database.connection import get_connection  # noqa: E402
 CONTENT_AND_STATE_TABLES = (
     "song_infos",
     "search_checks",
+    "search_requests",
     "songs_data",
     "recent_data",
     "targets",

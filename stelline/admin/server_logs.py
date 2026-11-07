@@ -215,9 +215,8 @@ def search_schedule_text():
     run_hours = search_run_hours_kst()
     hours = "·".join(f"{hour:02d}" for hour in run_hours)
     return (
-        f"한국 시간 {hours}시(하루 {len(run_hours)}회)에 최근 {RETRY_WINDOW.days}일 안에 검색이 안 된 적이 있는"
-        f" 곡을 다시 시도하고, 나머지 곡은 회차마다 {sweep_reserve(SEARCH_CALLS_PER_RUN)}곡씩 돌아가며 YouTube에서"
-        f" 찾아봅니다(회차마다 API {SEARCH_CALLS_PER_RUN}회)."
+        f"한국 시간 {hours}시(하루 {len(run_hours)}회) · 회차당 API {SEARCH_CALLS_PER_RUN}회 ·"
+        f" {RETRY_WINDOW.days}일 안에 검색이 안 된 곡을 먼저, 나머지는 {sweep_reserve(SEARCH_CALLS_PER_RUN)}곡씩 순회"
     )
 
 

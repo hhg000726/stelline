@@ -118,7 +118,15 @@ def test_search_status_judges_each_song_by_its_own_records(client, db, clean_db)
     # 화면의 '다음 검색' 시각과 간격은 서버 설정에서 온다.
     schedule = payload["schedule"]
     assert (schedule["interval_hours"], schedule["run_hours_kst"]) == (8, [1, 9, 17])
-    assert schedule["next_run_at"] % (8 * 3600) == 0 and schedule["next_run_at"] > payload["generated_at"]
+    # 다음 회차: 그 회차가 시작할 시각과, 최소 목록(sure)·최대 목록이 정해진 순서.
+    next_run = payload["next_run"]
+    assert next_run["at"] % (8 * 3600) == 0 and next_run["at"] > payload["generated_at"]
+    assert next_run["sure"] == len(songs) == len(next_run["songs"])  # 곡이 15곡보다 적으면 모두 확정
+    # 순회 몫(검사 전인 곡 D) 다음에 재시도 대상을 오래 기다린 순서로: E(5일 전) → A(16시간 전) → B·C(8시간 전)
+    assert [s["query"] for s in next_run["songs"]] == ["곡 D", "곡 E", "곡 A", "곡 B", "곡 C"]
+    assert [s["reason"] for s in next_run["songs"][:2]] == ["sweep", "retry"]
+    # 회차 시작 시각이 없는 기록(016 전)만 있으면 지난 회차는 없다.
+    assert payload["last_run"] is None
     assert payload["last_checked_at"] == max(s["checked_at"] for s in songs.values() if s["checked_at"])
 
 
@@ -145,6 +153,51 @@ def test_song_list_keeps_old_keys_with_the_new_risk(client, db, clean_db):
     assert data["곡 D"]["risk"] is None            # 기록이 없으면 모른다(옛 열의 28 을 쓰지 않는다)
     assert data["곡 D"]["fallback_query"] is None  # 옛 열의 값을 쓰지 않는다
     assert data["곡 A"]["risk"] == round(100 * 16 / 40)  # 40시간 동안 마지막 16시간이 막힘
+
+
+def test_last_run_lists_what_the_latest_run_checked(client, db, clean_db):
+    _song(db, "곡 A", "vidA")
+    _song(db, "곡 B", "vidB")
+    started = _utc_now() - timedelta(hours=2)
+    rows = [
+        ("곡 A", "vidA", "visible", started - timedelta(hours=8), started - timedelta(hours=8)),  # 그 전 회차
+        ("곡 A", "vidA", "blocked", started + timedelta(minutes=1), started),
+        ("곡 B", "vidB", "cover_only", started + timedelta(minutes=2), started),
+    ]
+    with db.cursor() as cursor:
+        cursor.executemany(
+            "INSERT INTO search_checks (query, video_id, result, checked_at, run_started_at) VALUES (%s, %s, %s, %s, %s)",
+            rows,
+        )
+    db.commit()
+    last_run = client.get("/api/search/status").get_json()["last_run"]
+    assert last_run == {
+        "started_at": started.replace(tzinfo=timezone.utc).timestamp(),
+        "songs": [{"query": "곡 A", "result": "blocked"}, {"query": "곡 B", "result": "cover_only"}],
+    }
+
+
+def test_admin_adjustments_change_the_next_run_at_once(admin_client, db, clean_db):
+    """관리자가 조정하면 저장하자마자 다음 회차 순서가 다시 계산된다(공개 API 도 같은 순서)."""
+    _seed_search_history(db)
+
+    def next_order():
+        return [s["query"] for s in admin_client.get("/api/search/status").get_json()["next_run"]["songs"]]
+
+    def adjust(action, query):
+        return admin_client.post("/admin/search/next", data={"csrf_token": admin_client.csrf, "action": action, "query": query})
+
+    assert next_order()[0] == "곡 D"
+    assert adjust("first", "곡 C").status_code == 302
+    assert next_order()[:2] == ["곡 C", "곡 D"]
+    adjust("skip", "곡 D")
+    assert "곡 D" not in next_order()
+    adjust("cancel", "곡 D")
+    assert "곡 D" in next_order()
+    adjust("first", "목록에 없는 곡")
+    assert _scalar(db, "SELECT COUNT(*) FROM search_requests WHERE query = %s", ("목록에 없는 곡",)) == 0
+    html = admin_client.get("/admin/").get_data(as_text=True)
+    assert "data-search-next" in html and "최소 목록" in html and "관리자 요청" in html
 
 
 def test_search_status_is_empty_but_well_formed_without_records(client, db, clean_db):

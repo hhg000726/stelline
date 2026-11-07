@@ -179,10 +179,11 @@ export default function SearchPage() {
   const ready = status.phase === "ready";
   const summary = status.summary;
   /* 검사는 모든 곡을 매번 하지 않는다. 그 사실은 숫자 한 줄로만 적고, 일정과 방식은 '다음 검색'
-   * 칩을 펼치면 보이게 한다(설명 문장이 길면 목록보다 먼저 읽히지 않는다). */
+   * 칩을 펼치면 보이게 한다(설명 문장이 길면 목록보다 먼저 읽히지 않는다).
+   * 아직 한 번도 검사하지 않은 곡 수('검색 전 N곡')는 보는 사람에게 쓸모가 없어 적지 않는다
+   * (관리자 화면 '검색 점검 곡' 표 위 숫자 줄에는 그대로 있다). */
   const coverage = ready && summary
     ? `최근 ${status.windowDays}일 ${summary.checked_in_window}/${summary.songs}곡 검색`
-      + (summary.unchecked ? ` · 검색 전 ${summary.unchecked}곡` : "")
     : undefined;
   const lastRunTime = status.lastRun?.started_at || status.lastCheckedAt;
 

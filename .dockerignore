@@ -1,19 +1,36 @@
+# 도커로 넘기지 않을 것. 지금 쓰는 곳은 리눅스 테스트 이미지(dev/linux-tests.Dockerfile) 하나다.
+# 이 파일의 무늬는 맨 위 폴더 기준이라, 하위 폴더까지 막으려면 **/ 를 붙여야 한다
+# (예전의 node_modules/ 는 frontend/node_modules 를 막지 못했다).
+
+# 비밀 값과 키
 .env
 .env.*
+**/*service-account*.json
+*.pem
+*.key
+*.crt
+
+# 가상환경·캐시·빌드 도구
 venv/
 .venv/
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
+**/__pycache__
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+**/node_modules
+
+# 실행 중에 생기는 것
 *.log
 logs/
 *.sqlite3
 *.db
-node_modules/
+.background_tasks.lock
+.search_cycle.lock
+
+# 저장소·편집기·Claude 작업 폴더(세션 worktree 가 통째로 들어 있다)
 .git
-.venv/
+.github
+.claude
 .vscode/
-*.pem
-*.key
-*.crt
+.idea/

@@ -62,11 +62,15 @@ function SongCardBase({ song, query, machine, isFavorite, inSetlist, onCopy, onT
         <NumberButton song={song} machine="tj" selectedMachine={machine} onCopy={onCopy} />
         <NumberButton song={song} machine="ky" selectedMachine={machine} onCopy={onCopy} />
       </div>
+      {/* 단추 글자가 기호(☆·+)뿐이라, 낭독기가 "흰 별"처럼 기호 이름을 읽지 않게 이름을 붙인다.
+          목록에서 단추만 옮겨 다녀도 어느 곡인지 알도록 곡명을 앞에 둔다.
+          켜졌는지는 aria-pressed 가 알려 주므로 이름은 그대로 둔다. */}
       <div className="song-actions">
         <button
           type="button"
           className={`icon-btn${isFavorite ? " is-on" : ""}`}
           aria-pressed={isFavorite}
+          aria-label={`${song.title} 즐겨찾기`}
           title="즐겨찾기"
           onClick={() => onToggleFavorite(song)}
         >
@@ -76,6 +80,7 @@ function SongCardBase({ song, query, machine, isFavorite, inSetlist, onCopy, onT
           type="button"
           className={`icon-btn${inSetlist ? " is-on" : ""}`}
           aria-pressed={inSetlist}
+          aria-label={`${song.title} 부를 곡 목록에 담기`}
           title="부를 곡 목록에 담기"
           onClick={() => onToggleSetlist(song)}
         >

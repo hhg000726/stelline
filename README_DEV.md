@@ -71,7 +71,25 @@ pytest
   화면 소스(`frontend/src`)가 예전 규칙을 그대로 지키는지, nginx 설정이 캐시·전달 규칙을 지키는지를 함께 봅니다.
 - `*_integration.py`, `test_migrations.py`, `test_background_tasks.py` 는 **실제 MySQL**이 필요합니다.
   MySQL이 없으면 자동으로 `skip` 됩니다. 로컬에서 통과했다고 끝이 아니라 **CI 결과까지 확인**하세요.
-- 파일 잠금처럼 리눅스에서만 의미 있는 테스트는 윈도우에서 `skip` 되고 CI(ubuntu)에서 돕니다.
+- 파일 잠금처럼 리눅스에서만 의미 있는 테스트는 윈도우에서 `skip` 됩니다. 아래 `리눅스에서 전체 테스트`로
+  로컬에서도 돌릴 수 있습니다.
+
+### 리눅스에서 전체 테스트
+
+파일 잠금(`fcntl`)·gunicorn 테스트까지 포함해, CI와 같은 조건(Python 3.12·MySQL 8.4·`REQUIRE_DB=1`)으로
+도커 안의 리눅스에서 돌립니다. Docker Desktop 만 켜져 있으면 되고, 개발 DB나 이 PC의 다른 MySQL과
+부딪히지 않습니다(호스트 포트를 열지 않는 일회용 DB를 쓰고, 끝나면 지웁니다).
+
+PowerShell
+```
+./dev/run-linux-tests.ps1                 # 전체
+./dev/run-linux-tests.ps1 -k background   # pytest 인자를 그대로 넘긴다
+```
+
+- 지금 작업 폴더를 이미지에 **복사**해 돌리므로 커밋하지 않은 수정도 시험합니다. 무엇을 빼는지는 `.dockerignore`.
+- 처음 한 번은 이미지를 받고 의존성을 설치하느라 몇 분 걸리고, 그 뒤로는 테스트만 돌아 수십 초면 끝납니다.
+- 다른 셸에서는 `docker compose -f dev/docker-compose.linux-tests.yml -p stelline-linux-tests run --rm --build tests`
+  뒤에 `... down -v` 로 일회용 DB를 지웁니다.
 
 DB 통합 테스트를 로컬에서 돌리려면 일회용 MySQL을 띄우고 접속 정보를 넘겨줍니다:
 
@@ -96,7 +114,8 @@ CI(GitHub Actions, `.github/workflows/deploy.yml`)는 MySQL 서비스 컨테이�
 2. CI 가 초록이 된 뒤 합칩니다. `main` 에 직접 push 하면 테스트와 배포가 같은 실행에서 이어져,
    테스트가 실패해야만 배포가 멈춥니다(검토할 틈이 없습니다).
 3. 화면 소스를 고쳤으면 빌드 결과물도 같은 커밋에 넣습니다.
-4. 스키마를 바꿨으면 운영 DB 백업 → `python -m stelline.database.migrate` 를 **직접** 실행합니다(자동 적용 안 됨).
+4. 스키마를 바꿨으면, 운영에는 `main` 배포 때 `deploy/deploy.sh` 가 `python -m stelline.database.migrate` 를
+   **자동으로** 실행합니다. 데이터를 지우거나 바꾸는 마이그레이션이면 합치기 전에 운영 DB를 백업하고, PR 설명에 그렇게 적습니다.
 
 ## 운영 점검 루틴
 

@@ -67,28 +67,37 @@ def load_targets():
         return []
 
 
+def refresh_rank_data(recent_data, targets):
+    """대상마다 순위를 새로 읽어 `recent_data`에 채운다. 한 회차 분량이다.
+
+    관리자가 지웠거나 만료돼 지워진 대상은 함께 뺀다. 예전에는 대상이 하나라도 남아 있으면
+    지운 대상의 마지막 순위가 서버를 다시 띄울 때까지 메인 화면에 계속 남았다.
+    대상은 그대로인데 이번에 읽지 못한 것은 지난 값을 그대로 둔다(잠깐의 실패로 칸이 사라지지 않게).
+    """
+    names = {target["name"] for target in targets}
+    for stale in [name for name in recent_data if name not in names]:
+        recent_data.pop(stale, None)
+
+    for target in targets:
+        name = target["name"]
+        try:
+            new_data = scrape_bugs_favorite(name, target["url_number"])
+            if new_data is None:
+                continue
+            new_data["title"] = target["title"]
+            new_data["url_number"] = target["url_number"]
+            recent_data[name] = new_data
+        except requests.RequestException as exc:
+            logging.error("Bugs 순위 갱신 실패: %s - %s", name, describe_request_error(exc))
+        except Exception:
+            # 페이지 모양이 바뀌어 파싱이 깨진 경우가 대부분이다. 어느 줄인지 알아야 고친다.
+            logging.exception("Bugs 순위 갱신 실패: %s", name)
+
+
 def run_bugs_rank_cycle(recent_data):
     """주기적으로 Bugs 응원 순위를 가져와 `recent_data`에 채운다."""
     while True:
-        targets = load_targets()
-        if targets:
-            for target in targets:
-                name = target["name"]
-                try:
-                    new_data = scrape_bugs_favorite(name, target["url_number"])
-                    if new_data is None:
-                        continue
-                    new_data["title"] = target["title"]
-                    new_data["url_number"] = target["url_number"]
-                    recent_data[name] = new_data
-                except requests.RequestException as exc:
-                    logging.error("Bugs 순위 갱신 실패: %s - %s", name, describe_request_error(exc))
-                except Exception:
-                    # 페이지 모양이 바뀌어 파싱이 깨진 경우가 대부분이다. 어느 줄인지 알아야 고친다.
-                    logging.exception("Bugs 순위 갱신 실패: %s", name)
-        else:
-            recent_data.clear()
-
+        refresh_rank_data(recent_data, load_targets())
         time.sleep(API_CHECK_INTERVAL)
 
 

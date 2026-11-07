@@ -9,6 +9,7 @@
      지금은 같은 규칙이 frontend/src 아래에 있으므로 그쪽을 읽는다.
 """
 
+import json
 import pathlib
 import re
 
@@ -277,8 +278,9 @@ def test_pages_move_without_reloading_the_document():
     app = source("App.jsx")
     for path in ("/", "/search", "/karaoke", "/congratulation", "/offline"):
         assert f'path="{path}"' in app, path
-    # 화면 묶음은 들어간 화면 것만 받아 온다.
-    assert "lazy(" in app
+    # 화면 묶음은 들어간 화면 것만 받아 온다(React.lazy 는 pages.js 가 감싼다).
+    assert "PAGES[" in app
+    assert "lazy(" in source("pages.js")
     assert "Suspense" in source("components", "Layout.jsx")
 
 
@@ -393,6 +395,127 @@ def test_congratulation_badge_marks_exact_milestones_only():
     assert "tenThousands >= 100" not in page
 
 
+def test_open_page_notifications_read_what_the_server_sends():
+    """서버는 제목·내용을 notification 이 아니라 data 에 담아 보낸다(background_tasks/monitoring.py).
+
+    화면을 열어 둔 사람의 알림이 notification 만 읽으면 늘 '새 알림 / 내용 없음'이 뜬다.
+    서비스 워커(화면을 닫아 둔 사람)와 같은 자리에서 읽어야 한다.
+    """
+    worker = (STATIC_ROOT / "firebase-messaging-sw.js").read_text(encoding="utf-8")
+    hook = source("pages", "congratulation", "useNotifications.js")
+    for key in ("payload.data?.title", "payload.data?.body"):
+        assert key in worker
+        assert key in hook
+
+
+# --- 불러오기·보내기 실패 ---------------------------------------------------
+
+def test_failed_lists_show_an_error_instead_of_a_broken_card():
+    """실패 응답({"error": …})을 목록으로 받으면 오류 문구 한 줄이 카드 한 장으로 그려진다.
+
+    화면이 데이터를 받는 길은 getJson 하나이고, 실패 응답은 거기서 실패로 넘긴다.
+    """
+    assert "if (!response.ok) throw" in source("lib", "api.js")
+    assert "getJson(path)" in source("lib", "useApiList.js")
+    # 오프라인 화면은 서버 실패를 '진행 중인 이벤트가 없다'로 잘못 말하지 않는다.
+    assert 'getJson("offline/offline_api")' in source("pages", "OfflinePage.jsx")
+
+
+def test_report_errors_do_not_show_a_json_parse_message():
+    """배포 중 502처럼 HTML 이 오는 실패에서 "Unexpected token '<'" 가 그대로 보이면 안 된다."""
+    assert ".json().catch(" in source("lib", "api.js")
+
+
+def test_a_script_that_failed_once_can_be_loaded_again():
+    """실패한 태그가 남아 있으면 다시 부를 때 그 태그의 load 를 기다리다 캡차·지도가 영영 뜨지 않는다."""
+    assert "script.remove()" in source("lib", "loadScript.js")
+
+
+# --- 첫 화면과 화면 이동의 기다림 -------------------------------------------
+
+def _early_fetch_table():
+    """문서 머리의 미리 부르기 표(주소 → API)를 읽는다."""
+    html = (PROJECT_ROOT / "frontend" / "index.html").read_text(encoding="utf-8")
+    table = re.search(r"var pageData = (\{.*?\});", html, re.S).group(1)
+    common = re.search(r"\[([^\]]*)\]\.concat\(pageData", html).group(1)
+    pages = {route: re.findall(r'"([^"]+)"', keys) for route, keys in re.findall(r'"(/[a-z]*)": \[([^\]]*)\]', table)}
+    return re.findall(r'"([^"]+)"', common), pages
+
+
+PAGE_SOURCES = {
+    "/": [("pages", "main", "TwitsPanel.jsx"), ("pages", "main", "EventsPanel.jsx"), ("pages", "main", "BugsPanel.jsx")],
+    "/search": [("pages", "SearchPage.jsx")],
+    "/karaoke": [("pages", "KaraokePage.jsx")],
+    "/congratulation": [("pages", "CongratulationPage.jsx")],
+    "/offline": [("pages", "OfflinePage.jsx")],
+}
+
+
+def test_the_document_starts_each_page_s_data_with_the_bundle():
+    """데이터가 번들을 다 받고 실행한 뒤에야 출발했다. 문서 머리가 미리 부르고 화면이 그것을 꺼내 쓴다.
+
+    표와 화면이 어긋나면 같은 요청이 두 번 나가거나(꺼내 쓰지 않음) 미리 부르기가 헛돈다.
+    """
+    common, pages = _early_fetch_table()
+    assert set(pages) == set(PAGE_SOURCES)
+    assert common == ["content", "main/buttons"]
+    assert 'getJson("content")' in source("context", "ContentContext.jsx")
+    assert 'getJson("main/buttons")' in source("context", "NavButtonsContext.jsx")
+    for route, keys in pages.items():
+        text = "".join(source(*parts) for parts in PAGE_SOURCES[route])
+        for key in keys:
+            assert f'getJson("{key}")' in text or f'useApiList("{key}"' in text, (route, key)
+    # 무언가를 바꾸는 요청(기록·제보)은 미리 부르지 않는다. 화면이 실제로 쓸 때만 나가야 한다.
+    for keys in [common, *pages.values()]:
+        assert not any(key.endswith(("record", "reports", "record_copy")) for key in keys)
+    # 미리 부른 응답은 한 번만, 오래되지 않았을 때만 쓴다.
+    api_js = source("lib", "api.js")
+    assert "delete store[key]" in api_js
+    assert "EARLY_MAX_AGE_MS" in api_js
+
+
+def test_the_built_document_preloads_the_page_it_was_opened_on(client):
+    """화면 조각은 번들을 실행한 뒤에야 출발했다. 빌드 때 '주소 → 조각' 표를 문서에 적어 함께 받는다."""
+    html = client.get("/").get_data(as_text=True)
+    assert "__STELLINE_ROUTE_FILES__" not in html
+    table = json.loads(re.search(r"var routeFiles = (\{.*?\});", html).group(1))
+    assert set(table) == set(PAGE_SOURCES)
+    for route, files in table.items():
+        assert files, route
+        for href in files:
+            assert href.startswith("/app/"), href
+            assert client.get(href).status_code == 200, href
+    # 실제로 부를 때(Vite)와 crossorigin 이 같아야 같은 파일을 두 번 받지 않는다.
+    assert 'link.crossOrigin = ""' in html
+
+
+def test_the_document_shows_a_skeleton_before_the_bundle_runs(client):
+    """번들을 받는 동안 빈 바탕만 보이면 멈춘 것처럼 보인다."""
+    root = client.get("/").get_data(as_text=True).split('<div id="root">')[1].split("</body>")[0]
+    assert "skeleton" in root
+    assert 'aria-hidden="true"' in root
+
+
+def test_moving_to_a_page_does_not_wait_once_it_has_been_fetched():
+    """미리 받은 화면은 기다리지 않고 그린다. 다만 화면을 연 동안에는 처음 고른 것을 끝까지 쓴다."""
+    pages = source("pages.js")
+    assert "useState(() => loaded || Waiting)" in pages
+    assert "prefetchPagesWhenIdle" in source("components", "Layout.jsx")
+    # 데이터를 아끼는 설정·느린 연결에서는 미리 받지 않는다.
+    assert "saveData" in pages
+    for parts in (("components", "SiteHeader.jsx"), ("pages", "MainPage.jsx")):
+        assert "prefetchProps(item.to)" in source(*parts)
+
+
+def test_a_new_deploy_reloads_once_instead_of_breaking_the_page():
+    """배포로 조각 이름이 바뀌면 열어 둔 화면이 옛 조각을 못 찾는다. 한 번만 새로 고친다."""
+    pages = source("pages.js")
+    assert "window.location.reload()" in pages
+    assert "RELOAD_GUARD_MS" in pages  # 연달아 실패하면 끝없이 새로 고치지 않는다
+    # 그래도 실패하면 오류 화면에서 바로 새로 고칠 수 있게 한다.
+    assert "window.location.reload()" in source("components", "ErrorBoundary.jsx")
+
+
 # --- 복사·알림 말풍선 -------------------------------------------------------
 
 def test_copy_and_toast_helpers_live_in_one_place():
@@ -473,7 +596,7 @@ def test_search_page_keeps_the_three_tabs_and_filters_by_the_server_judgment():
     """탭은 예전 그대로(지금 막힘·최근 7일·cover 검색으로 발견)이고, 어느 곡이 들어갈지는 서버 판정
     (history.py 의 state·recent)으로만 거른다. 화면에서 따로 판정하지 않는다."""
     page = source("pages", "SearchPage.jsx")
-    assert 'api("search/status")' in page
+    assert 'getJson("search/status")' in page
     for name, label in (("current", "지금 막힘"), ("recent", "최근 7일"), ("cover", "cover 검색으로 발견")):
         assert f'name: "{name}", label: "{label}"' in page
     assert 'pick: (song) => song.state === "blocked"' in page
@@ -591,3 +714,34 @@ def test_header_stacks_the_brand_above_the_menu_on_narrow_screens(client):
     narrow = css.split("@media (max-width: 720px)")[-1]
     header = narrow.split(".site-header {")[1].split("}")[0]
     assert "flex-direction: column" in header
+
+
+def test_a_main_panel_without_its_pair_takes_the_whole_row(client):
+    """벅스 대상이 없으면 이벤트 칸이 왼쪽 절반에만 서서 제목이 여러 줄로 접히고 오른쪽 절반이 비었다."""
+    css = client.get("/assets/site.css").get_data(as_text=True)
+    wide = css.split("@media (min-width: 900px)")[1].split("@media")[0]
+    assert ".info-stack.is-split > .section-panel:only-child" in wide
+    assert ".info-stack.is-split > .is-full + .section-panel:last-child" in wide
+
+
+def test_narrow_tabs_drop_the_count_before_breaking_the_name(client):
+    """휴대폰 폭에서 세 탭이 한 줄에 안 들어가 '지금 / 막힘'처럼 이름 한가운데가 끊겼다."""
+    css = client.get("/assets/site.css").get_data(as_text=True)
+    narrow = css.split("@media (max-width: 720px)")[-1]
+    tab = narrow.split(".section-actions > .segmented button {")[1].split("}")[0]
+    assert "flex-wrap: wrap" in tab
+    assert "word-break: keep-all" in tab
+
+
+def test_karaoke_toolbar_does_not_spread_over_four_rows_on_phones():
+    """화면 위에 붙어 다니는 칸이라, '필터'·'여러 곡'이 한 줄씩 차지하면 그만큼 목록이 가려진다."""
+    narrow = source("styles", "karaoke.css").split("@media (max-width: 640px)")[1]
+    assert ".kara-toolbar-end { display: contents; }" in narrow
+
+
+def test_karaoke_symbol_buttons_have_names():
+    """기호(☆·+)만 있는 단추는 낭독기가 '흰 별'처럼 기호 이름을 읽는다."""
+    for parts in (("pages", "karaoke", "SongCard.jsx"), ("pages", "karaoke", "MultiPickDialog.jsx")):
+        text = source(*parts)
+        assert "aria-label={`${song.title} 즐겨찾기`}" in text
+        assert "aria-label={`${song.title} 부를 곡 목록에 담기`}" in text

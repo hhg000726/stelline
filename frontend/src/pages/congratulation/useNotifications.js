@@ -264,10 +264,14 @@ export function useNotifications() {
       }
 
       // 웹사이트가 열려 있을 때(포그라운드) 받은 메시지.
+      // 서버는 제목·내용을 notification 이 아니라 data 에 담아 보낸다(background_tasks/monitoring.py).
+      // 서비스 워커(firebase-messaging-sw.js)와 같은 자리에서 읽어야 곡 제목과 달성 수가 보인다.
+      // 예전에는 notification 만 읽어, 화면을 열어 둔 사람은 늘 "새 알림 / 내용 없음"을 받았다.
       messaging.current.onMessage((payload) => {
-        const notificationTitle = payload.notification?.title || "새 알림";
-        const notificationBody = payload.notification?.body || "내용 없음";
+        const notificationTitle = payload.data?.title || payload.notification?.title || "새 알림";
+        const notificationBody = payload.data?.body || payload.notification?.body || "내용 없음";
         const videoUrl = payload.data?.video_url;
+        const imageUrl = payload.data?.image;
 
         window.alert(
           `[${notificationTitle}]\n${notificationBody}\n\n${videoUrl ? `유튜브 링크: ${videoUrl}` : ""}`,
@@ -278,6 +282,7 @@ export function useNotifications() {
             if (registration) {
               registration.showNotification(notificationTitle, {
                 body: notificationBody,
+                icon: imageUrl,
                 data: { video_url: videoUrl },
               });
             }

@@ -9,7 +9,7 @@
  */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import { api } from "../lib/api";
+import { getJson } from "../lib/api";
 import { readStore, writeStore } from "../lib/storage";
 
 const CACHE_KEY = "stelline.main.buttons";
@@ -22,8 +22,7 @@ export function NavButtonsProvider({ children }) {
 
   useEffect(() => {
     let alive = true;
-    api("main/buttons")
-      .then((response) => response.json())
+    getJson("main/buttons")
       .then((loaded) => {
         if (!alive) return;
         const list = Array.isArray(loaded) ? loaded : [];

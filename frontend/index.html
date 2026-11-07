@@ -33,10 +33,69 @@
       document.documentElement.setAttribute("data-theme", saved || system);
     })();
   </script>
+  <!-- 들어온 화면이 쓸 것을 번들과 함께 받기 시작한다.
+       그대로 두면 번들 → 화면 조각 → 데이터가 차례로 내려와, 데이터는 번들을 다 받고 실행한 뒤에야
+       출발했다. 어느 주소로 들어왔는지는 브라우저만 알므로 여기서 정한다.
+       - 데이터: 화면이 쓸 GET 을 먼저 불러 window.__stellineEarly 에 둔다. 화면은 lib/api.js 의
+         getJson 으로 한 번만 꺼내 쓰고, 오래됐거나 실패했으면 새로 부른다. 기록·제보처럼 무언가를
+         바꾸는 요청은 여기 넣지 않는다(화면이 실제로 쓸 때만 나가야 한다).
+       - 화면 조각: 이름에 내용 해시가 붙어 빌드 때만 안다. vite.config.js 가 빌드 때 아래 표를 채운다.
+       - 유튜브 썸네일을 쓰는 화면은 그 주소로 미리 연결해 둔다. -->
+  <script>
+    (function () {
+      var path = location.pathname.replace(/\/+$/, "") || "/";
+      var pageData = {
+        "/": ["main/twits", "main/events", "bugs/rank"],
+        "/search": ["search/status"],
+        "/karaoke": ["karaoke/songs"],
+        "/congratulation": ["congratulation/congratulations"],
+        "/offline": ["offline/offline_api"]
+      };
+      var early = (window.__stellineEarly = {});
+      if (window.fetch) {
+        ["content", "main/buttons"].concat(pageData[path] || []).forEach(function (key) {
+          var response = fetch("/api/" + key);
+          // 아무도 꺼내 쓰지 않은 채 실패해도 콘솔에 오류를 남기지 않게 한다(꺼내 쓰는 쪽은 그대로 받는다).
+          response.catch(function () {});
+          early[key] = { at: Date.now(), response: response };
+        });
+      }
+      // crossorigin 은 화면 조각을 실제로 부를 때(Vite 의 import·CSS 링크)와 같아야 한 번 받은 것을
+      // 그대로 쓴다. 다르면 같은 파일을 두 번 받는다. 그림 주소에 미리 연결하는 것은 그대로 둔다.
+      function hint(rel, href, as, sameCors) {
+        var link = document.createElement("link");
+        link.rel = rel;
+        if (as) link.as = as;
+        if (sameCors) link.crossOrigin = "";
+        link.href = href;
+        document.head.appendChild(link);
+      }
+      var routeFiles = __STELLINE_ROUTE_FILES__;
+      (routeFiles[path] || []).forEach(function (href) {
+        if (/\.css$/.test(href)) hint("preload", href, "style", true);
+        else hint("modulepreload", href, "script", true);
+      });
+      if (path === "/search" || path === "/congratulation") hint("preconnect", "https://img.youtube.com");
+    })();
+  </script>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- 번들을 받는 동안의 뼈대. 문서가 그려지자마자 보이고(배색·짜임 CSS 는 이미 받아 있다),
+         React 가 뜨면 이 자리를 통째로 갈아 끼운다. 그 전까지 빈 바탕만 보이면 멈춘 것처럼 보인다.
+         모양은 화면 조각을 받는 동안의 뼈대(components/Loading.jsx 의 RouteFallback)와 같다. -->
+    <div class="route-progress" aria-hidden="true"></div>
+    <main class="site-container" aria-busy="true">
+      <section class="section-panel skeleton-page" aria-hidden="true">
+        <div class="skeleton skeleton-line" style="width: 38%; height: 22px"></div>
+        <div class="skeleton skeleton-line" style="width: 62%"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </section>
+    </main>
+  </div>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 

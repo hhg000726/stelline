@@ -31,10 +31,7 @@ export function TwitsPanel() {
   if (state.status === "ready" && !state.items.length) return null;
 
   async function onCopy(text) {
-    api("main/record", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    }).catch((error) => console.error("API 요청 중 오류 발생:", error));
+    api("main/record").catch((error) => console.error("API 요청 중 오류 발생:", error));
 
     // 복사에 실패하면 X로 보내 봐야 붙여 넣을 것이 없다. 그대로 두고 까닭을 알린다.
     if (!(await copyText(text))) {

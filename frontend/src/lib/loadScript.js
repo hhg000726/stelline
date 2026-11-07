@@ -23,6 +23,9 @@ export function loadScript(src, { attributes } = {}) {
     script.addEventListener("error", () => {
       // 실패한 약속을 남겨 두면 다시 들어와도 영영 못 받는다. 지워서 재시도를 연다.
       loading.delete(src);
+      // 실패한 태그도 함께 걷어 낸다. 남겨 두면 다시 부를 때 위의 '이미 붙어 있는 태그'로 잡혀,
+      // 다시는 오지 않을 load 를 기다리느라 약속이 끝나지 않는다(캡차·지도가 영영 '불러오는 중').
+      script.remove();
       reject(new Error(`스크립트를 불러오지 못했습니다: ${src}`));
     });
     if (!existing) document.head.appendChild(script);

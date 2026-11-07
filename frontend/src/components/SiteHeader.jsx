@@ -6,6 +6,7 @@
 import { NavLink, Link } from "react-router";
 
 import { useNavItems } from "../context/NavButtonsContext";
+import { prefetchProps } from "../pages";
 import { NAV_ITEMS } from "./navItems";
 
 export function SiteHeader() {
@@ -26,6 +27,7 @@ export function SiteHeader() {
             to={item.to}
             data-button-key={item.key}
             hidden={item.hidden}
+            {...prefetchProps(item.to)}
           >
             {item.navLabel}
           </NavLink>

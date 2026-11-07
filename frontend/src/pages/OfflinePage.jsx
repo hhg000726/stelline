@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContentText } from "../components/ContentText";
 import { EmptyState } from "../components/EmptyState";
 import { SkeletonRows } from "../components/Loading";
-import { api } from "../lib/api";
+import { getJson } from "../lib/api";
 import { escapeHtml } from "../lib/escapeHtml";
 import { loadScript } from "../lib/loadScript";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -112,8 +112,9 @@ export default function OfflinePage() {
   /* ---------- 데이터 ---------- */
   useEffect(() => {
     let alive = true;
-    api("offline/offline_api", { method: "GET", headers: { "Content-Type": "application/json" } })
-      .then((response) => response.json())
+    // 서버가 실패를 알려 오면 getJson 이 실패로 넘긴다. 빈 목록으로 받으면 "진행 중인 이벤트가 없다"고
+    // 잘못 말하게 된다.
+    getJson("offline/offline_api")
       .then((data) => {
         if (alive) setEvents({ status: "ready", items: Array.isArray(data) ? data : [] });
       })
@@ -287,8 +288,10 @@ export default function OfflinePage() {
           <div id="map" ref={mapShell} className="map-canvas" />
           {/* 지도 쪽에서 뒤늦게 제 오류 화면을 그려 넣기도 한다. 우리 안내만 남도록
               위 칸은 CSS(.map-shell.is-unavailable)에서 감춘다. */}
+          {/* 목록은 넓은 화면에서는 지도 왼쪽, 좁은 화면에서는 지도 위에 온다. '아래 목록'이라고 하면
+              어느 쪽에서도 틀린 말이라 자리를 가리키지 않는다. */}
           {!mapReady && (
-            <p className="map-fallback">지도를 불러오지 못했습니다. 아래 목록에서 장소와 기간을 확인해 주세요.</p>
+            <p className="map-fallback">지도를 불러오지 못했습니다. 목록에서 장소와 기간을 확인해 주세요.</p>
           )}
         </div>
       </section>

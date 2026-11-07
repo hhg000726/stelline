@@ -13,7 +13,7 @@ import { Icon } from "../components/Icon";
 import { SkeletonRows } from "../components/Loading";
 import { ReportPanel } from "../components/ReportPanel";
 import { useToast } from "../context/ToastContext";
-import { api } from "../lib/api";
+import { api, getJson } from "../lib/api";
 import { copyText } from "../lib/clipboard";
 import { readStore, writeStore } from "../lib/storage";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -91,20 +91,25 @@ export default function KaraokePage() {
       setData({ status: "ready", songs: cached.songs.map(decorate), members: cached.members || [], updatedAt: cached.updatedAt || "" });
     }
 
-    api("karaoke/songs")
-      .then((response) => {
-        if (!response.ok) throw new Error("목록을 불러오지 못했습니다.");
-        return response.json();
-      })
+    getJson("karaoke/songs")
       .then((payload) => {
         if (!alive) return;
         setShowOfflineNote(false);
         writeStore(STORAGE_KEYS.cache, payload);
-        setData({
-          status: "ready",
-          songs: (payload.songs || []).map(decorate),
-          members: payload.members || [],
-          updatedAt: payload.updatedAt || "",
+        // 저장해 둔 목록으로 먼저 그린 랜덤 순서를 그대로 이어 간다. 곡마다 새로 섞으면 화면을 열자마자
+        // (새 목록이 도착하는 순간) 보던 목록이 통째로 뒤바뀐다. 새로 생긴 곡만 새 자리를 받는다.
+        setData((prev) => {
+          const shuffleOf = new Map(prev.songs.map((song) => [song.key, song.shuffle]));
+          return {
+            status: "ready",
+            songs: (payload.songs || []).map((song) => {
+              const decorated = decorate(song);
+              const shuffle = shuffleOf.get(decorated.key);
+              return shuffle === undefined ? decorated : { ...decorated, shuffle };
+            }),
+            members: payload.members || [],
+            updatedAt: payload.updatedAt || "",
+          };
         });
       })
       .catch(() => {
@@ -124,14 +129,15 @@ export default function KaraokePage() {
   const songByKey = useMemo(() => new Map(songs.map((song) => [song.key, song])), [songs]);
   const songById = useMemo(() => new Map(songs.map((song) => [song.id, song])), [songs]);
 
-  // 저장해 둔 목록에서 지금은 사라진 곡은 정리한다.
+  // 저장해 둔 목록에서 지금은 사라진 곡은 화면에서 뺀다. 저장소는 여기서 고치지 않는다.
+  // 저장해 둔 곡 목록(캐시)으로 먼저 그린 순간에도 이 효과가 돌기 때문에, 여기서 지워 버리면
+  // 서버에서 막 다시 생긴 곡까지 잃을 수 있다. 저장소는 다음에 목록을 바꿀 때 함께 맞춰진다.
   useEffect(() => {
     if (data.status !== "ready" || !songs.length) return;
     setSetlist((prev) => {
       const kept = prev.filter((key) => songByKey.has(key));
       return kept.length === prev.length ? prev : kept;
     });
-    // 저장소도 함께 맞춘다. 다음 방문에 없는 곡을 또 들고 오지 않게 한다.
   }, [data.status, songs.length, songByKey]);
 
   /* ---------- 주소 표시줄 ----------

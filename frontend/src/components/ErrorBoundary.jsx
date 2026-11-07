@@ -3,6 +3,9 @@
  * 바깥에서 불러오는 것들(지도·캡차·알림 SDK)은 우리가 고칠 수 없는 자리에서 갑자기
  * 멈출 수 있다. 예전에는 화면마다 문서가 따로라 한 화면의 사고가 그 화면에서 끝났지만,
  * 한 문서 안에서 화면을 바꾸는 지금은 막아 주지 않으면 사이트가 통째로 사라진다.
+ *
+ * 가장 흔한 원인은 연결이 잠깐 끊겨 화면 조각을 못 받은 경우라, 새로고침 단추를 그 자리에 둔다.
+ * "새로고침하세요"라고 말만 하면 휴대폰에서는 어디를 눌러야 하는지부터 찾아야 한다.
  */
 import { Component } from "react";
 
@@ -32,7 +35,12 @@ export class ErrorBoundary extends Component {
     return (
       <section className="page-shell not-found">
         <h1 className="page-title">화면을 여는 중 문제가 생겼습니다</h1>
-        <p className="page-subtitle">새로고침하거나 잠시 후 다시 시도해 주세요.</p>
+        <p className="page-subtitle">연결을 확인한 뒤 새로고침해 주세요.</p>
+        <p>
+          <button className="btn-primary" type="button" onClick={() => window.location.reload()}>
+            새로고침
+          </button>
+        </p>
       </section>
     );
   }

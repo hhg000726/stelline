@@ -135,38 +135,29 @@ def test_scrape_bugs_favorite_returns_none_on_http_error():
         assert scrape_bugs_favorite("대상 곡", 42) is None
 
 
-# --- 검색 위험도(risk) 판정 -------------------------------------------
+# --- 검색 검사 기록 저장 --------------------------------------------------
 
-def test_resolve_match_lowers_risk_when_video_present():
-    with patch.object(search_tasks, "update_song_risk") as update:
-        found = search_tasks._resolve_match("q", "vid1", ["vid1", "vid2"], song_risk=10)
-    assert found is True
-    update.assert_called_once_with("q", 9, clear_fallback=True)
+def test_record_check_appends_one_row_with_the_result_and_utc_time():
+    """곡 하나의 결과는 덮어쓰지 않고 한 줄씩 쌓는다. 판정은 모두 이 기록에서 나온다."""
+    from stelline.apis.search.history import SongStatus
 
-
-def test_resolve_match_raises_risk_when_video_missing():
-    with patch.object(search_tasks, "update_song_risk") as update:
-        found = search_tasks._resolve_match("q", "vidX", ["vid1"], song_risk=3)
-    assert found is False
-    update.assert_called_once_with("q", 28)
-
-
-def test_resolve_match_risk_never_negative():
-    with patch.object(search_tasks, "update_song_risk") as update:
-        search_tasks._resolve_match("q", "vid1", ["vid1"], song_risk=0)
-    update.assert_called_once_with("q", 0, clear_fallback=True)
-
-
-def test_update_song_risk_records_when_the_song_was_checked():
     context = MagicMock()
     cursor = context.__enter__.return_value
-    with patch.object(search_tasks, "database_cursor", return_value=context):
-        search_tasks.update_song_risk("q", 27, clear_fallback=True)
+    with patch.object(search_tasks, "database_cursor", return_value=context), \
+         patch.object(search_tasks, "utc_now", return_value=datetime(2026, 11, 7, 0, 5)):
+        saved = search_tasks.record_check(SongStatus("q", "vid"), "cover_only", "q cover")
 
     sql, params = cursor.execute.call_args.args
-    assert "last_checked_at = CURRENT_TIMESTAMP" in sql
-    assert "fallback_query = NULL" in sql
-    assert params == (27, "q")
+    assert saved is True
+    assert sql.split()[:3] == ["INSERT", "INTO", "search_checks"]
+    assert params == ("q", "vid", "cover_only", "q cover", datetime(2026, 11, 7, 0, 5))
+
+
+def test_record_check_failure_does_not_stop_the_run():
+    from stelline.apis.search.history import SongStatus
+
+    with patch.object(search_tasks, "database_cursor", side_effect=RuntimeError("DB 끊김")):
+        assert search_tasks.record_check(SongStatus("q", "vid"), "visible") is False
 
 
 # --- 관리자 폼 헬퍼 ---------------------------------------------------
@@ -177,7 +168,7 @@ def test_update_song_risk_records_when_the_song_was_checked():
         ("expires_at", "datetime-local"),
         ("start_date", "datetime-local"),
         ("url_number", "number"),
-        ("risk", "number"),
+        ("count", "number"),
         ("latitude", "number"),
         ("title", "text"),
         ("content", "text"),

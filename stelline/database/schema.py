@@ -1,5 +1,13 @@
 """MySQL 스키마의 코드 기준(source of truth)."""
 
+from datetime import datetime, timedelta, timezone
+
+# 예전 위험도의 최댓값. 기본 검색에 실패한 곡은 늘 이 값이 됐다(015 에서 옛 값을 읽을 때만 쓴다).
+LEGACY_MAX_RISK = 28
+# 015 를 만들 때(2026-11) 한 회차는 10분 남짓 걸렸고 회차 사이는 8시간이었다. recent_data 의 시각과
+# 곡의 마지막 검사 시각이 이만큼 안에 있으면 같은 회차의 같은 검사로 본다.
+LEGACY_SAME_RUN = timedelta(hours=1)
+
 
 def migrate_song_infos_primary_key(cursor):
     cursor.execute("DELETE FROM song_infos WHERE query IS NULL")
@@ -36,6 +44,69 @@ def add_column_if_missing(table, column, definition):
         if not cursor.fetchone()["column_count"]:
             cursor.execute(f"ALTER TABLE `{table}` ADD COLUMN `{column}` {definition}")
     return migrate
+
+
+def backfill_search_checks(cursor):
+    """예전 검색 점검 상태값을 새 검사 기록(search_checks)으로 옮긴다(015).
+
+    예전에는 곡마다 마지막 결과를 song_infos 의 열(risk·fallback_query·last_checked_at)에 덮어쓰고,
+    최종 실패한 곡은 recent_data 에 7일 동안 남겼다. 그 값에서 확실히 알 수 있는 것만 옮긴다.
+
+    - last_checked_at 이 있는 곡: 그때 나온 결과 한 건. fallback_query 가 있으면 cover로만,
+      위험도가 28 이면 막힘(기본 검색에 실패하면 늘 28 이 됐고, 웹 검색에서 찾으면 28 아래로 내렸다),
+      그 밖에는 정상.
+    - recent_data 의 행: 그 회차에 막혔다는 기록. 위의 마지막 결과와 같은 회차면 겹치므로 건너뛴다.
+
+    last_checked_at 이 없는 곡(그 열이 생긴 10/20 이후 한 번도 검사하지 않은 곡)은 기록 없이 두어
+    새 기준에서 가장 먼저 검사한다. 옛 표와 열은 지우지 않는다(코드를 되돌려도 돌아가게).
+    """
+    cursor.execute("SELECT COUNT(*) AS row_count FROM search_checks")
+    if cursor.fetchone()["row_count"]:
+        return  # 이미 옮겼다. 마이그레이션을 다시 돌려도 두 번 넣지 않는다.
+
+    # last_checked_at 은 DB 의 CURRENT_TIMESTAMP(세션 시간대)로 저장됐다. 새 기록은 UTC 로 맞춘다.
+    cursor.execute("SELECT TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), NOW()) AS offset_seconds")
+    offset = timedelta(seconds=int(cursor.fetchone()["offset_seconds"]))
+
+    cursor.execute("SELECT query, video_id, risk, fallback_query, last_checked_at FROM song_infos")
+    songs, latest, rows = {}, {}, []
+    for song in cursor.fetchall():
+        query, video_id = song["query"], song["video_id"]
+        if not query or not video_id:
+            continue
+        songs[query] = song
+        if song["last_checked_at"] is None:
+            continue
+        checked_at = song["last_checked_at"] - offset
+        if song["fallback_query"]:
+            result, fallback = "cover_only", song["fallback_query"]
+        elif (song["risk"] or 0) >= LEGACY_MAX_RISK:
+            result, fallback = "blocked", None
+        else:
+            result, fallback = "visible", None
+        rows.append((query, video_id, result, fallback, checked_at))
+        latest[query] = checked_at
+
+    # 운영 DB 의 recent_data 는 코드 스키마와 열 구성이 달라(id 없음, query 가 기본키) 쓰는 열만 고른다.
+    cursor.execute("SELECT query, video_id, searched_time FROM recent_data")
+    seen = set()
+    for row in cursor.fetchall():
+        song = songs.get(row["query"])
+        if song is None or song["video_id"] != row["video_id"] or row["searched_time"] is None:
+            continue  # 지금 목록에 없거나 영상이 바뀐 곡의 기록은 다른 대상을 검사한 것이다.
+        failed_at = datetime.fromtimestamp(float(row["searched_time"]), timezone.utc).replace(tzinfo=None)
+        known = latest.get(row["query"])
+        if (known is not None and abs(known - failed_at) < LEGACY_SAME_RUN) or (row["query"], failed_at) in seen:
+            continue
+        seen.add((row["query"], failed_at))
+        rows.append((row["query"], row["video_id"], "blocked", None, failed_at))
+
+    if rows:
+        cursor.executemany(
+            """INSERT INTO search_checks (query, video_id, result, fallback_query, checked_at)
+               VALUES (%s, %s, %s, %s, %s)""",
+            rows,
+        )
 
 
 def drop_column_if_present(table, column):
@@ -145,5 +216,24 @@ MIGRATIONS = [
     ("014_search_cover_fallback", [
         add_column_if_missing("song_infos", "fallback_query", "VARCHAR(512) NULL"),
         add_column_if_missing("song_infos", "last_checked_at", "DATETIME NULL"),
+    ]),
+    ("015_search_checks", [
+        # 검색 노출 판정의 원천. 곡 하나를 검사할 때마다 한 줄씩 쌓는다(stelline/apis/search/history.py).
+        # 현재 상태·최근 7일·위험도는 모두 이 기록에서 계산하고 따로 저장하지 않는다.
+        # 예전처럼 회차가 끝날 때 목록 표를 비우고 다시 채우지 않으므로, 회차가 중간에 끊겨도
+        # 그때까지 검사한 결과가 남는다. checked_at 은 UTC 다.
+        #
+        # 이제 쓰지 않는 songs_data·recent_data 표와 song_infos 의 risk·fallback_query·last_checked_at
+        # 열은 코드를 되돌릴 때를 대비해 이번에는 남겨 둔다.
+        """CREATE TABLE IF NOT EXISTS search_checks (
+             id BIGINT AUTO_INCREMENT PRIMARY KEY,
+             query VARCHAR(512) NOT NULL,
+             video_id VARCHAR(100) NOT NULL,
+             result VARCHAR(16) NOT NULL,
+             fallback_query VARCHAR(512) NULL,
+             checked_at DATETIME NOT NULL,
+             INDEX search_checks_checked_at_idx (checked_at)
+           ) CHARACTER SET utf8mb4""",
+        backfill_search_checks,
     ]),
 ]

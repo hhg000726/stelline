@@ -145,7 +145,7 @@ CONTENT_ITEMS = {
     ),
     "search_query_note": _text(
         "search", "검색어 리스트 설명", "검색어 리스트 제목 옆 한 줄입니다.",
-        "등록된 곡을 8시간마다 검색하고, 실패하면 cover도 확인합니다.", 60,
+        "최근 검색이 안 된 곡부터 다시 검색하고, 실패하면 cover도 확인합니다.", 60,
     ),
     "search_step_pc_1_label": _text(
         "search", "PC 1단계 설명", "PC 안내 첫 번째 칸의 제목입니다.", "필터 클릭", 30,

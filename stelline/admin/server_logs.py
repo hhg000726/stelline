@@ -15,7 +15,13 @@ import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlsplit
 
-from stelline.apis.search.tasks import SEARCH_EVENT_PREFIX
+from stelline.apis.search.history import RETRY_WINDOW, sweep_reserve
+from stelline.apis.search.tasks import (
+    SEARCH_CALLS_PER_RUN,
+    SEARCH_EVENT_PREFIX,
+    next_search_run_epoch,
+    search_run_hours_kst,
+)
 from stelline.background_tasks.monitoring import SYNC_DONE_MESSAGE, SYNC_FAILED_MESSAGE
 from stelline.config import API_CHECK_INTERVAL, SEARCH_API_INTERVAL
 from stelline.logging_config import EVENT_LOG_FILE, INFO_LOG_FILE, LOG_DIR, LOG_KEEP_DAYS, WARNING_LOG_FILE, redact
@@ -47,7 +53,7 @@ MAX_PROBLEM_GROUPS = 30
 MAX_EVENTS = 100
 # 조회수 감시는 5분마다 돈다. 세 번 연달아 소식이 없으면 '늦어짐'으로 본다.
 MONITORING_LATE_AFTER = timedelta(seconds=API_CHECK_INTERVAL * 3)
-# 검색 점검은 8시간마다 돌고 한 회차에 10분 남짓 걸린다. 넉넉히 30분을 더 기다린다.
+# 검색 점검은 SEARCH_API_INTERVAL 마다 돌고 한 회차에 10분 남짓 걸린다. 넉넉히 30분을 더 기다린다.
 SEARCH_LATE_AFTER = timedelta(seconds=SEARCH_API_INTERVAL, minutes=30)
 # INFO 파일에서는 마지막 동기화 줄만 찾으면 되므로 끝부분만 읽는다.
 INFO_TAIL_BYTES = 256 * 1024
@@ -199,10 +205,20 @@ def _monitoring_status(info_entries, problems, now):
 
 
 def next_search_run(now):
-    """다음 검색 점검 시각(한국 시간). 회차는 UTC 기준 8시간 경계에서 시작한다(tasks.wait_until_next_search_interval)."""
-    seconds = int(now.replace(tzinfo=KST).timestamp())
-    upcoming = (seconds // SEARCH_API_INTERVAL + 1) * SEARCH_API_INTERVAL
+    """다음 검색 점검 시각(한국 시간). 검색 작업이 기다리는 것과 같은 계산을 쓴다(tasks.next_search_run_epoch)."""
+    upcoming = next_search_run_epoch(now.replace(tzinfo=KST).timestamp())
     return datetime.fromtimestamp(upcoming, KST).replace(tzinfo=None)
+
+
+def search_schedule_text():
+    """'운영 로그'의 검색 점검 설명. 시각과 횟수를 글자로 적지 않고 설정값에서 계산한다."""
+    run_hours = search_run_hours_kst()
+    hours = "·".join(f"{hour:02d}" for hour in run_hours)
+    return (
+        f"한국 시간 {hours}시(하루 {len(run_hours)}회)에 최근 {RETRY_WINDOW.days}일 안에 검색이 안 된 적이 있는"
+        f" 곡을 다시 시도하고, 나머지 곡은 회차마다 {sweep_reserve(SEARCH_CALLS_PER_RUN)}곡씩 돌아가며 YouTube에서"
+        f" 찾아봅니다(회차마다 API {SEARCH_CALLS_PER_RUN}회)."
+    )
 
 
 def _search_status(event_entries, info_entries, now):
@@ -238,7 +254,7 @@ def _search_status(event_entries, info_entries, now):
     return {
         "key": "search",
         "label": "검색 점검",
-        "schedule": "한국 시간 01·09·17시에 우선 대상 15곡과 위험도 0 곡 일부를 YouTube에서 찾아봅니다.",
+        "schedule": search_schedule_text(),
         "state": state,
         "state_label": STATE_LABELS[state],
         "lines": lines,

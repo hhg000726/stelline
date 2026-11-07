@@ -482,6 +482,16 @@
           <h2>{{ form.title }}</h2>
           <span class="count">{{ rows|length }}개</span>
           <p class="hint">{{ form.description }}</p>
+          {% if table_name == 'song_infos' and search_overview %}
+          {# 공개 검색 화면과 같은 판정에서 나온 숫자다(admin/search_status.py). #}
+          <p class="hint" data-search-overview>
+            {% for label, count in search_overview.tabs %}{{ label }} <strong>{{ count }}</strong>{% if not loop.last %} · {% endif %}{% endfor %}
+            <br>재시도 대상(최근 {{ search_overview.retry_days }}일 안에 검색이 안 된 적이 있는 곡) <strong>{{ search_overview.retry_count }}</strong>곡
+            {% if search_overview.retry_wait_hours is not none %} · 그중 가장 오래 기다린 곡은 {{ search_overview.retry_wait_hours }}시간 전에 시도{% endif %}
+            <br>최근 {{ search_overview.window_days }}일 동안 {{ search_overview.songs }}곡 중 <strong>{{ search_overview.checked_in_window }}</strong>곡 검사
+            {% if search_overview.sweep_wait_days is not none %} · 나머지 곡은 가장 오래된 것이 {{ search_overview.sweep_wait_days }}일 전에 검사(한 바퀴 도는 기간){% endif %}
+          </p>
+          {% endif %}
         </header>
 
         {% if form.collapse_form %}<details class="form-box" data-form-box>

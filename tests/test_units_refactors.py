@@ -12,7 +12,6 @@ import pytest
 
 from stelline.apis.karaoke.service import _member_list
 from stelline.apis.offline.service import _needs_geocoding
-from stelline.apis.search.tasks import SEARCH_TARGET_LIMIT, select_search_targets
 from stelline.background_tasks import monitoring
 from stelline.database import import_admin_html
 
@@ -40,56 +39,7 @@ class FakeCursor:
         return [sql for call, sql, _ in self.calls if kind is None or call == kind]
 
 
-# --- 검색 대상 고르기 --------------------------------------------------
-
-def _song(query, risk):
-    return {"query": query, "video_id": "v" + query, "risk": risk}
-
-
-def test_select_search_targets_prefers_the_riskiest_songs():
-    songs = [_song("a", 0), _song("b", 5), _song("c", 28), _song("d", 5), _song("e", 0)]
-    risk_zero, targets = select_search_targets(songs)
-
-    # 위험도가 큰 쪽부터, 같은 위험도 안에서는 원래 목록 순서 그대로.
-    assert [song["query"] for song in targets] == ["c", "b", "d"]
-    assert [song["query"] for song in risk_zero] == ["a", "e"]
-
-
-def test_select_search_targets_stops_at_the_limit():
-    songs = [_song(str(index), 10) for index in range(30)]
-    _, targets = select_search_targets(songs)
-    assert len(targets) == 15 == SEARCH_TARGET_LIMIT
-
-
-def test_select_search_targets_prioritizes_unchecked_and_stale_songs():
-    from datetime import datetime
-
-    songs = [
-        {**_song("recent-risk-28", 28), "last_checked_at": datetime(2026, 1, 3)},
-        {**_song("old-risk-1", 1), "last_checked_at": datetime(2026, 1, 1)},
-        {**_song("unchecked-risk-5", 5), "last_checked_at": None},
-        {**_song("unchecked-risk-28", 28), "last_checked_at": None},
-    ]
-    _, targets = select_search_targets(songs)
-    assert [song["query"] for song in targets] == [
-        "unchecked-risk-28",
-        "unchecked-risk-5",
-        "old-risk-1",
-        "recent-risk-28",
-    ]
-
-
-def test_select_search_targets_ignores_songs_without_risk():
-    risk_zero, targets = select_search_targets([{"query": "x", "video_id": "v"}])
-    assert risk_zero == [] and targets == []
-
-
-def test_select_search_targets_does_not_alias_the_bucket():
-    """돌려준 목록을 호출부가 pop 해도 원본 곡 목록이 상하면 안 된다."""
-    songs = [_song("a", 0), _song("b", 0)]
-    risk_zero, _ = select_search_targets(songs)
-    risk_zero.pop()
-    assert len(songs) == 2
+# 검색 대상 고르기·판정은 tests/test_search_history.py 가 맡는다.
 
 
 # --- 조회수 갱신 (곡마다 SELECT 하지 않는다) ---------------------------
@@ -318,16 +268,10 @@ def test_background_tasks_follow_the_switch(enabled):
     assert start.called is enabled
 
 
-def test_search_runs_fit_the_youtube_quota_day_three_times():
-    """할당량은 태평양 시간 자정에 다시 찬다. 8시간 간격이면 서머타임과 상관없이 하루에 정확히 세 회차다.
-
-    네 회차였을 때는 마지막 회차(한국 15시)가 할당량을 넘겨 늘 429 로 끊겼다.
-    """
+def _runs_per_quota_day(interval):
+    """2년 동안 태평양 시간 날짜(할당량이 다시 차는 단위)마다 정기 회차가 몇 번씩 드는지."""
     from collections import Counter
     from datetime import datetime, timedelta, timezone
-
-    from stelline.apis.search.tasks import SEARCH_CALLS_PER_RUN
-    from stelline.config import SEARCH_API_INTERVAL
 
     try:
         from zoneinfo import ZoneInfo
@@ -337,52 +281,41 @@ def test_search_runs_fit_the_youtube_quota_day_three_times():
 
     start = int(datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp())
     end = int(datetime(2028, 1, 1, tzinfo=timezone.utc).timestamp())
-    first = start - start % SEARCH_API_INTERVAL + SEARCH_API_INTERVAL
-    # 첫 검색 호출은 회차 시작 20초 뒤에 나간다(tasks.search_unverified_songs 의 sleep).
-    runs_per_quota_day = Counter(
+    first = start - start % interval + interval
+    # 첫 검색 호출은 회차 시작 20초 뒤에 나간다(tasks.run_search_checks 의 sleep).
+    counts = Counter(
         (datetime.fromtimestamp(t, timezone.utc) + timedelta(seconds=20)).astimezone(pacific).date()
-        for t in range(first, end, SEARCH_API_INTERVAL)
+        for t in range(first, end, interval)
     )
-    full_days = list(runs_per_quota_day.items())[1:-1]  # 처음·마지막 날은 잘려 있다
-    assert full_days and {count for _, count in full_days} == {3}
+    full_days = list(counts.items())[1:-1]  # 처음·마지막 날은 잘려 있다
+    return {count for _, count in full_days}
 
-    daily_units = 3 * SEARCH_CALLS_PER_RUN * 100
+
+def test_search_runs_fit_the_youtube_quota_day():
+    """할당량은 태평양 시간 자정에 다시 찬다. 설정한 간격이면 서머타임과 상관없이 할당 하루마다
+    회차 수가 일정하고, 그 하루 총량이 9,000 단위(할당량 10,000 중 다른 사용분 몫 1,000 을 뺀 것)를
+    넘지 않아야 한다. 예전 6시간 × 25회는 할당량을 꽉 채워 마지막 회차(한국 15시)가 늘 429 로 끊겼다.
+
+    간격(config.SEARCH_API_INTERVAL)이나 회차당 횟수(tasks.SEARCH_CALLS_PER_RUN)를 바꾸면 이 테스트가 지킨다.
+    """
+    from stelline.apis.search.tasks import SEARCH_CALLS_PER_RUN, search_run_hours_kst
+    from stelline.config import SEARCH_API_INTERVAL
+
+    assert SEARCH_API_INTERVAL % 3600 == 0 and 86400 % SEARCH_API_INTERVAL == 0, "간격은 하루를 나누어떨어지는 시간 단위"
+    runs_per_day = 86400 // SEARCH_API_INTERVAL
+    assert len(search_run_hours_kst()) == runs_per_day
+    assert _runs_per_quota_day(SEARCH_API_INTERVAL) == {runs_per_day}
+
+    daily_units = runs_per_day * SEARCH_CALLS_PER_RUN * 100
     assert daily_units <= 9000, "같은 프로젝트의 다른 사용분 몫으로 1,000 은 남겨야 한다"
 
 
-def test_one_search_run_never_exceeds_its_call_budget():
-    from stelline.apis.search import tasks
-
-    songs = [{"query": f"곡 {i}", "video_id": f"v{i}", "risk": 0} for i in range(200)]
-    with patch.object(tasks, "fetch_song_infos_from_db", return_value=songs), \
-         patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
-         patch.object(tasks, "update_song_risk"), \
-         patch.object(tasks, "update_fallback_query", return_value=True), \
-         patch.object(tasks, "crawl_search_results_for_missing_videos", side_effect=lambda found: found), \
-         patch.object(tasks.time, "sleep"), \
-         patch.object(tasks, "_youtube_video_ids_for_query", return_value=[]) as search:
-        result = tasks.search_unverified_songs()
-
-    assert search.call_count == tasks.SEARCH_CALLS_PER_RUN
-    assert result["isQuotaExceeded"] is False
-
-
-def test_search_uses_cover_fallback_and_records_match_for_public_display():
-    from stelline.apis.search import tasks
-
-    song = {"query": "토아 제육감", "video_id": "video", "risk": 28}
-    with patch.object(tasks, "fetch_song_infos_from_db", return_value=[song]), \
-         patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
-         patch.object(tasks, "update_song_risk"), \
-         patch.object(tasks, "update_fallback_query", return_value=True) as save_fallback, \
-         patch.object(tasks, "crawl_search_results_for_missing_videos", side_effect=lambda found: found), \
-         patch.object(tasks.time, "sleep"), \
-         patch.object(tasks, "_youtube_video_ids_for_query", side_effect=[[], ["video"]]) as search:
-        result = tasks.search_unverified_songs()
-
-    assert [call.args[0] for call in search.call_args_list] == ["토아 제육감", "토아 제육감 cover"]
-    save_fallback.assert_called_once_with("토아 제육감", "토아 제육감 cover")
-    assert result["all_songs"] == []
+@pytest.mark.parametrize("hours", [2, 3, 4, 6, 8, 12])
+def test_any_whole_hour_divisor_of_a_day_keeps_the_quota_day_even(hours):
+    """간격을 바꾸려면 하루를 나누어떨어지는 시간으로만 바꾼다. 그러면 서머타임이 바뀌는 날에도
+    할당 하루마다 회차 수가 같다(2026-11 모의 실험: 하루 90회를 2·3·4·6회로 나눠 보니 8시간 × 30회가
+    막힌 곡 재시도가 가장 빨랐다)."""
+    assert _runs_per_quota_day(hours * 3600) == {24 // hours}
 
 
 # --- 오프라인 좌표 보완 ------------------------------------------------

@@ -420,13 +420,37 @@ def test_search_steps_open_on_the_tab_matching_the_device():
     assert "pointer: coarse" in page
 
 
-def test_search_page_separates_songs_found_only_with_cover_query():
+def test_search_page_keeps_the_three_tabs_and_filters_by_the_server_judgment():
+    """탭은 예전 그대로(지금 막힘·최근 7일·cover 검색으로 발견)이고, 어느 곡이 들어갈지는 서버 판정
+    (history.py 의 state·recent)으로만 거른다. 화면에서 따로 판정하지 않는다."""
     page = source("pages", "SearchPage.jsx")
-    assert 'name: "cover"' in page
-    assert "cover 검색으로 발견" in page
-    assert "data.cover_matches" in page
+    assert 'api("search/status")' in page
+    for name, label in (("current", "지금 막힘"), ("recent", "최근 7일"), ("cover", "cover 검색으로 발견")):
+        assert f'name: "{name}", label: "{label}"' in page
+    assert 'pick: (song) => song.state === "blocked"' in page
+    assert "pick: (song) => song.recent === true" in page
+    assert 'pick: (song) => song.state === "cover_only"' in page
     assert "cover 추가 검색에서 발견" in page
     assert "song.fallback_query" in page
+
+
+def test_search_page_takes_the_schedule_from_the_server():
+    """검색 간격을 화면에 글자로 적어 두면 설정을 바꿀 때 어긋난다. 서버가 주는 값만 쓴다."""
+    page = source("pages", "SearchPage.jsx")
+    assert "schedule.interval_hours" in page and "schedule.next_run_at" in page
+    assert not re.search(r"\d+시간마다", page)
+    defaults = source("lib", "contentDefaults.js")
+    assert not re.search(r"\d+시간마다", defaults)
+
+
+def test_search_cards_show_the_record_behind_the_judgment():
+    page = source("pages", "SearchPage.jsx")
+    assert "function WeekRecord" in page
+    assert "week.results" in page
+    assert "song.checked_at" in page
+    # '최근 7일' 탭에는 지금 상태가 섞여 있어 카드마다 지금 상태를 적는다.
+    recent_start = page.index('tabPanelProps("song-tabs", "recent", songTab === "recent")')
+    assert "showState" in page[recent_start:page.index("</div>", recent_start)]
 
 
 def test_search_cover_explanation_is_scoped_to_its_tabpanel():

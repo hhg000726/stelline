@@ -1,10 +1,14 @@
 /* 검색 안되는 노래 화면.
  *
- * 부르는 API 와 그 결과를 다루는 규칙은 예전 search.js 그대로다.
- *   - search/not_searched → 지금 막힌 곡·최근 7일 곡(둘 다 받아온 뒤 섞는다)
- *   - search/songs        → 검색어 목록
- *   - search/record       → 카드를 누를 때 기록(실패해도 화면은 그대로 진행)
- * 달라진 것은 화면 안에서 상태로 다룬다는 점과, 값을 기다리는 동안 빈칸을 보여 준다는 점이다.
+ * 곡별 노출 상태는 search/status 하나로 받는다. 판정은 서버 한 곳(stelline/apis/search/history.py)에서만
+ * 하고, 화면은 서버가 정한 값으로 거르기만 한다.
+ *   - 지금 막힘: 마지막 검사에서 막힌 곡(state). 예전처럼 '마지막 회차에서 검사한 곡'만 보지 않는다.
+ *   - 최근 7일: 7일 안에 검색이 안 된(막힘·cover로만) 적이 있는 곡(recent). 지금 상태는 카드에 적는다.
+ *     막힌 곡은 '지금 막힘'과 여기 둘 다 나온다. 두 탭은 '지금'과 '지난 7일'이라는 다른 질문에 답한다.
+ *   - cover 검색으로 발견: 마지막 검사에서 cover 를 붙여야만 찾은 곡(state).
+ *   - 카드마다 최근 7일 검사 결과와 마지막 검사 시각을 붙여, 왜 그 탭에 있는지 보이게 한다.
+ *   - 아래 검색어 리스트도 같은 응답을 쓴다.
+ *   - search/record → 카드를 누를 때 기록(실패해도 화면은 그대로 진행)
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -21,7 +25,6 @@ import { useToast } from "../context/ToastContext";
 import { api } from "../lib/api";
 import { copyText } from "../lib/clipboard";
 import { openExternal } from "../lib/openExternal";
-import { useApiList } from "../lib/useApiList";
 import { usePageMeta } from "../lib/usePageMeta";
 import { StepGrid } from "./search/StepGrid";
 import "../styles/search.css";
@@ -39,6 +42,24 @@ const MOBILE_STEPS = [
   { imageKey: "search_step_mobile_4_image", labelKey: "search_step_mobile_4_label", alt: "정렬된 모바일 검색 결과" },
 ];
 
+/* 곡 목록 탭. 이름·순서는 예전 화면 그대로이고, 어느 곡이 들어가는지는 서버 판정(state·recent)으로 정한다. */
+const SONG_TABS = [
+  { name: "current", label: "지금 막힘", pick: (song) => song.state === "blocked" },
+  { name: "recent", label: "최근 7일", pick: (song) => song.recent === true },
+  { name: "cover", label: "cover 검색으로 발견", pick: (song) => song.state === "cover_only" },
+];
+
+const RESULT_LABELS = { blocked: "막힘", cover_only: "cover로만", visible: "정상" };
+
+/* '최근 7일' 탭 카드에 붙이는 지금 상태. cover로만인 곡은 카드의 cover 안내가 같은 말을 한다. */
+const STATE_NOTES = {
+  blocked: { className: "is-blocked", text: "지금도 검색이 안 돼요" },
+  visible: { className: "is-visible", text: "지금은 기본 검색에서 보여요" },
+};
+
+/* 카드에 늘어놓는 검사 결과 점의 최대 개수. 더 있으면 최근 것만 보이고 개수는 글로 센다. */
+const MAX_MARKS = 12;
+
 /* 안내 그림은 PC와 모바일 두 벌이 있다. 휴대폰으로 들어온 사람에게 PC 화면부터
  * 보여 주면, 자기 화면과 다른 그림을 보고 한 번 더 눌러야 한다. */
 function defaultMethodTab() {
@@ -47,8 +68,9 @@ function defaultMethodTab() {
   return coarsePointer || narrow ? "mobile" : "pc";
 }
 
+/* 같은 곡에만 응원이 몰리지 않게 탭 안의 순서는 열 때마다 섞는다(예전 화면과 같다). */
 function shuffled(list) {
-  const array = Array.isArray(list) ? list.slice() : [];
+  const array = list.slice();
   for (let i = array.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
@@ -56,12 +78,28 @@ function shuffled(list) {
   return array;
 }
 
-/* 제목 아래 값 줄에 넣을 "마지막 검색 시도"의 값 부분.
- * 이름표는 화면에서 따로 그리므로 여기서는 값만 만든다. */
-function lastUpdatedText(searchedTime) {
-  if (searchedTime === 0) return "없음";
-  if (typeof searchedTime === "string") return searchedTime;
-  return new Date(searchedTime * 1000).toLocaleString();
+function absoluteTime(epochSeconds) {
+  return epochSeconds ? new Date(epochSeconds * 1000).toLocaleString() : "";
+}
+
+/* "3시간 전"처럼 지금부터 얼마나 지났는지. 판정이 언제 것인지 한눈에 보이게 한다. */
+function timeAgo(epochSeconds) {
+  if (!epochSeconds) return "";
+  const seconds = Math.max(0, Date.now() / 1000 - epochSeconds);
+  if (seconds < 3600) return `${Math.max(1, Math.floor(seconds / 60))}분 전`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}시간 전`;
+  return `${Math.floor(seconds / 86400)}일 전`;
+}
+
+function emptyStatus(phase) {
+  return { phase, songs: [], summary: null, lastCheckedAt: null, windowDays: 7, schedule: null };
+}
+
+/* "N시간마다(한국 시간 HH·HH·HH시)". 간격을 화면에 글자로 적지 않고 서버 설정에서 받는다. */
+function scheduleText(schedule) {
+  if (!schedule || !schedule.interval_hours) return "";
+  const hours = (schedule.run_hours_kst || []).map((hour) => String(hour).padStart(2, "0")).join("·");
+  return `${schedule.interval_hours}시간마다` + (hours ? `(한국 시간 ${hours}시)` : "");
 }
 
 export default function SearchPage() {
@@ -71,38 +109,44 @@ export default function SearchPage() {
   });
 
   const toast = useToast();
-  const [songs, setSongs] = useState({ status: "loading", current: [], recent: [], cover: [], updated: "" });
-  const queries = useApiList("search/songs", {
-    errorLabel: "JSON을 불러오는 중 오류 발생:",
-    select: (data) => (Array.isArray(data) ? data : []),
-  });
+  const [status, setStatus] = useState(() => emptyStatus("loading"));
   const [filter, setFilter] = useState("");
-  const [songTab, setSongTab] = useState("current");
+  const [songTab, setSongTab] = useState(SONG_TABS[0].name);
   const [methodTab, setMethodTab] = useState(defaultMethodTab);
   const [viewerImage, setViewerImage] = useState(null);
 
   useEffect(() => {
     let alive = true;
-    api("search/not_searched")
-      .then((response) => response.json())
+    api("search/status")
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
       .then((data) => {
         if (!alive) return;
-        setSongs({
-          status: "ready",
-          current: shuffled(data.all_songs),
-          recent: shuffled(data.recent),
-          cover: shuffled(data.cover_matches),
-          updated: lastUpdatedText(data.searched_time),
+        setStatus({
+          phase: "ready",
+          songs: Array.isArray(data.songs) ? data.songs : [],
+          summary: data.summary || null,
+          lastCheckedAt: data.last_checked_at || null,
+          windowDays: data.window_days || 7,
+          schedule: data.schedule || null,
         });
       })
       .catch((error) => {
-        console.error("Error fetching songs:", error);
-        if (alive) setSongs({ status: "error", current: [], recent: [], cover: [], updated: "" });
+        console.error("검색 노출 상태를 불러오지 못했습니다:", error);
+        if (alive) setStatus(emptyStatus("error"));
       });
     return () => {
       alive = false;
     };
   }, []);
+
+  /* 탭마다 한 번만 섞는다. 다시 그릴 때마다 섞으면 카드가 눈앞에서 자리를 바꾼다. */
+  const tabSongs = useMemo(
+    () => Object.fromEntries(SONG_TABS.map((tab) => [tab.name, shuffled(status.songs.filter(tab.pick))])),
+    [status.songs],
+  );
 
   /* 검색어를 눌렀을 때. 기록은 결과를 기다리지 않고, 복사가 막히면 유튜브로 보내지 않는다.
    * (붙여 넣을 것이 없는 채로 보내 봐야 소용없다.) */
@@ -130,8 +174,20 @@ export default function SearchPage() {
 
   const filteredQueries = useMemo(() => {
     const normalized = filter.trim().toLowerCase();
-    return queries.items.filter((item) => String(item.query || "").toLowerCase().includes(normalized));
-  }, [queries.items, filter]);
+    return status.songs.filter((song) => String(song.query || "").toLowerCase().includes(normalized));
+  }, [status.songs, filter]);
+
+  const ready = status.phase === "ready";
+  const summary = status.summary;
+  /* 검사는 모든 곡을 매번 하지 않는다(최근에 막힌 곡은 자주, 나머지는 돌아가며). 그 사실을 숨기지 않는다.
+   * 검색 간격도 여기서 서버 설정 그대로 보여 준다. */
+  const schedule = scheduleText(status.schedule);
+  const coverage = ready && summary
+    ? `최근 ${status.windowDays}일 동안 ${summary.songs}곡 중 ${summary.checked_in_window}곡 검색`
+      + (summary.unchecked ? ` · 아직 검색 전 ${summary.unchecked}곡` : "")
+      + (schedule ? ` · ${schedule} 검색해요.` : "")
+      + " 막혔던 곡은 자주, 나머지는 돌아가며 확인해요."
+    : undefined;
 
   return (
     <>
@@ -143,10 +199,16 @@ export default function SearchPage() {
             {/* 설명 문장 뒤에 시각을 이어 붙이면 어디까지가 문장인지 알 수 없다.
                 이름표를 붙여 따로 세운다. */}
             <div className="page-meta">
-              {songs.status === "ready" && (
-                <span id="last-updated" className="meta-pill">
-                  <span>마지막 검색 시도</span>
-                  <strong>{songs.updated}</strong>
+              {ready && (
+                <span id="last-updated" className="meta-pill" title={absoluteTime(status.lastCheckedAt)}>
+                  <span>마지막 검색</span>
+                  <strong>{status.lastCheckedAt ? absoluteTime(status.lastCheckedAt) : "없음"}</strong>
+                </span>
+              )}
+              {ready && status.schedule?.next_run_at && (
+                <span className="meta-pill" title={scheduleText(status.schedule)}>
+                  <span>다음 검색</span>
+                  <strong>{absoluteTime(status.schedule.next_run_at)}</strong>
                 </span>
               )}
             </div>
@@ -166,52 +228,48 @@ export default function SearchPage() {
         <SiteNotice titleKey="search_notice_title" textKey="search_notice" imageKey="search_notice_image" />
       </section>
 
-      {/* 지금 막힌 곡과 최근에 막혔던 곡은 같은 종류의 목록이라, 두 칸을 따로 두는 대신
-          한 칸에서 탭으로 바꿔 본다. 화면이 절반으로 짧아지고 둘의 관계도 분명해진다. */}
       <SectionPanel
         title="검색 노출 현황"
+        note={coverage}
         actions={
           <Segmented
             groupId="song-tabs"
             label="곡 목록 종류"
             value={songTab}
             onChange={setSongTab}
-            tabs={[
-              {
-                name: "current",
-                label: "지금 막힘 ",
-                suffix: <span data-count="current">{songs.status === "ready" ? songs.current.length : ""}</span>,
-              },
-              {
-                name: "recent",
-                label: "최근 7일 ",
-                suffix: <span data-count="recent">{songs.status === "ready" ? songs.recent.length : ""}</span>,
-              },
-              {
-                name: "cover",
-                label: "cover 검색으로 발견 ",
-                suffix: <span data-count="cover">{songs.status === "ready" ? songs.cover.length : ""}</span>,
-              },
-            ]}
+            tabs={SONG_TABS.map((tab) => ({
+              name: tab.name,
+              label: `${tab.label} `,
+              suffix: <span data-count={tab.name}>{ready ? tabSongs[tab.name].length : ""}</span>,
+            }))}
           />
         }
       >
-        {songs.status === "loading" && <SkeletonCards count={8} />}
-        {songs.status === "error" && <EmptyState isError>목록을 불러오지 못했습니다.</EmptyState>}
-        {songs.status === "ready" && (
+        {status.phase === "loading" && <SkeletonCards count={8} />}
+        {status.phase === "error" && <EmptyState isError>목록을 불러오지 못했습니다.</EmptyState>}
+        {ready && (
           <>
+            <p className="search-legend">
+              <span className="week-mark is-blocked" aria-hidden="true" />막힘
+              <span className="week-mark is-cover_only" aria-hidden="true" />cover로만
+              <span className="week-mark is-visible" aria-hidden="true" />정상
+              <span className="search-legend-note">카드의 점 하나가 검색 한 번이에요(왼쪽이 먼저).</span>
+            </p>
             <div {...tabPanelProps("song-tabs", "current", songTab === "current")}>
               <SongCards
-                songs={songs.current}
+                songs={tabSongs.current}
                 emptyText="검색 안되는 노래가 없습니다."
+                windowDays={status.windowDays}
                 onSelect={openYoutube}
               />
             </div>
             <div {...tabPanelProps("song-tabs", "recent", songTab === "recent")}>
               <SongCards
-                songs={songs.recent}
-                emptyText="최근 7일 이내에 막혔던 곡이 없습니다."
+                songs={tabSongs.recent}
+                emptyText="최근 7일 이내에 검색이 안 됐던 곡이 없습니다."
+                windowDays={status.windowDays}
                 onSelect={openYoutube}
+                showState
               />
             </div>
             <div
@@ -220,8 +278,9 @@ export default function SearchPage() {
             >
               <ContentText contentKey="search_songs_note" />
               <SongCards
-                songs={songs.cover}
+                songs={tabSongs.cover}
                 emptyText="기본 검색에서 찾지 못해 cover를 붙여 다시 찾은 곡이 없습니다."
+                windowDays={status.windowDays}
                 onSelect={openYoutube}
               />
             </div>
@@ -267,7 +326,7 @@ export default function SearchPage() {
         actions={
           <>
             <span id="query-count" className="results-count">
-              {queries.status === "error" ? "불가" : `${filteredQueries.length}개`}
+              {status.phase === "error" ? "불가" : `${filteredQueries.length}개`}
             </span>
             <label className="query-search" htmlFor="query-search">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -292,19 +351,7 @@ export default function SearchPage() {
               {filter.trim() ? "검색어를 찾을 수 없습니다." : "표시할 검색어가 없습니다."}
             </li>
           ) : (
-            filteredQueries.map((item) => (
-              <li className="query-item" key={`${item.video_id}-${item.query}`}>
-                <button
-                  type="button"
-                  className={`query-chip${item.fallback_query ? " has-cover-match" : ""}`}
-                  title={item.fallback_query ? `${item.fallback_query} 검색어 복사 후 유튜브 열기` : item.query}
-                  onClick={() => openYoutube(item.fallback_query || item.query)}
-                >
-                  <span>{item.query}</span>
-                  {item.fallback_query && <small>cover 추가 검색에서 발견</small>}
-                </button>
-              </li>
-            ))
+            filteredQueries.map((song) => <QueryChip key={`${song.video_id}-${song.query}`} song={song} onSelect={openYoutube} />)
           )}
         </ul>
       </SectionPanel>
@@ -314,41 +361,102 @@ export default function SearchPage() {
   );
 }
 
-/* 카드 전체가 "복사 & 새 탭" 버튼이라 별도의 버튼 줄이 필요 없다. */
-function SongCards({ songs, emptyText, onSelect, ...panelProps }) {
+/* 검색어 하나. 지금 막혔거나 cover로만 찾히는 곡은 위 현황과 같은 말로 표시한다. */
+function QueryChip({ song, onSelect }) {
+  const isCover = song.state === "cover_only" && song.fallback_query;
+  const isBlocked = song.state === "blocked";
+  const className = ["query-chip", isCover ? "has-cover-match" : "", isBlocked ? "is-blocked" : ""].filter(Boolean).join(" ");
   return (
-    <div className="card-grid is-compact" {...panelProps}>
-      {songs.map((song) => {
-        const searchQuery = song.fallback_query || song.query;
-        return (
-          <button
-            key={`${song.video_id}-${song.query}`}
-            type="button"
-            className="card is-link"
-            title={`${searchQuery} 복사하고 유튜브를 새 탭에서 열기`}
-            onClick={() => onSelect(searchQuery)}
-          >
-            <div className="thumb-wrap">
-              <img src={`https://img.youtube.com/vi/${song.video_id}/0.jpg`} alt="" loading="lazy" />
-              <span className="thumb-play">
-                <Icon name="play" />
-              </span>
-            </div>
-            <div className="info">
-              <h3>{song.query}</h3>
-              {song.fallback_query && (
-                <span className="cover-match-note">
-                  기본 검색에서는 찾지 못했지만, ‘{song.fallback_query}’ 검색에서 찾았어요.
-                </span>
-              )}
-              <span className="card-action">
-                {song.fallback_query ? "cover 검색어 복사 & 새 탭" : "복사 & 새 탭"}
-              </span>
-            </div>
-          </button>
-        );
-      })}
+    <li className="query-item">
+      <button
+        type="button"
+        className={className}
+        title={isCover ? `${song.fallback_query} 검색어 복사 후 유튜브 열기` : song.query}
+        onClick={() => onSelect(isCover ? song.fallback_query : song.query)}
+      >
+        <span>{song.query}</span>
+        {isCover && <small>cover 추가 검색에서 발견</small>}
+        {isBlocked && <small>지금 막힘</small>}
+      </button>
+    </li>
+  );
+}
+
+/* 카드 전체가 "복사 & 새 탭" 버튼이라 별도의 버튼 줄이 필요 없다.
+ * showState: '최근 7일' 탭처럼 지금 상태가 섞여 있는 목록에서 카드마다 지금 상태를 적는다. */
+function SongCards({ songs, emptyText, windowDays, onSelect, showState = false }) {
+  return (
+    <div className="card-grid is-compact">
+      {songs.map((song) => (
+        <SongCard
+          key={`${song.video_id}-${song.query}`}
+          song={song}
+          windowDays={windowDays}
+          onSelect={onSelect}
+          showState={showState}
+        />
+      ))}
       {songs.length === 0 && <EmptyState>{emptyText}</EmptyState>}
     </div>
+  );
+}
+
+function SongCard({ song, windowDays, onSelect, showState }) {
+  const searchQuery = song.fallback_query || song.query;
+  const stateNote = showState ? STATE_NOTES[song.state] : null;
+  return (
+    <button
+      type="button"
+      className="card is-link"
+      title={`${searchQuery} 복사하고 유튜브를 새 탭에서 열기`}
+      onClick={() => onSelect(searchQuery)}
+    >
+      <div className="thumb-wrap">
+        <img src={`https://img.youtube.com/vi/${song.video_id}/0.jpg`} alt="" loading="lazy" />
+        <span className="thumb-play">
+          <Icon name="play" />
+        </span>
+      </div>
+      <div className="info">
+        <h3>{song.query}</h3>
+        {song.fallback_query && (
+          <span className="cover-match-note">
+            기본 검색에서는 찾지 못했지만, ‘{song.fallback_query}’ 검색에서 찾았어요.
+          </span>
+        )}
+        {stateNote && <span className={`state-note ${stateNote.className}`}>{stateNote.text}</span>}
+        <WeekRecord week={song.week} windowDays={windowDays} />
+        <span className="meta">
+          <span title={absoluteTime(song.checked_at)}>{song.checked_at ? `${timeAgo(song.checked_at)} 검색` : "검색 기록 없음"}</span>
+          <span className="card-action">{song.fallback_query ? "cover 검색어 복사 & 새 탭" : "복사 & 새 탭"}</span>
+        </span>
+      </div>
+    </button>
+  );
+}
+
+/* 최근 7일 검사 결과. 점은 보기 좋으라고 두는 것이고, 같은 내용을 글로도 적는다(화면 낭독기는 글을 읽는다). */
+function WeekRecord({ week, windowDays }) {
+  const checks = week?.checks || 0;
+  if (!checks) return <span className="week-record is-empty">최근 {windowDays}일 검색 기록 없음</span>;
+  const results = Array.isArray(week.results) ? week.results.slice(-MAX_MARKS) : [];
+  const parts = ["blocked", "cover_only", "visible"]
+    .filter((result) => week[result])
+    .map((result) => `${RESULT_LABELS[result]} ${week[result]}`);
+  return (
+    <span className="week-record">
+      <span className="week-marks" aria-hidden="true">
+        {results.map((entry) => (
+          <span
+            key={`${entry.at}-${entry.result}`}
+            className={`week-mark is-${entry.result}`}
+            title={`${absoluteTime(entry.at)} ${RESULT_LABELS[entry.result] || ""}`}
+          />
+        ))}
+      </span>
+      <span>
+        최근 {windowDays}일 {checks}번 · {parts.join(" · ")}
+      </span>
+    </span>
   );
 }

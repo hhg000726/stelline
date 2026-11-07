@@ -74,7 +74,7 @@ def remove_expired_data(cursor):
     expiry_tables = (("twits", "expires_at"), ("events", "expires_at"), ("targets", "expires_at"), ("offline", "end_date"))
     for table, column in expiry_tables:
         cursor.execute(f"DELETE FROM {table} WHERE {column} < %s", (now,))
-    cursor.execute("DELETE FROM recent_data WHERE searched_time < %s", (time.time() - 7 * 24 * 3600,))
+    # 검색 점검 기록(search_checks)은 검색 점검 회차가 끝날 때 스스로 정리한다(apis/search/tasks.py).
 
 
 def send_milestone_notifications(cursor, access_token, song):

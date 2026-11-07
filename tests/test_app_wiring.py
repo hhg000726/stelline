@@ -24,6 +24,7 @@ EXPECTED_RULES = {
     "/api/main/twits",
     "/api/main/buttons",
     # search API
+    "/api/search/status",
     "/api/search/not_searched",
     "/api/search/record",
     "/api/search/songs",

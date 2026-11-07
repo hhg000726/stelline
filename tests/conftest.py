@@ -35,6 +35,7 @@ from stelline.database.connection import get_connection  # noqa: E402
 # 관리자/마이그레이션이 다루는 전체 테이블. 통합 테스트는 매번 이 목록을 비운다.
 CONTENT_AND_STATE_TABLES = (
     "song_infos",
+    "search_checks",
     "songs_data",
     "recent_data",
     "targets",

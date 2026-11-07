@@ -90,6 +90,82 @@
   gap: 12px;
 }
 
+/* 검색어 리스트에서 지금 막힌 곡. 위 현황의 '지금 막힘'과 같은 판정이다. */
+.query-chip.is-blocked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.query-chip.is-blocked small {
+  color: var(--danger);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+/* 곡 목록 탭은 세 개에 숫자까지 붙어 휴대폰 폭에서 줄이 바뀐다. "지금 막 / 힘"처럼 낱말 가운데서
+ * 끊기지 않게 띄어쓰기에서만 바꾼다. */
+#song-tabs button { word-break: keep-all; }
+
+/* 카드의 최근 7일 검사 결과. 점 하나가 검색 한 번이고, 같은 내용을 글로도 적는다. */
+.week-record {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.week-record.is-empty { color: var(--muted-soft); }
+
+.week-marks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.week-mark {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted-soft);
+}
+
+.week-mark.is-blocked { background: var(--danger); }
+.week-mark.is-cover_only { background: var(--primary-strong); }
+.week-mark.is-visible { background: var(--success); }
+
+.search-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.search-legend .week-mark { margin-left: 4px; }
+.search-legend .week-mark:first-child { margin-left: 0; }
+
+.search-legend-note { color: var(--muted-soft); }
+
+/* '최근 7일' 탭 카드의 지금 상태. 지난 7일에 문제가 있었던 곡이 지금은 어떤지 한 줄로 적는다. */
+.state-note {
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.state-note.is-blocked { color: var(--danger); }
+.state-note.is-visible { color: var(--success); }
+
 .query-chip:hover {
   transform: none;
   border-color: var(--primary-outline);

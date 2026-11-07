@@ -190,6 +190,17 @@
   border-color: var(--primary-outline);
 }
 
+/* 칩과 목록 사이 6px 틈도 목록의 일부로 친다. 틈을 지나는 순간 마우스가 '벗어남'이 되어
+ * 목록이 닫히던 문제를 막는다(목록은 칩을 감싼 .run-pill 의 자식이라 이 영역도 그 안이다). */
+.run-popover::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  right: 0;
+  left: 0;
+  height: 8px;
+}
+
 .run-popover {
   position: absolute;
   top: calc(100% + 6px);

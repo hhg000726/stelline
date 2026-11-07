@@ -19,11 +19,26 @@ export function shortTime(epochSeconds) {
   return `${date.getMonth() + 1}월 ${date.getDate()}일 ${hh}:${mm}`;
 }
 
+/* 마우스가 칩·목록을 벗어난 뒤 이만큼 기다렸다가 닫는다. 칩에서 목록으로 옮겨 가거나 대각선으로
+ * 움직이다 잠깐 벗어나도 바로 닫히지 않게 한다. */
+const HOVER_CLOSE_DELAY_MS = 200;
+
 export function RunPill({ label, value, children }) {
   const [open, setOpen] = useState(false);
   const wrapper = useRef(null);
+  const closeTimer = useRef(null);
   const panelId = useId();
   const canHover = useMemo(() => Boolean(window.matchMedia?.("(hover: hover)").matches), []);
+
+  const openNow = () => {
+    clearTimeout(closeTimer.current);
+    setOpen(true);
+  };
+  const closeSoon = () => {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), HOVER_CLOSE_DELAY_MS);
+  };
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -45,8 +60,8 @@ export function RunPill({ label, value, children }) {
     <span
       className="run-pill"
       ref={wrapper}
-      onMouseEnter={canHover ? () => setOpen(true) : undefined}
-      onMouseLeave={canHover ? () => setOpen(false) : undefined}
+      onMouseEnter={canHover ? openNow : undefined}
+      onMouseLeave={canHover ? closeSoon : undefined}
     >
       <button
         type="button"

@@ -113,7 +113,7 @@ def search_tab_views(rows, connection, now=None):
         status = statuses.get(row.get("query"))
         if status is None or status.video_id != row.get("video_id"):
             # 영상 ID 가 비어 있으면 무엇을 찾아야 할지 몰라 검사하지 않는다.
-            extra = {"search_state": NO_VIDEO_LABEL, "search_checked": "", "search_week": "", "search_risk": ""}
+            extra = {"search_state": NO_VIDEO_LABEL, "search_checked": "", "search_week": ""}
             order = 5
         else:
             extra = {
@@ -122,7 +122,6 @@ def search_tab_views(rows, connection, now=None):
                     f"{_kst(status.checked_at)} ({_ago(now - status.checked_at)})" if status.checked_at else ""
                 ),
                 "search_week": _week_text(status.week),
-                "search_risk": f"{status.risk}%" if status.risk is not None else "",
             }
             order = _order(status)
         annotated.append((order, row.get("query") or "", {**row, **extra}))

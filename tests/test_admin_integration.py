@@ -33,6 +33,23 @@ def test_admin_index_shows_existing_rows(admin_client, db, clean_db):
     assert "관리자에게 보이는 이벤트" in html
 
 
+def test_admin_search_table_columns_come_from_check_records(admin_client, db, clean_db):
+    """'검색 점검 곡' 표에 덧붙인 칸은 검사 기록에서 계산한다. 판정에 쓰지 않던 위험도 칸은 뺐다."""
+    with db.cursor() as cursor:
+        cursor.execute("INSERT INTO song_infos (query, video_id) VALUES (%s, %s)", ("관리자 표 곡", "vidAdmin"))
+        cursor.execute(
+            "INSERT INTO search_checks (query, video_id, result, checked_at)"
+            " VALUES (%s, %s, 'blocked', UTC_TIMESTAMP() - INTERVAL 3 HOUR)",
+            ("관리자 표 곡", "vidAdmin"),
+        )
+    db.commit()
+    html = admin_client.get("/admin/").get_data(as_text=True)
+
+    assert "<th>현재 상태</th><th>마지막 검사</th><th>최근 7일</th><th>관리</th>" in html
+    assert ">1번 · 막힘 1<" in html  # 최근 7일 칸
+    assert "위험도" not in html
+
+
 def test_admin_add_row_inserts(admin_client, db, clean_db):
     resp = admin_client.post(
         "/admin/data/events",

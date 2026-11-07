@@ -111,6 +111,7 @@ def test_search_status_judges_each_song_by_its_own_records(client, db, clean_db)
     assert [r["result"] for r in songs["곡 A"]["week"]["results"]] == ["visible", "blocked"]
     assert songs["곡 C"]["fallback_query"] == "곡 C cover"
     assert songs["곡 D"]["fallback_query"] is None and songs["곡 D"]["checked_at"] is None
+    assert "risk" not in songs["곡 A"]  # 판정에 쓰지 않던 위험도는 내보내지 않는다
     assert songs["곡 E"]["week"]["checks"] == 1  # 9일 전 기록은 7일 밖이다
     assert payload["summary"]["checked_in_window"] == 4
     assert (payload["summary"]["blocked"], payload["summary"]["recent"], payload["summary"]["cover_only"]) == (1, 3, 1)
@@ -144,15 +145,14 @@ def test_not_searched_keeps_its_shape_for_outside_readers(client, db, clean_db):
     assert payload["searched_time"] > 0
 
 
-def test_song_list_keeps_old_keys_with_the_new_risk(client, db, clean_db):
+def test_song_list_keeps_old_keys_except_risk(client, db, clean_db):
     _seed_search_history(db)
     data = {song["query"]: song for song in client.get("/api/search/songs").get_json()}
 
     assert list(data) == ["곡 A", "곡 B", "곡 C", "곡 D", "곡 E"]  # 가나다순
-    assert set(data["곡 A"]) == {"video_id", "query", "risk", "fallback_query", "state", "checked_at"}
-    assert data["곡 D"]["risk"] is None            # 기록이 없으면 모른다(옛 열의 28 을 쓰지 않는다)
+    # 예전 키 가운데 risk 만 뺐다. 판정에 쓰지 않던 값이고, 옛 열(곡 D 의 28)도 내보내지 않는다.
+    assert set(data["곡 A"]) == {"video_id", "query", "fallback_query", "state", "checked_at"}
     assert data["곡 D"]["fallback_query"] is None  # 옛 열의 값을 쓰지 않는다
-    assert data["곡 A"]["risk"] == round(100 * 16 / 40)  # 40시간 동안 마지막 16시간이 막힘
 
 
 def test_last_run_lists_what_the_latest_run_checked(client, db, clean_db):

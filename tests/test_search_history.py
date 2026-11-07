@@ -1,7 +1,7 @@
 """검색 노출 판정(stelline/apis/search/history.py)과 검사 한 회차의 순수 로직 테스트.
 
 모든 판정은 검사 기록과 '지금' 시각만으로 정해진다. 시각을 고정해 두고, 기록을 바꿔 가며
-현재 상태·최근 7일·검색 대상·위험도가 각자의 기준대로 나오는지 본다.
+현재 상태·최근 7일·검색 대상이 각자의 기준대로 나오는지 본다.
 """
 
 import json
@@ -60,9 +60,7 @@ def test_current_state_is_the_latest_result_whichever_run_checked_it():
 
 def test_a_song_without_any_record_is_unchecked():
     status = _status("새 곡", [])
-    assert (status.state, status.recent_problem, status.retry, status.checked_at, status.risk) == (
-        UNCHECKED, False, False, None, None,
-    )
+    assert (status.state, status.recent_problem, status.retry, status.checked_at) == (UNCHECKED, False, False, None)
 
 
 def test_records_for_another_video_do_not_count():
@@ -154,28 +152,6 @@ def test_the_window_moves_with_now_not_with_the_number_of_checks():
         _check("곡", VISIBLE, _ago(hours=hours)) for hours in range(4, 140, 4)
     ]
     assert _status("곡", sparse).last_problem_at == _status("곡", dense).last_problem_at == _ago(days=6)
-
-
-# --- 위험도: 최근 30일 중 기본 검색에서 안 보인 시간 비율 ------------------------
-
-def test_risk_is_the_share_of_time_spent_in_a_problem_state():
-    status = _status("곡", [
-        _check("곡", BLOCKED, _ago(days=40)),   # 30일 전에도 막혀 있었다
-        _check("곡", VISIBLE, _ago(days=20)),
-    ])
-    assert status.risk == round(100 * 10 / 30)
-
-
-def test_risk_counts_from_the_first_record_when_history_is_short():
-    status = _status("곡", [_check("곡", COVER_ONLY, _ago(days=5)), _check("곡", VISIBLE, _ago(days=4))])
-    assert status.risk == 20
-
-
-def test_risk_does_not_grow_just_because_a_song_is_checked_more_often():
-    once = _status("곡", [_check("곡", BLOCKED, _ago(days=10)), _check("곡", VISIBLE, _ago(days=5))])
-    often = _status("곡", [_check("곡", BLOCKED, _ago(days=10 - step / 4)) for step in range(20)]
-                    + [_check("곡", VISIBLE, _ago(days=5))])
-    assert once.risk == often.risk == 50
 
 
 # --- 검색 대상: 최근 실패한 곡을 우선 다시 시도 ------------------------------------

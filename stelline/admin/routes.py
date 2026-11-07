@@ -98,20 +98,19 @@ CONTENT_TABLES = {
         "title": "검색 점검 곡",
         "group": "search",
         "description": (
-            "YouTube 검색 노출을 확인할 곡입니다. 상태·7일·위험도(30일 중 안 보인 시간 비율)는 검사 기록에서"
-            " 계산합니다. 검색어나 영상 ID를 바꾸면 다음 회차에 먼저 검사합니다."
+            "YouTube 검색 노출을 확인할 곡입니다. 현재 상태·최근 7일은 검사 기록에서 계산합니다."
+            " 검색어나 영상 ID를 바꾸면 다음 회차에 먼저 검사합니다."
         ),
         "fields": ("query", "video_id"),
         "labels": {"query": "검색어", "video_id": "영상 ID"},
         # 검색어가 기본키다. 표시용으로 덧붙인 칸(search_*)이 수정·삭제 조건에 섞이지 않는다.
         "key_fields": ("query",),
         # search_* 칸은 DB 열이 아니라 검사 기록에서 계산해 붙인 값이다(admin/search_status.py).
-        "list_fields": ("query", "video_id", "search_state", "search_checked", "search_week", "search_risk"),
+        "list_fields": ("query", "video_id", "search_state", "search_checked", "search_week"),
         "list_labels": {
             "search_state": "현재 상태",
             "search_checked": "마지막 검사",
             "search_week": "최근 7일",
-            "search_risk": "위험도(30일)",
         },
         "searchable": True,
     },

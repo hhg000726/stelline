@@ -52,7 +52,6 @@ def _song_json(status):
             "blocked": status.week["blocked"],
             "results": [{"at": to_epoch(moment), "result": result} for moment, result in status.week_results],
         },
-        "risk": status.risk,
     }
 
 
@@ -110,9 +109,10 @@ def get_not_searched():
 
 
 def get_song_infos():
-    """검색어 목록. 예전 키(video_id·query·risk·fallback_query)를 유지하고 상태를 덧붙인다.
+    """검색어 목록. 예전 키(video_id·query·fallback_query)를 유지하고 상태를 덧붙인다.
 
-    risk 는 이제 '최근 30일 중 기본 검색에서 안 보인 시간의 비율(0~100)'이고, 기록이 없으면 null 이다.
+    예전의 risk 는 판정에 쓰지 않던 값이라 2026-11 에 뺐다. 이 주소를 받아 가는 바깥 이용자도 그 값은
+    읽지 않았다.
     """
     logging.debug("곡 메타 정보 조회 요청")
     statuses, _ = _sorted_statuses()
@@ -120,7 +120,6 @@ def get_song_infos():
         {
             "video_id": status.video_id,
             "query": status.query,
-            "risk": status.risk,
             "fallback_query": status.fallback_query,
             "state": status.state,
             "checked_at": to_epoch(status.checked_at),

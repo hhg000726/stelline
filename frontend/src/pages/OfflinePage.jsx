@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContentText } from "../components/ContentText";
 import { EmptyState } from "../components/EmptyState";
 import { SkeletonRows } from "../components/Loading";
-import { api } from "../lib/api";
+import { getJson } from "../lib/api";
 import { escapeHtml } from "../lib/escapeHtml";
 import { loadScript } from "../lib/loadScript";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -112,12 +112,9 @@ export default function OfflinePage() {
   /* ---------- 데이터 ---------- */
   useEffect(() => {
     let alive = true;
-    api("offline/offline_api", { method: "GET", headers: { "Content-Type": "application/json" } })
-      .then((response) => {
-        // 서버가 실패를 알려 왔는데 빈 목록으로 받으면 "진행 중인 이벤트가 없다"고 잘못 말하게 된다.
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
+    // 서버가 실패를 알려 오면 getJson 이 실패로 넘긴다. 빈 목록으로 받으면 "진행 중인 이벤트가 없다"고
+    // 잘못 말하게 된다.
+    getJson("offline/offline_api")
       .then((data) => {
         if (alive) setEvents({ status: "ready", items: Array.isArray(data) ? data : [] });
       })

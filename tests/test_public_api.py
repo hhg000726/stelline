@@ -162,3 +162,15 @@ def test_cors_is_limited_to_public_api(client):
     origin = {"Origin": "https://example.com"}
     assert client.get("/api/bugs/rank", headers=origin).headers.get("Access-Control-Allow-Origin")
     assert "Access-Control-Allow-Origin" not in client.get("/auth/login", headers=origin).headers
+
+
+def test_site_contents_answer_304_when_nothing_changed(client):
+    """모든 화면이 열릴 때마다 부르는 주소다. 그대로면 본문을 다시 보내지 않는다(DB 가 없어도 기본값으로 답한다)."""
+    with patch("stelline.content.store.load_overrides", return_value={}):
+        first = client.get("/api/content")
+        etag = first.headers.get("ETag")
+        again = client.get("/api/content", headers={"If-None-Match": etag})
+    assert first.status_code == 200 and etag
+    assert first.headers["Cache-Control"] == "no-cache"  # 관리자가 고치면 곧바로 보여야 한다
+    assert again.status_code == 304
+    assert again.data == b""

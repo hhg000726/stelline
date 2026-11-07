@@ -23,7 +23,7 @@ import { SectionPanel } from "../components/SectionPanel";
 import { Segmented, tabPanelProps } from "../components/Segmented";
 import { SiteNotice } from "../components/SiteNotice";
 import { useToast } from "../context/ToastContext";
-import { api } from "../lib/api";
+import { api, getJson } from "../lib/api";
 import { copyText } from "../lib/clipboard";
 import { openExternal } from "../lib/openExternal";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -121,11 +121,7 @@ export default function SearchPage() {
 
   useEffect(() => {
     let alive = true;
-    api("search/status")
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
+    getJson("search/status")
       .then((data) => {
         if (!alive) return;
         setStatus({
@@ -158,10 +154,7 @@ export default function SearchPage() {
    * (붙여 넣을 것이 없는 채로 보내 봐야 소용없다.) */
   const openYoutube = useCallback(
     async (query) => {
-      api("search/record", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      }).catch((error) => console.error("API 요청 중 오류 발생:", error));
+      api("search/record").catch((error) => console.error("API 요청 중 오류 발생:", error));
 
       if (!(await copyText(query))) {
         toast("복사하지 못했어요. 검색어를 직접 선택해 복사해 주세요.");

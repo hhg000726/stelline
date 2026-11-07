@@ -7,7 +7,7 @@
  */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-import { api } from "../lib/api";
+import { getJson } from "../lib/api";
 import { CONTENT_DEFAULTS } from "../lib/contentDefaults";
 import { readStore, writeStore } from "../lib/storage";
 
@@ -20,8 +20,7 @@ export function ContentProvider({ children }) {
 
   useEffect(() => {
     let alive = true;
-    api("content")
-      .then((response) => response.json())
+    getJson("content")
       .then((loaded) => {
         if (!alive || !loaded || typeof loaded !== "object") return;
         setItems(loaded);

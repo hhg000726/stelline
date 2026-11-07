@@ -9,10 +9,7 @@ import { SectionPanel } from "../../components/SectionPanel";
 import { useApiList } from "../../lib/useApiList";
 
 export function EventsPanel() {
-  const state = useApiList("main/events", {
-    options: { method: "GET", headers: { "Content-Type": "application/json" } },
-    errorLabel: "이벤트 API 요청 중 오류 발생:",
-  });
+  const state = useApiList("main/events", { errorLabel: "이벤트 API 요청 중 오류 발생:" });
 
   if (state.status === "ready" && !state.items.length) return null;
 

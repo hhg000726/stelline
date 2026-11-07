@@ -13,7 +13,7 @@ import { Icon } from "../components/Icon";
 import { SkeletonRows } from "../components/Loading";
 import { ReportPanel } from "../components/ReportPanel";
 import { useToast } from "../context/ToastContext";
-import { api } from "../lib/api";
+import { api, getJson } from "../lib/api";
 import { copyText } from "../lib/clipboard";
 import { readStore, writeStore } from "../lib/storage";
 import { usePageMeta } from "../lib/usePageMeta";
@@ -91,20 +91,25 @@ export default function KaraokePage() {
       setData({ status: "ready", songs: cached.songs.map(decorate), members: cached.members || [], updatedAt: cached.updatedAt || "" });
     }
 
-    api("karaoke/songs")
-      .then((response) => {
-        if (!response.ok) throw new Error("목록을 불러오지 못했습니다.");
-        return response.json();
-      })
+    getJson("karaoke/songs")
       .then((payload) => {
         if (!alive) return;
         setShowOfflineNote(false);
         writeStore(STORAGE_KEYS.cache, payload);
-        setData({
-          status: "ready",
-          songs: (payload.songs || []).map(decorate),
-          members: payload.members || [],
-          updatedAt: payload.updatedAt || "",
+        // 저장해 둔 목록으로 먼저 그린 랜덤 순서를 그대로 이어 간다. 곡마다 새로 섞으면 화면을 열자마자
+        // (새 목록이 도착하는 순간) 보던 목록이 통째로 뒤바뀐다. 새로 생긴 곡만 새 자리를 받는다.
+        setData((prev) => {
+          const shuffleOf = new Map(prev.songs.map((song) => [song.key, song.shuffle]));
+          return {
+            status: "ready",
+            songs: (payload.songs || []).map((song) => {
+              const decorated = decorate(song);
+              const shuffle = shuffleOf.get(decorated.key);
+              return shuffle === undefined ? decorated : { ...decorated, shuffle };
+            }),
+            members: payload.members || [],
+            updatedAt: payload.updatedAt || "",
+          };
         });
       })
       .catch(() => {

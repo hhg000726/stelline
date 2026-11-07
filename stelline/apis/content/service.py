@@ -16,9 +16,11 @@ def fetch_site_contents():
     # 모든 화면이 열릴 때마다 부른다. INFO 로 두면 로그의 대부분이 이 줄이 된다.
     logging.debug("사이트 콘텐츠 조회 요청")
     response = jsonify(resolve_items())
-    # 관리자가 고치면 곧바로 보여야 한다. 매번 새로 확인하게 둔다.
+    # 관리자가 고치면 곧바로 보여야 한다. 매번 새로 확인하게 두되, 그대로면 304 로 본문(6KB 남짓)을
+    # 다시 보내지 않는다. 화면이 열릴 때마다 오는 요청이라 휴대폰 데이터가 그만큼 준다.
     response.headers["Cache-Control"] = "no-cache"
-    return response
+    response.add_etag()
+    return response.make_conditional(request)
 
 
 def fetch_site_content_image(key):

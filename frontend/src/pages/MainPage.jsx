@@ -14,6 +14,7 @@ import { EventsPanel } from "./main/EventsPanel";
 import { TwitsPanel } from "./main/TwitsPanel";
 import { useNavItems } from "../context/NavButtonsContext";
 import { usePageMeta } from "../lib/usePageMeta";
+import { prefetchProps } from "../pages";
 
 export default function MainPage() {
   usePageMeta();
@@ -46,6 +47,7 @@ export default function MainPage() {
               className="nav-card"
               data-button-key={item.key}
               hidden={item.hidden}
+              {...prefetchProps(item.to)}
             >
               <span className="nav-card-icon">
                 <Icon name={item.icon} size={18} />

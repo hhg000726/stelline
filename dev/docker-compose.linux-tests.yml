@@ -1,0 +1,50 @@
+# 리눅스에서 전체 테스트를 CI 와 같은 조건(Python 3.12·MySQL 8.4·REQUIRE_DB=1)으로 돌린다.
+#
+#   docker compose -f dev/docker-compose.linux-tests.yml -p stelline-linux-tests run --rm --build tests
+#   docker compose -f dev/docker-compose.linux-tests.yml -p stelline-linux-tests down -v
+#
+# 보통은 dev/run-linux-tests.ps1 이 두 줄을 차례로 부른다. pytest 인자를 덧붙일 수 있다(-k 등).
+#
+# DB 는 이 실행만을 위한 일회용이다. 호스트 포트를 열지 않으므로 개발 DB(3307)나 이 PC 의 다른
+# MySQL(3306)과 부딪히지 않고, 테스트가 매번 모든 표를 비워도 다른 데이터에 닿지 않는다.
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: stelline_test
+    # 디스크에 남길 이유가 없는 데이터라 메모리에 둔다. 끝나면 함께 사라진다.
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot", "--silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  tests:
+    build:
+      context: ..
+      dockerfile: dev/linux-tests.Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    # .github/workflows/deploy.yml 의 test 잡과 같은 값이다.
+    environment:
+      REQUIRE_DB: "1"
+      APP_ENV: development
+      START_BACKGROUND_TASKS: "false"
+      AUTO_CREATE_SCHEMA: "false"
+      SECRET_KEY: linux-test-secret-key
+      SERVICE_ACCOUNT_FILE: ""
+      TURNSTILE_SECRET_KEY: ""
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: test-admin-password
+      RDS_HOST: db
+      RDS_PORT: "3306"
+      RDS_USER: root
+      RDS_PASSWORD: root
+      RDS_DB: stelline_test
+    # 덧붙인 인자는 command 자리에 들어간다(run --rm tests -k 검색).
+    entrypoint: ["python", "-m", "pytest", "-p", "no:cacheprovider"]
+    command: ["-ra"]

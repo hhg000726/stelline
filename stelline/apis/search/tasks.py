@@ -190,7 +190,7 @@ def plan_next_run(state):
 
 
 def load_song_statuses(now=None):
-    """곡마다 현재 상태·최근 7일·위험도. 화면·API·관리자·검색 대상 선정이 모두 이것 하나를 쓴다."""
+    """곡마다 현재 상태·최근 7일·재시도 여부. 화면·API·관리자·검색 대상 선정이 모두 이것 하나를 쓴다."""
     state = load_search_state(now)
     return state["statuses"], state["now"]
 

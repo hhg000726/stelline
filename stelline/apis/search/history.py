@@ -19,10 +19,10 @@
 풀렸다가 다시 막히는 일이 잦다. 7일로 자르면 그런 곡을 순회 차례까지 기다려야 해서 다시 막힌 것을
 늦게 찾는다(로그로 추정한 모의 실험에서 발견까지 중앙값 1.3일 → 14일로 두면 0.3일).
 
-위험도는 이 셋 어디에도 쓰지 않는다. 예전 위험도(실패하면 28, 성공마다 1씩 감소)는 검사 횟수로
-세는 값이라, 하루 회차 수나 한 회차에 검사하는 곡 수가 바뀌면 '7일'이라는 뜻이 무너졌다
-(하루 3회·우선 15곡이 되자 실제로는 19일쯤을 뜻했다). 지금 위험도는 '최근 30일 중 기본 검색에서
-안 보인 시간의 비율'로, 관리자가 자주 막히는 곡을 찾는 참고 지표일 뿐이다.
+위험도는 두지 않는다. 예전 위험도(실패하면 28, 성공마다 1씩 감소)는 검사 횟수로 세는 값이라,
+하루 회차 수나 한 회차에 검사하는 곡 수가 바뀌면 '7일'이라는 뜻이 무너졌다(하루 3회·우선 15곡이
+되자 실제로는 19일쯤을 뜻했다). 위 셋을 검사 기록으로 판정하게 바꾼 뒤 참고용으로 남겼던 '30일 중
+안 보인 시간 비율'도 판정·검색 순서·바깥 이용자 어디에서도 쓰지 않아 뺐다(2026-11).
 
 이 모듈은 DB 를 모른다. 기록과 시각(now)을 받아서만 판단하므로 같은 기록이면 언제 계산해도
 답이 같고, 시험도 시각을 정해 놓고 할 수 있다. 시각은 모두 UTC(시간대 없는 datetime)다.
@@ -50,8 +50,6 @@ UNCHECKED = "unchecked"
 RECENT_WINDOW = timedelta(days=7)
 # 검색 대상: 이 안에 검색이 안 된 적이 있으면 회차마다 우선 다시 시도한다.
 RETRY_WINDOW = timedelta(days=14)
-# 위험도를 계산하는 기간.
-RISK_WINDOW = timedelta(days=30)
 # 검사 기록을 남겨 두는 기간. 위 기간들보다 길어야 기간이 시작할 때의 상태를 안다.
 CHECK_RETENTION = timedelta(days=90)
 
@@ -113,37 +111,10 @@ class SongStatus:
     recent_problem: bool = False
     # 최근 14일 안에 검색이 안 된 적이 있어 회차마다 우선 다시 시도한다(검색 대상).
     retry: bool = False
-    # 최근 30일 중 문제 상태였던 시간 비율(0~100). 기록이 없으면 None.
-    risk: int | None = None
-
-
-def _risk_percent(rows, now):
-    """최근 30일 중 기본 검색에서 안 보였던 시간의 비율.
-
-    결과 하나는 다음 검사 전까지 유지된다고 본다. 검사 횟수로 세면 문제 곡을 더 자주 검사하는
-    만큼 문제가 부풀려지고, 검사 간격이 바뀌면 같은 곡도 값이 달라진다.
-    """
-    if not rows:
-        return None
-    start = now - RISK_WINDOW
-    before = [row for row in rows if row["checked_at"] < start]
-    inside = [row for row in rows if row["checked_at"] >= start]
-    # 기간이 시작할 때의 상태는 그 앞의 마지막 기록으로 안다. 없으면 첫 기록부터 센다.
-    segments = ([(start, before[-1]["result"])] if before else []) + [
-        (row["checked_at"], row["result"]) for row in inside
-    ]
-    observed = now - segments[0][0]
-    if observed <= timedelta(0):
-        return 100 if segments[-1][1] in PROBLEM_RESULTS else 0
-    problem = timedelta(0)
-    for (moment, result), (until, _) in zip(segments, segments[1:] + [(now, None)]):
-        if result in PROBLEM_RESULTS and until > moment:
-            problem += min(until, now) - moment
-    return round(100 * (problem / observed))
 
 
 def build_statuses(songs, checks, now):
-    """곡 목록과 검사 기록으로 곡마다 현재 상태·최근 7일·재시도 여부·위험도를 계산한다.
+    """곡 목록과 검사 기록으로 곡마다 현재 상태·최근 7일·재시도 여부를 계산한다.
 
     기록은 검색어와 영상 ID 가 둘 다 같은 것만 그 곡의 것으로 본다. 관리자가 영상 ID 나
     검색어를 바꾸면 예전 결과는 다른 대상을 검사한 것이므로 쓰지 않고, 그 곡은 기록이 없는
@@ -176,7 +147,6 @@ def build_statuses(songs, checks, now):
                     status.week["checks"] += 1
                     status.week[row["result"]] += 1
                     status.week_results.append((row["checked_at"], row["result"]))
-            status.risk = _risk_percent(rows, now)
         status.recent_problem = status.week[COVER_ONLY] + status.week[BLOCKED] > 0
         status.retry = status.state in PROBLEM_RESULTS or bool(
             status.last_problem_at and status.last_problem_at >= now - RETRY_WINDOW
@@ -239,7 +209,7 @@ def search_order(statuses, calls_per_run, first=(), skip=()):
     3. 예산이 남으면 나머지 순회 곡
 
     관리자가 '이번에 빼기'로 고른 곡(skip)은 순서에서 뺀다. 순회 몫을 재시도 앞에 두는 것은 재시도 대상이
-    예산보다 많아도 그 몫만큼은 확인하게 하려는 것이다. 위험도는 보지 않는다.
+    예산보다 많아도 그 몫만큼은 확인하게 하려는 것이다.
     """
     by_query = {status.query: status for status in statuses}
     requested = [by_query[query] for query in dict.fromkeys(first) if query in by_query and query not in skip]

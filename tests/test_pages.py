@@ -84,6 +84,11 @@ def test_theme_is_decided_before_the_page_is_painted(client):
         "/firebase-messaging-sw.js",
         "/search/1.PNG",
         "/search/1.jpg",
+        # 기본 안내 그림의 WebP 사본(frontend/src/lib/webpCopies.js)과 링크 미리보기 그림 두 벌.
+        "/search/1.PNG.webp",
+        "/search/1.jpg.webp",
+        "/og-image.jpg",
+        "/og-image.png",
         "/favicon.svg",
     ],
 )
@@ -108,9 +113,9 @@ def test_deployment_nginx_forwards_vercel_origin_requests_to_the_app():
     assert "listen 80;" in vercel_server
     assert "try_files $uri $uri/ @app;" in vercel_server
     assert "location @app" in vercel_server
-    assert "location /api/" in vercel_server
-    assert "location /admin" in vercel_server
-    assert "location /auth" in vercel_server
+    assert "location ^~ /api/" in vercel_server
+    assert "location ^~ /admin" in vercel_server
+    assert "location ^~ /auth" in vercel_server
     assert "proxy_pass http://stelline_app;" in vercel_server
     assert "return 404;" in next(block for block in server_blocks if "listen 80 default_server;" in block)
 
@@ -142,11 +147,54 @@ def test_hashed_bundles_are_cached_for_good_and_the_shell_is_not():
     app_servers = [block for block in server_blocks if "@app" in block]
     assert len(app_servers) == 1
     for block in app_servers:
-        bundle_rule = re.search(r"(?s)location /app/ \{(.*?)\}", block).group(1)
+        bundle_rule = re.search(r"(?s)location \^~ /app/ \{(.*?)\}", block).group(1)
         assert "immutable" in bundle_rule
         assert "try_files $uri =404;" in bundle_rule
+        # always 가 붙으면 없는 파일의 404 에도 1년 캐시가 붙어 Vercel 이 그 404 를 들고 있는다.
+        assert " always" not in bundle_rule
         shell_rule = re.search(r"(?s)location / \{(.*?)\}", block).group(1)
         assert 'Cache-Control "no-cache"' in shell_rule
+
+
+def _vercel_server_block():
+    config = (PROJECT_ROOT / "deploy" / "nginx" / "stelline.conf").read_text(encoding="utf-8")
+    directives = "\n".join(line for line in config.splitlines() if not line.lstrip().startswith("#"))
+    blocks = re.findall(r"(?ms)^server \{\n(.*?)(?=^server \{|\Z)", directives)
+    return next(block for block in blocks if "@app" in block)
+
+
+def test_images_are_cached_for_a_day_so_vercel_keeps_them():
+    """그림·아이콘은 하루 캐시한다. no-cache 면 Vercel 이 매번 원본 서버에 다시 물어
+    og-image.png(190KB) 하나가 서버 전송량의 69%를 차지했다(2026-11).
+
+    앱이 답하는 주소(/api/·/admin·/auth)와 해시 번들(/app/)은 ^~ 로 이 정규식보다 먼저 잡혀야 한다.
+    그러지 않으면 .png 로 끝나는 앱 주소가 정적 파일 쪽으로 새거나 번들의 1년 캐시가 하루로 준다.
+    """
+    block = _vercel_server_block()
+    image_rule = re.search(r"(?s)location ~\* \\\.\(\?:([a-z|?]+)\)\$ \{(.*?)\}", block)
+    assert image_rule, "그림 캐시 규칙이 없습니다"
+    extensions = image_rule.group(1).split("|")
+    for needed in ("png", "jpe?g", "webp", "ico", "svg"):
+        assert needed in extensions
+    body = image_rule.group(2)
+    assert 'add_header Cache-Control "public, max-age=86400";' in body
+    # 없는 그림은 예전처럼 앱이 답한다. always 를 붙이면 그 오류 응답까지 하루 캐시된다.
+    assert "try_files $uri @app;" in body
+    assert " always" not in body
+    for prefix in ("/app/", "/api/", "/admin", "/auth"):
+        assert re.search(rf"location \^~ {re.escape(prefix)} \{{", block), prefix
+
+
+def test_text_responses_are_compressed_on_the_way_to_vercel():
+    """기본 nginx 설정은 HTML 만 줄인다. JSON(검색 점검 상태 105KB → 13KB)·JS·CSS·SVG 도 줄여 보낸다."""
+    block = _vercel_server_block()
+    assert re.search(r"^\s*gzip on;", block, re.M)
+    assert re.search(r"^\s*gzip_vary on;", block, re.M)
+    types = re.search(r"^\s*gzip_types ([^;]+);", block, re.M).group(1).split()
+    for needed in ("application/json", "application/javascript", "text/css", "image/svg+xml"):
+        assert needed in types
+    # text/html 은 gzip on 이면 늘 줄인다. 다시 적으면 nginx -t 가 중복이라고 경고한다.
+    assert "text/html" not in types
 
 
 def test_production_process_is_supervised_single_worker_and_local_only():

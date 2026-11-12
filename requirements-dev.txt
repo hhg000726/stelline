@@ -4,3 +4,6 @@ pytest-cov
 pytest-timeout
 # 윈도우에는 시간대 데이터가 없어, 할당량 하루(태평양 시간) 계산 테스트가 건너뛰어진다.
 tzdata
+# 그림의 가벼운 사본(og-image.jpg, 검색 안내 그림 WebP)을 만들고(dev/make_web_images.py),
+# 사본이 지금 원본과 같은 그림인지 본다(tests/test_static_images.py). 운영 서버에는 필요 없다.
+pillow

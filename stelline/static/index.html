@@ -15,7 +15,9 @@
   <meta property="og:locale" content="ko_KR">
   <meta property="og:title" content="Stelline · 스텔라이브 비공식 팬 사이트">
   <meta property="og:description" content="스텔라이브를 좋아해서 만든 비공식 팬 사이트입니다.">
-  <meta property="og:image" content="/og-image.png">
+  <!-- 미리보기 그림은 가벼운 JPEG(17KB)로 알린다. og-image.png(190KB)는 이미 만들어진 링크 카드가
+       그 주소를 기억해 계속 불러 가므로 지우지 않는다(dev/make_web_images.py). -->
+  <meta property="og:image" content="/og-image.jpg">
   <meta name="twitter:card" content="summary_large_image">
   <!-- 테마는 화면이 그려지기 전에 정해져야 한다. 본문 뒤나 번들 안에서 켜면
        밝은 화면이 한 번 번쩍인다. 그래서 이 한 조각만 <head>에 그대로 둔다.
@@ -67,7 +69,7 @@
         link.href = href;
         document.head.appendChild(link);
       }
-      var routeFiles = {"/":["/app/MainPage-tvpgWNx9.js","/app/EmptyState-DiSeQ4Aw.js","/app/Collapse-au6EroFT.js","/app/useApiList-Q365_FRN.js","/app/usePageMeta-B7L4wKRg.js","/app/clipboard-BhwkPkrI.js","/app/openExternal-FQDNh7qg.js"],"/search":["/app/SearchPage-BNNX3Wkh.js","/app/EmptyState-DiSeQ4Aw.js","/app/ReportPanel-BCyIYYoJ.js","/app/loadScript-DuwNQ6MA.js","/app/Collapse-au6EroFT.js","/app/usePageMeta-B7L4wKRg.js","/app/clipboard-BhwkPkrI.js","/app/useModal-4hS1C1H_.js","/app/openExternal-FQDNh7qg.js","/app/SearchPage-CTyDYAWy.css"],"/karaoke":["/app/KaraokePage-Bwh1v0vR.js","/app/EmptyState-DiSeQ4Aw.js","/app/Collapse-au6EroFT.js","/app/ReportPanel-BCyIYYoJ.js","/app/loadScript-DuwNQ6MA.js","/app/usePageMeta-B7L4wKRg.js","/app/clipboard-BhwkPkrI.js","/app/useModal-4hS1C1H_.js","/app/KaraokePage-Bhpe0lRA.css"],"/congratulation":["/app/CongratulationPage-DiGmpYFZ.js","/app/EmptyState-DiSeQ4Aw.js","/app/loadScript-DuwNQ6MA.js","/app/ReportPanel-BCyIYYoJ.js","/app/Collapse-au6EroFT.js","/app/useApiList-Q365_FRN.js","/app/usePageMeta-B7L4wKRg.js"],"/offline":["/app/OfflinePage-ArIcNiXK.js","/app/EmptyState-DiSeQ4Aw.js","/app/loadScript-DuwNQ6MA.js","/app/usePageMeta-B7L4wKRg.js","/app/OfflinePage-CvhF_spN.css"]};
+      var routeFiles = {"/":["/app/MainPage-CuOEwt8x.js","/app/EmptyState-DiSeQ4Aw.js","/app/Collapse-au6EroFT.js","/app/useApiList-B3DR0uv6.js","/app/usePageMeta-B7L4wKRg.js","/app/clipboard-BhwkPkrI.js","/app/openExternal-DK9DsxZP.js"],"/search":["/app/SearchPage-BIqou7gr.js","/app/EmptyState-DiSeQ4Aw.js","/app/ReportPanel-RxLrzNuW.js","/app/loadScript-DuwNQ6MA.js","/app/Collapse-au6EroFT.js","/app/usePageMeta-B7L4wKRg.js","/app/clipboard-BhwkPkrI.js","/app/useModal-4hS1C1H_.js","/app/openExternal-DK9DsxZP.js","/app/SearchPage-CTyDYAWy.css"],"/karaoke":["/app/KaraokePage-Kvi_YwDB.js","/app/EmptyState-DiSeQ4Aw.js","/app/Collapse-au6EroFT.js","/app/ReportPanel-RxLrzNuW.js","/app/loadScript-DuwNQ6MA.js","/app/usePageMeta-B7L4wKRg.js","/app/clipboard-BhwkPkrI.js","/app/useModal-4hS1C1H_.js","/app/KaraokePage-Bhpe0lRA.css"],"/congratulation":["/app/CongratulationPage-BiNCbQos.js","/app/EmptyState-DiSeQ4Aw.js","/app/loadScript-DuwNQ6MA.js","/app/ReportPanel-RxLrzNuW.js","/app/Collapse-au6EroFT.js","/app/useApiList-B3DR0uv6.js","/app/usePageMeta-B7L4wKRg.js"],"/offline":["/app/OfflinePage-CMMW1Fal.js","/app/EmptyState-DiSeQ4Aw.js","/app/loadScript-DuwNQ6MA.js","/app/usePageMeta-B7L4wKRg.js","/app/OfflinePage-CvhF_spN.css"]};
       (routeFiles[path] || []).forEach(function (href) {
         if (/\.css$/.test(href)) hint("preload", href, "style", true);
         else hint("modulepreload", href, "script", true);
@@ -81,7 +83,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/app/index-B9S3SVGB.js"></script>
+  <script type="module" crossorigin src="/app/index-DHe-d1e6.js"></script>
   <link rel="modulepreload" crossorigin href="/app/jsx_runtime-BIUEfZIL.js">
   <link rel="stylesheet" crossorigin href="/app/index-D6IkSQzr.css">
 </head>

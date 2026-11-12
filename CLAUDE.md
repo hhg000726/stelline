@@ -11,6 +11,7 @@
 - **`main`에 올라가면 곧바로 운영에 배포된다.** 브랜치 → PR → CI 초록 → squash 머지 순서로만 올린다. `main`에 직접 push하지 않는다.
 - **`frontend/`를 고쳤으면** `cd frontend && npm run build` 후 `stelline/static/index.html`, `stelline/static/app/`를 같은 커밋에 넣는다. CI가 다시 빌드해 커밋된 것과 비교한다.
 - 배색과 간격 토큰은 `stelline/static/assets/site.css` 한 곳에서 정한다. 관리자·로그인 화면도 이 파일을 쓴다.
+- **그림·아이콘은 브라우저와 Vercel 에 하루 캐시된다.** 그림을 바꿀 때 같은 이름으로 덮어쓰지 않는다. 새 이름을 쓰거나 참조에 `?v=N` 을 붙이고, 검색 안내 그림은 `python dev/make_web_images.py` 로 WebP 사본도 다시 만든다(README `정적 파일 캐시와 그림 바꾸기`). `og-image.png` 는 바깥 링크 카드가 쓰므로 지우지 않는다.
 - 스키마를 바꿨으면: 운영 반영은 `main` 배포 때 `deploy/deploy.sh` 가 `python -m stelline.database.migrate` 로 **자동으로 한다**. 데이터를 지우거나 바꾸는 마이그레이션이면 합치기 전에 백업이 필요하다고 PR 설명에 적고 사용자에게 알린다.
 - 기존 기능과 화면 동작을 바꾸지 말라는 요청이 많다. 범위 밖의 변경은 제안만 한다.
 

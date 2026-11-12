@@ -174,3 +174,16 @@ def test_site_contents_answer_304_when_nothing_changed(client):
     assert first.headers["Cache-Control"] == "no-cache"  # 관리자가 고치면 곧바로 보여야 한다
     assert again.status_code == 304
     assert again.data == b""
+
+
+def test_site_contents_still_answer_304_after_nginx_weakens_the_etag(client):
+    """운영 nginx 는 JSON 을 gzip 으로 줄이면서 ETag 를 약한 것(W/"…")으로 바꿔 내보낸다(Vercel 도 그렇다).
+
+    브라우저는 받은 그대로 W/"…" 를 If-None-Match 에 실어 돌려준다. 앱이 강하게 비교하면 매번 200 으로
+    본문을 다시 보내게 되므로, 약한 꼴로 와도 304 인지 본다(deploy/nginx/stelline.conf 의 gzip).
+    """
+    with patch("stelline.content.store.load_overrides", return_value={}):
+        etag = client.get("/api/content").headers["ETag"]
+        again = client.get("/api/content", headers={"If-None-Match": f"W/{etag}"})
+    assert not etag.startswith("W/")
+    assert again.status_code == 304

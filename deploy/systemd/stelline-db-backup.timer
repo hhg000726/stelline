@@ -1,0 +1,15 @@
+# 운영 서버의 /etc/systemd/system/stelline-db-backup.timer 원본. 서버에서만 고치지 말고 여기도 함께 고친다.
+#
+# 매일 04:30(한국 시간)에 stelline-db-backup.service 를 부른다.
+# - 검색 점검(01·09·17시, 10분 남짓)과 새벽 자동 보안 업데이트(06:40 무렵)를 피한 시각이다.
+# - Oracle 자동 백업(19:44 무렵, 1일 보관)과 시각이 달라, 하루에 두 시점이 남는다.
+# - 서버가 꺼져 있어 그 시각을 놓쳤으면 켜진 뒤 한 번 돈다(Persistent).
+[Unit]
+Description=Run the stelline DB dump every day at 04:30 KST
+
+[Timer]
+OnCalendar=*-*-* 04:30:00 Asia/Seoul
+Persistent=true
+
+[Install]
+WantedBy=timers.target

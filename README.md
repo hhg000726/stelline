@@ -329,6 +329,48 @@ install -m 644 deploy/deploy.sh ~/deploy.sh
 **프로세스를 이름으로 찾아 죽이지 마세요**(`pkill -f gunicorn` 등). 그 명령을 실행하는 셸의 명령줄에도
 같은 글자가 들어 있으면 셸까지 함께 죽습니다. 다시 띄울 때는 `systemctl restart stelline` 만 씁니다.
 
+### DB 백업
+
+운영 DB 는 Oracle 의 무료(Always Free) MySQL HeatWave 입니다. 이 등급은 자동 백업을 **1일만** 남기고 그 기간을
+바꿀 수 없습니다. 수동 백업과 시점 복구(PITR)도 막혀 있습니다. 그래서 앱 서버가 날마다 직접 덤프를 뜹니다
+(`deploy/db-backup.sh`, 서버의 `~/db-backup.sh`).
+
+| | |
+| --- | --- |
+| 언제 | 매일 04:30(한국 시간). `stelline-db-backup.timer`. 그 시각에 서버가 꺼져 있었으면 켜진 뒤 한 번 |
+| 무엇을 | 운영 DB 전체(표 구조와 데이터)를 `mysqldump --single-transaction` 으로. 표를 잠그지 않아 앱은 그대로 돕니다 |
+| 어디에 | 서버의 `~/backup/db/stelline-YYYYMMDD-HHMMSS.sql.gz`(한국 시간). 폴더 700, 파일 600. 2026-11 기준 한 개에 50KB 남짓 |
+| 얼마나 | 최근 30개(약 30일). 새 덤프가 성공한 뒤에만 지우고, 날짜가 아니라 개수로 세어 백업이 한동안 실패해도 남은 것은 지우지 않습니다 |
+| 확인 | 관리자 화면 `운영 로그` 탭의 `운영 기록` 에 `DB 백업 완료` 가 날마다 한 줄. 실패하면 `오류·경고` 에 `DB 백업 실패: 이유` |
+
+- 덤프가 끝까지 쓰였는지(`-- Dump completed`)와 표 수가 DB 와 같은지 확인한 것만 제 이름으로 남깁니다.
+- 덤프에 DB 이름을 넣지 않아(`--databases` 를 쓰지 않음) 아무 이름의 DB 에나 넣을 수 있습니다. GTID 줄도 넣지 않아
+  개발 DB 같은 다른 서버에도 들어갑니다. 2026-11-12 에 MySQL 8.4 컨테이너에 되살려 23개 표의 행 수가 운영과 같음을 확인했습니다.
+- 데이터를 지우거나 바꾸는 마이그레이션을 합치기 직전처럼, 지금 한 번 더 뜨려면: `sudo systemctl start stelline-db-backup`
+  (결과는 `journalctl -u stelline-db-backup` 또는 `운영 로그` 탭).
+- 막지 못하는 것: 이 서버와 DB 를 **함께** 잃는 경우(계정 정지 등). 덤프는 이 서버 디스크에만 있습니다.
+
+되살리기. 먼저 지금 상태를 한 번 더 떠 두고, 되살릴 파일을 고릅니다. 덤프의 각 표는 `DROP TABLE IF EXISTS` 로 시작하므로
+덤프에 있는 표는 그 시점으로 통째로 바뀌고, 덤프 뒤에 새로 생긴 표는 그대로 남습니다.
+바로 덮어쓰기 전에 빈 DB(예: `stelline_restore`)에 넣어 내용을 먼저 확인해도 됩니다.
+
+```bash
+sudo systemctl start stelline-db-backup
+ls -1t ~/backup/db | head
+set -a; . ~/stelline/.env; set +a
+gunzip -c ~/backup/db/stelline-YYYYMMDD-HHMMSS.sql.gz | MYSQL_PWD="$RDS_PASSWORD" mysql -h "$RDS_HOST" -u "$RDS_USER" "$RDS_DB"
+```
+
+처음 한 번 설치(이 파일들도 배포 때 자동으로 설치되지 않습니다. 고쳤으면 같은 명령으로 다시 옮깁니다):
+
+```bash
+install -m 644 deploy/db-backup.sh ~/db-backup.sh
+sudo install -m 644 deploy/systemd/stelline-db-backup.service /etc/systemd/system/stelline-db-backup.service
+sudo install -m 644 deploy/systemd/stelline-db-backup.timer /etc/systemd/system/stelline-db-backup.timer
+sudo systemctl daemon-reload && sudo systemctl enable --now stelline-db-backup.timer
+sudo systemctl start stelline-db-backup && tail -n 1 ~/stelline/logs/app_event.log
+```
+
 ## 관리자 HTML로 개발 데이터 채우기
 
 운영 관리자 페이지에서 저장한 HTML 파일은 개발 DB의 데이터 스냅샷으로 사용할 수 있습니다. 이는 역마이그레이션이 아니라 개발용 시드 데이터 import입니다.

@@ -115,7 +115,8 @@ CI(GitHub Actions, `.github/workflows/deploy.yml`)는 MySQL 서비스 컨테이�
    테스트가 실패해야만 배포가 멈춥니다(검토할 틈이 없습니다).
 3. 화면 소스를 고쳤으면 빌드 결과물도 같은 커밋에 넣습니다.
 4. 스키마를 바꿨으면, 운영에는 `main` 배포 때 `deploy/deploy.sh` 가 `python -m stelline.database.migrate` 를
-   **자동으로** 실행합니다. 데이터를 지우거나 바꾸는 마이그레이션이면 합치기 전에 운영 DB를 백업하고, PR 설명에 그렇게 적습니다.
+   **자동으로** 실행합니다. 데이터를 지우거나 바꾸는 마이그레이션이면 합치기 전에 운영 DB를 한 번 더 덤프하고
+   (서버에서 `sudo systemctl start stelline-db-backup`, README 의 `DB 백업`), PR 설명에 그렇게 적습니다.
 
 ## 운영 점검 루틴
 
@@ -128,7 +129,8 @@ CI(GitHub Actions, `.github/workflows/deploy.yml`)는 MySQL 서비스 컨테이�
 | push/PR 마다 | 테스트·빌드 일치 검사·배포 | 자동(GitHub Actions) | Actions 가 초록 |
 | 배포 직후 | 공개 화면 5개·관리자 로그인이 열리는지, 두 앱 서버가 떠 있는지 | 사람 | `https://stel-line.vercel.app/`, `/search`, `/karaoke`, `/congratulation`, `/offline`, `/admin/`. 서버에서 `systemctl is-active stelline stelline-standby` 가 둘 다 `active`(README 의 `핫 스탠바이`) |
 | 주 1회 | `운영 로그` 탭의 오류·경고 훑기, 관리자 화면의 사용자 제보 3종 처리 | 사람 | 같은 오류가 반복되지 않음, 제보가 쌓이지 않음 |
-| 월 1회 | `npm audit`, `pip list --outdated`, 운영 DB 백업이 실제로 복원되는지 | 사람 | 고위험 취약점 0, 메이저 판올림은 PR 로 따로 |
+| 매일 04:30 | 운영 DB 덤프 백업(서버의 `~/backup/db/`, 최근 30개) | 자동(systemd 타이머) | `운영 로그` 탭의 `운영 기록` 에 `DB 백업 완료` 가 날마다 한 줄. `DB 백업 실패` 가 보이면 README 의 `DB 백업` |
+| 월 1회 | `npm audit`, `pip list --outdated`, 운영 DB 백업(`~/backup/db/`)이 실제로 복원되는지 | 사람 | 고위험 취약점 0, 메이저 판올림은 PR 로 따로. 덤프 하나를 일회용 MySQL 컨테이너에 넣어 오류 없이 들어가는지 |
 | 오류·장애 시 | `운영 로그` 탭(또는 서버의 `app_error.log`) → 최근 배포 커밋 → 필요하면 `git revert` 로 되돌린 PR | 사람 | 되돌린 뒤 위 "배포 직후" 점검 통과 |
 
 ### 로그
@@ -141,10 +143,12 @@ CI(GitHub Actions, `.github/workflows/deploy.yml`)는 MySQL 서비스 컨테이�
 | `app_info.log` | INFO 이상 전부. 백그라운드 작업이 무엇을 했는지가 여기 있습니다 |
 | `app_warning.log` | WARNING 이상. `운영 로그` 탭의 `오류·경고` 가 읽습니다 |
 | `app_error.log` | ERROR 이상 |
-| `app_event.log` | 운영 기록만(검색 점검 결과, 관리자 작업, 조회수 달성 알림, 사용자 제보, 서버 시작). `운영 로그` 탭의 `운영 기록` 이 읽습니다 |
+| `app_event.log` | 운영 기록만(검색 점검 결과, 관리자 작업, 조회수 달성 알림, 사용자 제보, 서버 시작, DB 백업). `운영 로그` 탭의 `운영 기록` 이 읽습니다 |
 
 - 한 줄은 `2026-10-24 09:00:20,010 [INFO] {search} 내용` 모양입니다. `{}` 안은 그 줄을 남긴 스레드이고
   (`monitoring`·`search`·`admin-search`·`bugs-rank`, 요청 처리는 `MainThread`), 시각은 서버 시간대와 상관없이 한국 시간입니다.
+- `{db-backup}` 줄만은 앱이 아니라 DB 백업 스크립트(`deploy/db-backup.sh`)가 같은 모양으로 직접 덧붙입니다. 성공은
+  `app_event.log`·`app_info.log` 에, 실패는 경고·오류 파일까지 남깁니다(README 의 `DB 백업`).
 - 자정마다 새 파일로 넘어가고, **7일이 지난 것은 날짜로 지웁니다.** 경고·오류 파일처럼 가끔만 쓰이는 파일도
   마지막으로 쓴 지 7일이 지나면 비웁니다(예전에는 개수로 지워서, 몇 주 전 오류 로그까지 남았습니다).
 - **API 키는 파일에 쓰기 직전에 가립니다**(`key=<가림>`). 외부 API 오류는 요청 주소 대신 상태 코드와 사유만

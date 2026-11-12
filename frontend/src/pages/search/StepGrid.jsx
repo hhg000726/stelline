@@ -2,11 +2,15 @@
  *
  * 관리자가 그림을 비우면 그 단계 칸이 통째로 사라지고 STEP 번호를 다시 매긴다.
  * (예전 content.js 의 data-content-hide=".stage" + renumberSteps 와 같은 규칙이다.)
+ *
+ * 기본 그림은 WebP 사본을 먼저 권한다(lib/webpCopies.js). 크게 볼 때는 칸에서 실제로 받은 파일
+ * (currentSrc)을 그대로 띄워, 같은 그림을 다시 받지 않는다.
  */
 import { useMemo } from "react";
 
 import { ContentText } from "../../components/ContentText";
 import { useContentItems } from "../../context/ContentContext";
+import { webpCopyOf } from "../../lib/webpCopies";
 
 export function StepGrid({ steps, onOpenImage, ...panelProps }) {
   const imageKeys = useMemo(() => steps.map((step) => step.imageKey), [steps]);
@@ -20,24 +24,29 @@ export function StepGrid({ steps, onOpenImage, ...panelProps }) {
   return (
     <div className="step-grid" data-step-grid {...panelProps}>
       {visible.map((entry, index) => {
-        const open = () => onOpenImage({ src: entry.image.value, alt: entry.step.alt });
+        const webp = webpCopyOf(entry.image.value);
+        const open = (event) =>
+          onOpenImage({ src: event.currentTarget.currentSrc || entry.image.value, alt: entry.step.alt });
         return (
           <div className="stage" key={entry.step.imageKey}>
             <div className="step-media">
-              <img
-                src={entry.image.value}
-                alt={entry.step.alt}
-                loading="lazy"
-                tabIndex={0}
-                role="button"
-                onClick={open}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    open();
-                  }
-                }}
-              />
+              <picture>
+                {webp ? <source srcSet={webp} type="image/webp" /> : null}
+                <img
+                  src={entry.image.value}
+                  alt={entry.step.alt}
+                  loading="lazy"
+                  tabIndex={0}
+                  role="button"
+                  onClick={open}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      open(event);
+                    }
+                  }}
+                />
+              </picture>
             </div>
             <div className="step-copy">
               <span className="step-number" data-step-number>

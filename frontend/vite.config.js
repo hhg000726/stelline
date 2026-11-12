@@ -122,6 +122,7 @@ export default defineConfig({
         "/favicon.png",
         "/apple-touch-icon.png",
         "/og-image.png",
+        "/og-image.jpg",
         "/firebase-messaging-sw.js",
       ].map((path) => [path, "http://127.0.0.1:5000"]),
     ),

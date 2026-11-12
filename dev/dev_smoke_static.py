@@ -16,8 +16,17 @@ ASSETS = [
     "/search/2.jpg",
     "/search/3.jpg",
     "/search/4.jpg",
+    # 기본 안내 그림의 WebP 사본(frontend/src/lib/webpCopies.js)
+    "/search/1.PNG.webp",
+    "/search/2.PNG.webp",
+    "/search/3.PNG.webp",
+    "/search/1.jpg.webp",
+    "/search/2.jpg.webp",
+    "/search/3.jpg.webp",
+    "/search/4.jpg.webp",
     "/favicon.svg",
     "/og-image.png",
+    "/og-image.jpg",
 ]
 
 for path in ASSETS:

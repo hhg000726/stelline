@@ -34,6 +34,9 @@
 - **바깥에서 불러오는 것(지도·캡차·알림 SDK)에는 제 칸을 통째로 내줍니다.** 그것들은 맡은 칸의 자식을
   제 마음대로 지우고 다시 깝니다. 같은 칸에 React 가 그린 것을 함께 두면, 지울 자국을 찾지 못해
   화면이 통째로 멈춥니다(오프라인 화면의 `.map-shell` / `.map-canvas`).
+- **그림·아이콘은 브라우저와 Vercel 이 하루 들고 있습니다.** 그림을 바꿀 때는 같은 이름으로 덮어쓰지 말고
+  새 이름을 쓰거나, 이름을 바꿀 수 없으면 참조에 `?v=2` 같은 판 번호를 붙입니다. 검색 안내 그림은 WebP 사본도
+  다시 만듭니다. 아래 `정적 파일 캐시와 그림 바꾸기` 참고.
 
 ## 프론트엔드
 
@@ -252,8 +255,8 @@ rewrite 해 보내고, 브라우저 쪽 https 는 Vercel 이 맡습니다. 그�
 않습니다. 알 수 없는 Host는 기본 서버가 404로 거부합니다. 다른 도메인을 붙이려면 Vercel 쪽에서 붙이고,
 이 서버에는 인증서를 두지 않습니다.
 
-빌드 결과물 `/app/` 아래 파일은 이름에 내용 해시가 붙어 있어 1년(`immutable`) 캐시하고,
-`index.html` 등 나머지는 `no-cache` 로 매번 확인합니다. 해시 없는 파일을 `app/` 에 넣으면 테스트가 실패합니다.
+무엇을 얼마나 캐시하고 줄여 보내는지는 아래 `정적 파일 캐시와 그림 바꾸기` 에 적었습니다.
+해시 없는 파일을 `app/` 에 넣으면 테스트가 실패합니다.
 
 `main` 브랜치 배포 때 GitHub Actions가 이 설정을 서버에 설치하고 nginx를 검사·reload하므로
 별도 수동 설정이 필요하지 않습니다. 배포 서버에서 실행 중인 계정은 비밀번호 없이
@@ -268,6 +271,45 @@ rewrite 해 보내고, 브라우저 쪽 https 는 Vercel 이 맡습니다. 그�
 Vercel 원본 프록시를 계속 사용할 때는 Vercel 프로젝트 쪽 `vercel.json`(이 저장소에는 없습니다)의 rewrite 대상 IP와 위 Nginx의
 `server_name`을 함께 맞춰야 합니다. 이 Nginx 설정은 배포마다 workflow가 설치하므로,
 서버에서만 수동 수정하지 말고 저장소 설정도 함께 변경하세요.
+
+### 정적 파일 캐시와 그림 바꾸기
+
+방문자 브라우저와 Vercel 이 무엇을 얼마나 들고 있는지는 `deploy/nginx/stelline.conf` 가 정합니다.
+Vercel 은 이 서버가 보낸 `Cache-Control` 을 보고 응답을 받아 두었다가, 그동안은 이 서버에 다시 묻지 않고 바로 내보냅니다.
+
+| 무엇 | 캐시 | 까닭 |
+| --- | --- | --- |
+| `/app/*` (빌드 번들) | 1년, `immutable` | 이름에 내용 해시가 붙어, 바뀌면 이름도 바뀝니다. 200 응답에만 붙입니다. 404 에도 붙이면 Vercel 이 그 404 를 1년 들고 있어, 배포를 되돌려 같은 이름이 다시 생겨도 방문자는 404 를 받습니다 |
+| 그림·아이콘(`.png` `.jpg` `.webp` `.gif` `.ico` `.svg`) | 하루(`public, max-age=86400`) | 같은 그림을 날마다 몇 번만 이 서버에 묻습니다. 예전에는 `no-cache` 라 Vercel 이 매번 다시 물었고, 디시인사이드 글의 링크 카드가 불러 가는 `og-image.png` 하나가 서버 전송량의 69%였습니다(2026-11) |
+| 그 밖의 정적 파일(`index.html`, `firebase-messaging-sw.js`, `/assets/*.css`·`*.js`) | `no-cache`(매번 확인) | 고치면 곧바로 보여야 합니다. 서비스 워커는 특히 그렇습니다 |
+| API | 주소마다 앱이 정함 | 예) `/api/content` 는 `no-cache` 에 ETag(그대로면 304), `/api/karaoke/songs` 는 60초에 ETag |
+
+**그림을 바꿀 때**
+
+- 같은 이름으로 덮어쓰면 최대 하루 동안 옛 그림이 보입니다. **새 이름을 씁니다**(예: `3.PNG` → `3-2.PNG`).
+  그 주소를 적은 곳을 함께 고칩니다: 기본값(`stelline/content/registry.py`, `frontend/src/lib/contentDefaults.js`)과
+  WebP 목록(`frontend/src/lib/webpCopies.js`).
+- 이름을 바꿀 수 없는 파일(`favicon.ico`, `apple-touch-icon.png`, `og-image.png`·`og-image.jpg` 처럼 바깥이 주소를
+  기억하는 것)은 **우리가 적는 참조에 판 번호를 붙입니다**(예: `frontend/index.html` 의 `/favicon.svg?v=2`).
+  주소가 달라지면 브라우저도 Vercel 도 새로 받습니다. 바깥이 판 번호 없이 직접 부르는 주소는 최대 하루 옛것이 보입니다.
+- 관리자 화면에서 올린 그림은 앱이 `?v=` 를 붙여 내려주므로 따로 할 일이 없습니다.
+- 하루를 기다릴 수 없으면 Vercel 의 CDN 캐시를 비웁니다(Vercel 문서의 `vercel cache purge --type cdn`. 아직 써 보지 않았습니다).
+
+**가벼운 사본**
+
+- 링크 미리보기는 `og-image.jpg`(17KB)로 알립니다. `og-image.png`(190KB)는 지우지 않습니다. 이미 만들어진 링크 카드가
+  그 주소를 기억해 계속 불러 갑니다.
+- 검색 안내 그림은 원본 옆에 WebP 사본을 둡니다(원본 이름 + `.webp`, 예: `1.PNG.webp`). PNG 는 무손실, JPG 는 품질 85 로
+  옮겨 7장이 790KB 에서 400KB 남짓이 됩니다. 화면은 `<picture>` 로 WebP 를 먼저 권하고, 못 읽는 브라우저는 원본을 받습니다.
+  WebP 를 권하는 주소는 `frontend/src/lib/webpCopies.js` 에 적힌 것뿐입니다. 사본이 없는 주소에 권하면 그림이 깨집니다.
+- 원본을 바꾸거나 새 그림을 넣었으면 `pip install -r requirements-dev.txt` 뒤 `python dev/make_web_images.py` 로 사본을
+  다시 만듭니다. 사본이 없거나 지금 원본과 다른 그림이면 `tests/test_static_images.py` 가 실패합니다.
+
+**압축**
+
+- JSON·JS·CSS·SVG 도 nginx 가 gzip 으로 줄여 Vercel 에 보냅니다(서버 기본 설정은 HTML 만 줄입니다). 브라우저 쪽 압축은 Vercel 이 다시 맡습니다.
+- 줄일 때 nginx 가 앱의 ETag 를 약한 것(`W/"…"`)으로 바꾸지만, 앱의 304 판정은 약하게 비교하므로 그대로 304 입니다
+  (`tests/test_public_api.py`).
 
 ### 앱 프로세스(systemd)
 

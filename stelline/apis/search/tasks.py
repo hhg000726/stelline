@@ -5,6 +5,7 @@ import re
 import threading
 import time
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 try:
     import fcntl
@@ -237,11 +238,39 @@ def _youtube_video_ids_for_query(query, api_key):
     return [item["id"]["videoId"] for item in items if "id" in item]
 
 
+_PAGE_TITLE_RE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+
+
+def describe_search_page(response):
+    """결과 JSON 을 못 찾은 검색 페이지가 어떤 페이지였는지 한 줄로 줄인다.
+
+    동의·로봇 확인 페이지로 넘어갔는지(최종 주소), 페이지 제목, 결과 JSON 이름이 아예 없는지 아니면
+    다른 모양(문자열로 감싼 JSON 등)으로 있는지를 보면 파서를 고칠지 그냥 둘지 정할 수 있다.
+    """
+    text = response.text or ""
+    parts = [f"HTTP {getattr(response, 'status_code', '?')}"]
+    url = getattr(response, "url", None)
+    if isinstance(url, str):
+        # 검색어가 든 쿼리 문자열은 앞에 이미 적으므로 호스트와 경로만 남긴다.
+        where = urlsplit(url)
+        parts.append(f"{where.hostname}{where.path}")
+    parts.append(f"{len(text)}자")
+    title = _PAGE_TITLE_RE.search(text)
+    parts.append(f"제목 {' '.join(title.group(1).split())[:60]!r}" if title else "제목 없음")
+    marker = text.find("ytInitialData")
+    if marker < 0:
+        parts.append("ytInitialData 없음")
+    else:
+        start = marker + len("ytInitialData")
+        parts.append(f"ytInitialData 뒤 {text[start:start + 20]!r}")
+    return " · ".join(parts)
+
+
 def find_videos_on_search_page(statuses):
     """API 와 cover 검색에서 못 찾은 곡을 웹 검색 결과 페이지에서 한 번 더 찾는다.
 
-    찾은 곡의 검색어 집합을 돌려준다. 크롤링이 막히면 거기서 멈추고 그때까지 찾은 것만 돌려준다
-    (못 본 곡은 찾지 못한 것으로 본다).
+    찾은 곡의 검색어 집합을 돌려준다. 크롤링이 막히거나 결과 JSON 이 없는 페이지가 오면 거기서 멈추고
+    그때까지 찾은 것만 돌려준다(못 본 곡은 찾지 못한 것으로 본다).
     """
     found = set()
     base_url = "https://www.youtube.com/results"
@@ -257,8 +286,12 @@ def find_videos_on_search_page(statuses):
             break
         match = YT_INITIAL_DATA_RE.search(response.text)
         if not match:
-            logging.error("크롤링 데이터 파싱 실패: %s", status.query)
-            continue
+            # 결과 JSON 이 없는 페이지는 검색어 탓이 아니라 그때 YouTube 가 다른 모양의 페이지를 준 것이다.
+            # 2026-11-14 09시 회차에는 막힌 7곡이 모두 이렇게 실패했고 그 뒤로는 재현되지 않았다. 같은 회차의
+            # 다음 곡도 같은 페이지를 받으므로 거기서 멈춘다. 본문이 남지 않아 원인을 알 수 없었으니
+            # 어떤 페이지였는지 가늠할 단서를 한 줄 남긴다.
+            logging.error("크롤링 데이터 파싱 실패: %s · %s", status.query, describe_search_page(response))
+            break
         try:
             data = json.loads(match.group(1))
         except json.JSONDecodeError:

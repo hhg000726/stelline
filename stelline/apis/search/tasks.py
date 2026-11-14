@@ -266,55 +266,56 @@ def describe_search_page(response):
     return " · ".join(parts)
 
 
-def find_videos_on_search_page(statuses):
-    """API 와 cover 검색에서 못 찾은 곡을 웹 검색 결과 페이지에서 한 번 더 찾는다.
+SEARCH_PAGE_URL = "https://www.youtube.com/results"
 
-    찾은 곡의 검색어 집합을 돌려준다. 크롤링이 막히거나 결과 JSON 이 없는 페이지가 오면 거기서 멈추고
-    그때까지 찾은 것만 돌려준다(못 본 곡은 찾지 못한 것으로 본다).
+
+class SearchPageBlocked(Exception):
+    """웹 검색 결과 페이지를 볼 수 없다(연결 실패, 결과 JSON 이 없는 페이지). 그 회차의 크롤링을 멈춘다."""
+
+
+def search_page_video_ids(query):
+    """웹 검색 결과 페이지 상위 3개 영상 ID.
+
+    API 검색 결과와 사람이 보는 웹 검색 결과가 다를 때가 있어, API 에서 못 찾은 검색어를 여기서 한 번 더 본다.
+    페이지를 볼 수 없으면 SearchPageBlocked 를 던진다. 같은 회차의 다음 요청도 같은 페이지를 받을 것이므로
+    부르는 쪽은 그 회차의 크롤링을 멈춘다.
     """
-    found = set()
-    base_url = "https://www.youtube.com/results"
-    headers = {"User-Agent": "Mozilla/5.0"}
-
-    for status in statuses:
-        time.sleep(random.uniform(3, 8))
-        try:
-            response = SESSION.get(base_url, params={"search_query": status.query}, headers=headers, timeout=10)
-            response.raise_for_status()
-        except requests.RequestException as exc:
-            logging.error("크롤링 실패: %s", describe_request_error(exc))
-            break
-        match = YT_INITIAL_DATA_RE.search(response.text)
-        if not match:
-            # 결과 JSON 이 없는 페이지는 검색어 탓이 아니라 그때 YouTube 가 다른 모양의 페이지를 준 것이다.
-            # 2026-11-14 09시 회차에는 막힌 7곡이 모두 이렇게 실패했고 그 뒤로는 재현되지 않았다. 같은 회차의
-            # 다음 곡도 같은 페이지를 받으므로 거기서 멈춘다. 본문이 남지 않아 원인을 알 수 없었으니
-            # 어떤 페이지였는지 가늠할 단서를 한 줄 남긴다.
-            logging.error("크롤링 데이터 파싱 실패: %s · %s", status.query, describe_search_page(response))
-            break
-        try:
-            data = json.loads(match.group(1))
-        except json.JSONDecodeError:
-            logging.error("JSON 파싱 실패: %s", status.query)
-            continue
-
-        video_ids = []
-        contents = (
-            data.get("contents", {})
-            .get("twoColumnSearchResultsRenderer", {})
-            .get("primaryContents", {})
-            .get("sectionListRenderer", {})
-            .get("contents", [])
+    time.sleep(random.uniform(3, 8))
+    try:
+        response = SESSION.get(
+            SEARCH_PAGE_URL, params={"search_query": query}, headers={"User-Agent": "Mozilla/5.0"}, timeout=10,
         )
-        for section in contents:
-            for item in section.get("itemSectionRenderer", {}).get("contents", []):
-                video = item.get("videoRenderer")
-                if video and len(video_ids) < 3:
-                    video_ids.append(video["videoId"])
-        if status.video_id in video_ids:
-            found.add(status.query)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        logging.error("크롤링 실패: %s", describe_request_error(exc))
+        raise SearchPageBlocked from exc
+    match = YT_INITIAL_DATA_RE.search(response.text)
+    if not match:
+        # 결과 JSON 이 없는 페이지는 검색어 탓이 아니라 그때 YouTube 가 다른 모양의 페이지를 준 것이다.
+        # 2026-11-14 09시 회차에는 막힌 7곡이 모두 이렇게 실패했고 그 뒤로는 재현되지 않았다. 본문이 남지 않아
+        # 원인을 알 수 없었으니 어떤 페이지였는지 가늠할 단서를 한 줄 남긴다.
+        logging.error("크롤링 데이터 파싱 실패: %s · %s", query, describe_search_page(response))
+        raise SearchPageBlocked
+    try:
+        data = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        logging.error("JSON 파싱 실패: %s", query)
+        return []
 
-    return found
+    video_ids = []
+    contents = (
+        data.get("contents", {})
+        .get("twoColumnSearchResultsRenderer", {})
+        .get("primaryContents", {})
+        .get("sectionListRenderer", {})
+        .get("contents", [])
+    )
+    for section in contents:
+        for item in section.get("itemSectionRenderer", {}).get("contents", []):
+            video = item.get("videoRenderer")
+            if video and len(video_ids) < 3:
+                video_ids.append(video["videoId"])
+    return video_ids
 
 
 def summarize_search_run(stats):
@@ -338,7 +339,7 @@ def summarize_search_run(stats):
         f" · 재시도 {stats['retry_checked']}/{stats['retry_total']}곡"
         f" · 순회 {stats['sweep_checked']}곡(처음 검사 {stats['first_time']})"
         f" · cover로 찾음 {stats['cover_found']}/{stats['cover_calls']}"
-        f" · 크롤링으로 찾음 {stats['crawl_found']}"
+        f" · 크롤링으로 찾음 {stats['crawl_found']} · cover 크롤링으로 찾음 {stats['cover_crawl_found']}"
         f" · API {stats['calls_used']}/{SEARCH_CALLS_PER_RUN}회"
         f" · {upcoming}"
     )
@@ -359,7 +360,8 @@ def _pick_api_key(by_admin):
 def run_search_checks(by_admin=False):
     """검사 한 회차. 곡마다 결과가 나오는 대로 search_checks 에 바로 남긴다.
 
-    순서: 기본 검색(API) → 못 찾으면 cover 검색(API) → 그래도 못 찾으면 웹 검색 결과 페이지.
+    순서: 기본 검색어로 API → 웹 검색 결과 페이지, 둘 다 못 찾으면 cover 검색어로 API → 웹 검색 결과 페이지.
+    기본 검색어로 어디서든 보이면 정상, cover 검색어로만 보이면 cover로만, 넷 다 못 찾으면 막힘이다.
     회차 결과를 모아 두었다가 한꺼번에 저장하지 않으므로, 중간에 API 오류가 나도 그때까지
     검사한 곡은 남고, 못 한 곡은 그대로 다음 회차의 대상이 된다.
     """
@@ -368,7 +370,7 @@ def run_search_checks(by_admin=False):
         "checked": 0, VISIBLE: 0, COVER_ONLY: 0, BLOCKED: 0,
         "requested_checked": 0,
         "retry_total": 0, "retry_checked": 0, "sweep_checked": 0, "first_time": 0,
-        "cover_calls": 0, "cover_found": 0, "crawl_found": 0,
+        "cover_calls": 0, "cover_found": 0, "crawl_found": 0, "cover_crawl_found": 0,
         "calls_used": 0, "unchecked_left": 0, "sweep_wait_days": None,
     }
     logging.info("검색 시작")
@@ -406,9 +408,22 @@ def run_search_checks(by_admin=False):
                 stats["sweep_checked"] += 1
                 stats["first_time"] += status.checked_at is None
 
+    crawl_open = True
+
+    def seen_on_search_page(status, query):
+        """웹 검색 결과 페이지 상위 3개에 영상이 있는지. 한 번 막히면 그 회차에는 더 보지 않는다."""
+        nonlocal crawl_open
+        if not crawl_open:
+            return False
+        try:
+            return status.video_id in search_page_video_ids(query)
+        except SearchPageBlocked:
+            crawl_open = False
+            return False
+
     failure = ""
     remaining = SEARCH_CALLS_PER_RUN
-    missing = []  # 기본 검색에서 못 찾은 곡. cover 검색을 기다린다.
+    missing = []  # 기본 검색어로는 API·웹 어디서도 못 찾은 곡. cover 검색을 기다린다.
     logging.info("[기본 검색 시작] 곡 %s", len(targets))
 
     # 못 찾은 곡마다 cover 검색 한 번을 남겨 둔다(history.budget_allows_another — 다음 회차 예상과 같은 규칙).
@@ -429,49 +444,49 @@ def run_search_checks(by_admin=False):
         remaining -= 1
         if status.video_id in video_ids:
             record(status, VISIBLE)
+        elif seen_on_search_page(status, status.query):
+            # cover 로 찾으면 문제(cover로만)로 남으므로, 기본 검색어로 웹에서 보이는지를 cover 보다 먼저 본다.
+            # 여기서 찾으면 cover 검색 몫의 API 1회가 남아 같은 회차에 곡을 더 검사할 수 있다.
+            stats["crawl_found"] += 1
+            record(status, VISIBLE)
         else:
             missing.append(status)
     logging.info("[기본 검색 종료] remainingQuotes=%s, not_searched=%s", remaining, len(missing))
 
-    still_missing = []
+    blocked = 0
     for index, status in enumerate(missing):
-        if failure or remaining <= 0:
-            # API 를 더 쓸 수 없으면 남은 곡은 cover 검색 없이 웹 검색만 한다.
-            still_missing.extend(missing[index:])
-            break
         fallback = cover_query(status.query)
         if len(fallback) > QUERY_MAX_LENGTH:
-            still_missing.append(status)
+            # cover 를 붙이면 검사 기록 열(fallback_query)에 담을 수 없어 cover 검색을 하지 않는다.
+            record(status, BLOCKED)
+            blocked += 1
             continue
-        time.sleep(20)
-        try:
-            logging.info(
-                "cover 검색 query=%s, video_id=%s, remainingQuotes=%s, not_searched=%s",
-                fallback, status.video_id, remaining, len(missing) - index,
-            )
-            video_ids = _youtube_video_ids_for_query(fallback, api_key)
-        except requests.RequestException as exc:
-            failure = describe_request_error(exc)
-            logging.error("cover 검색 API 요청 실패: %s", failure)
-            still_missing.extend(missing[index:])
-            break
-        remaining -= 1
-        stats["cover_calls"] += 1
-        if status.video_id in video_ids:
-            stats["cover_found"] += 1
+        if not failure and remaining > 0:
+            time.sleep(20)
+            try:
+                logging.info(
+                    "cover 검색 query=%s, video_id=%s, remainingQuotes=%s, not_searched=%s",
+                    fallback, status.video_id, remaining, len(missing) - index,
+                )
+                video_ids = _youtube_video_ids_for_query(fallback, api_key)
+            except requests.RequestException as exc:
+                failure = describe_request_error(exc)
+                logging.error("cover 검색 API 요청 실패: %s", failure)
+            else:
+                remaining -= 1
+                stats["cover_calls"] += 1
+                if status.video_id in video_ids:
+                    stats["cover_found"] += 1
+                    record(status, COVER_ONLY, fallback)
+                    continue
+        # API 에서 못 찾았거나 API 를 더 쓸 수 없으면(쿼터·오류) cover 검색어로 웹 검색 결과 페이지를 본다.
+        if seen_on_search_page(status, fallback):
+            stats["cover_crawl_found"] += 1
             record(status, COVER_ONLY, fallback)
         else:
-            still_missing.append(status)
-    logging.info("[cover 검색 종료] remainingQuotes=%s, not_searched=%s", remaining, len(still_missing))
-
-    found_on_page = find_videos_on_search_page(still_missing)
-    for status in still_missing:
-        if status.query in found_on_page:
-            stats["crawl_found"] += 1
-            record(status, VISIBLE)
-        else:
             record(status, BLOCKED)
-    logging.info("[최종 결과] 총 실패곡=%s", len(still_missing) - len(found_on_page))
+            blocked += 1
+    logging.info("[최종 결과] remainingQuotes=%s, 막힘=%s", remaining, blocked)
 
     prune_old_checks(now)
     # 쓴 요청만 지운다. '먼저 검사'는 실제로 검사한 곡만(못 한 곡은 다음 회차에도 맨 앞), '이번에 빼기'는

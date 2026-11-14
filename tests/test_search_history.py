@@ -453,6 +453,40 @@ def test_search_page_crawl_only_trusts_the_top_three(videos, expected):
     assert ("곡" in hits) is expected
 
 
+def test_search_page_crawl_stops_at_a_page_without_results_json(caplog):
+    # 2026-11-14 09시 회차: 결과 JSON 이 없는 페이지가 오자 막힌 7곡 모두에서 같은 오류가 났다.
+    class Response:
+        status_code = 200
+        url = "https://www.youtube.com/results?search_query=x"
+        text = "<html><head><title>YouTube</title></head><body>다른 페이지</body></html>"
+
+        def raise_for_status(self):
+            return None
+
+    with patch.object(tasks.SESSION, "get", return_value=Response()) as get, \
+         patch.object(tasks.time, "sleep"), caplog.at_level("ERROR"):
+        hits = tasks.find_videos_on_search_page([SongStatus("곡1", "v-1"), SongStatus("곡2", "v-2")])
+
+    assert hits == set()
+    assert get.call_count == 1  # 다음 곡은 요청하지 않는다
+    failures = [r.getMessage() for r in caplog.records if "크롤링 데이터 파싱 실패" in r.getMessage()]
+    assert failures == [
+        "크롤링 데이터 파싱 실패: 곡1 · HTTP 200 · www.youtube.com/results · 67자 · 제목 'YouTube' · ytInitialData 없음"
+    ]
+
+
+def test_search_page_description_shows_an_unexpected_initial_data_shape():
+    class Response:
+        status_code = 200
+        url = "https://consent.youtube.com/m?continue=x"
+        text = "var ytInitialData = '\\x7b\\x22responseContext';"
+
+    described = tasks.describe_search_page(Response())
+    assert "consent.youtube.com/m" in described
+    assert "제목 없음" in described
+    assert "ytInitialData 뒤 \" = '\\\\x7b" in described  # 문자열로 감싼 JSON 인지 보인다
+
+
 def test_search_page_crawl_stops_quietly_when_blocked():
     with patch.object(tasks.SESSION, "get", side_effect=requests.ConnectionError("막힘")), \
          patch.object(tasks.time, "sleep"):

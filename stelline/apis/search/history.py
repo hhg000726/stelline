@@ -33,11 +33,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
 # ---------- 검사 결과 ----------
-# 기본 검색(YouTube API, 안 되면 웹 검색 결과 페이지)에서 영상이 상위 3개 안에 보였다.
+# 기본 검색어로 YouTube API 나 웹 검색 결과 페이지의 상위 3개 안에 영상이 보였다.
 VISIBLE = "visible"
-# 기본 검색에서는 못 찾았고, 검색어 뒤에 cover 를 붙인 검색에서만 찾았다.
+# 기본 검색어로는 API·웹 어디서도 못 찾았고, 검색어 뒤에 cover 를 붙여야(API 나 웹에서) 찾았다.
 COVER_ONLY = "cover_only"
-# 기본 검색·cover 검색·웹 검색 결과 페이지 모두에서 못 찾았다.
+# 기본·cover 검색어 모두 API 와 웹 검색 결과 페이지에서 못 찾았다.
 BLOCKED = "blocked"
 RESULTS = (VISIBLE, COVER_ONLY, BLOCKED)
 # 기본 검색어로 안 보인 결과. '검색이 안 됐다'는 말은 이 둘을 가리킨다.

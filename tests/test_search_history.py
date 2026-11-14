@@ -232,10 +232,11 @@ class FakeRun:
         self.songs = songs
         self.checks = list(checks)
         self.api = api or (lambda query: [])
-        self.page_hits = set(page_hits)
+        self.page_hits = page_hits if isinstance(page_hits, Exception) else set(page_hits)
         self.requests = list(requests)
         self.recorded = []
         self.queries = []
+        self.page_queries = []
         self.run_started = set()
         self.cleared = None
 
@@ -245,6 +246,16 @@ class FakeRun:
         if isinstance(result, Exception):
             raise result
         return result
+
+    def page(self, query):
+        """웹 검색 결과 페이지. page_hits 에 든 검색어(기본 또는 'cover' 붙인 것)면 그 곡의 영상이 보인다."""
+        self.page_queries.append(query)
+        if isinstance(self.page_hits, Exception):
+            raise self.page_hits
+        videos = {}
+        for song in self.songs:
+            videos[song["query"]] = videos[f"{song['query']} cover"] = song["video_id"]
+        return [videos[query]] if query in self.page_hits else []
 
     def record(self, status, result, fallback_query=None, run_started_at=None):
         self.recorded.append((status.query, result, fallback_query))
@@ -262,8 +273,7 @@ class FakeRun:
              patch.object(tasks, "utc_now", return_value=NOW), \
              patch.object(tasks, "record_check", side_effect=self.record), \
              patch.object(tasks, "prune_old_checks"), \
-             patch.object(tasks, "find_videos_on_search_page",
-                          side_effect=lambda statuses: {s.query for s in statuses} & self.page_hits), \
+             patch.object(tasks, "search_page_video_ids", side_effect=self.page), \
              patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
              patch.object(tasks.time, "sleep"), \
              patch.object(tasks, "_youtube_video_ids_for_query", side_effect=self.search):
@@ -283,17 +293,51 @@ def test_one_run_never_exceeds_its_call_budget_and_keeps_a_cover_call_per_failur
 
 def test_each_song_gets_one_of_three_results():
     run = FakeRun(
-        [_song("보임"), _song("cover로만"), _song("웹에서 보임"), _song("막힘")],
-        api=lambda query: {"보임": ["v-보임"], "cover로만 cover": ["v-cover로만"]}.get(query, []),
-        page_hits={"웹에서 보임"},
+        [_song("보임"), _song("cover로만"), _song("웹에서 보임"), _song("웹 cover로만"), _song("막힘")],
+        api=lambda query: {
+            "보임": ["v-보임"],
+            "cover로만 cover": ["v-cover로만"],
+            "웹에서 보임 cover": ["v-웹에서 보임"],
+        }.get(query, []),
+        page_hits={"웹에서 보임", "웹 cover로만 cover"},
     )
-    run.run()
+    outcome = run.run()
     assert sorted(run.recorded) == sorted([
         ("보임", VISIBLE, None),
         ("cover로만", COVER_ONLY, "cover로만 cover"),
-        ("웹에서 보임", VISIBLE, None),  # API 와 cover 에서 못 찾아도 웹 검색 결과 페이지에 있으면 보이는 것이다
+        # API 에 없어도 기본 검색어로 웹 검색 결과 페이지에 있으면 정상이다. cover 로 찾힐 곡이어도 마찬가지다.
+        ("웹에서 보임", VISIBLE, None),
+        ("웹 cover로만", COVER_ONLY, "웹 cover로만 cover"),  # cover 검색어로 웹에서만 보여도 cover로만
         ("막힘", BLOCKED, None),
     ])
+    # 기본 검색어로 웹에서 찾은 곡은 cover API 를 쓰지 않는다.
+    assert "웹에서 보임 cover" not in run.queries
+    # 웹 검색은 API 에서 못 찾은 검색어만 보고, 기본 검색어를 cover 보다 먼저 본다.
+    assert sorted(run.page_queries) == sorted(["cover로만", "웹에서 보임", "웹 cover로만", "막힘", "웹 cover로만 cover", "막힘 cover"])
+    for query in ("cover로만", "웹 cover로만", "막힘"):
+        assert run.page_queries.index(query) < run.page_queries.index("웹 cover로만 cover")
+    assert "보임" not in run.page_queries and "cover로만 cover" not in run.page_queries
+    stats = outcome["stats"]
+    assert (stats["crawl_found"], stats["cover_found"], stats["cover_crawl_found"]) == (1, 1, 1)
+
+
+def test_cover_is_checked_on_the_search_page_when_the_api_is_out():
+    """API 가 회차 중간에 멈추면 cover API 검색을 못 한 곡도 cover 검색어로 웹 검색 결과 페이지는 본다."""
+    calls = iter([[], requests.ConnectionError("끊김")])
+    run = FakeRun([_song("a"), _song("b")], api=lambda query: next(calls), page_hits={"a cover"})
+    outcome = run.run()
+    assert run.queries == ["a", "b"]  # b 의 기본 검색에서 끊겨 a 의 cover API 검색은 못 한다
+    assert run.page_queries == ["a", "a cover"]  # b 는 검사하지 않은 곡으로 남아 다음 회차에 온다
+    assert run.recorded == [("a", COVER_ONLY, "a cover")]
+    assert outcome["error"]
+
+
+def test_a_blocked_search_page_stops_crawling_for_the_rest_of_the_run():
+    run = FakeRun([_song("a"), _song("b")], page_hits=tasks.SearchPageBlocked())
+    run.run()
+    assert run.page_queries == ["a"]  # 막힌 뒤로는 기본·cover 검색어 모두 웹 검색을 하지 않는다
+    assert sorted(run.queries) == sorted(["a", "a cover", "b", "b cover"])
+    assert {result for _, result, _ in run.recorded} == {BLOCKED}
 
 
 def test_an_api_error_keeps_what_was_already_checked():
@@ -449,11 +493,11 @@ def test_search_page_crawl_only_trusts_the_top_three(videos, expected):
             return None
 
     with patch.object(tasks.SESSION, "get", return_value=Response()), patch.object(tasks.time, "sleep"):
-        hits = tasks.find_videos_on_search_page([SongStatus("곡", "v-곡")])
-    assert ("곡" in hits) is expected
+        video_ids = tasks.search_page_video_ids("곡")
+    assert ("v-곡" in video_ids) is expected
 
 
-def test_search_page_crawl_stops_at_a_page_without_results_json(caplog):
+def test_search_page_without_results_json_is_treated_as_blocked(caplog):
     # 2026-11-14 09시 회차: 결과 JSON 이 없는 페이지가 오자 막힌 7곡 모두에서 같은 오류가 났다.
     class Response:
         status_code = 200
@@ -463,12 +507,11 @@ def test_search_page_crawl_stops_at_a_page_without_results_json(caplog):
         def raise_for_status(self):
             return None
 
-    with patch.object(tasks.SESSION, "get", return_value=Response()) as get, \
-         patch.object(tasks.time, "sleep"), caplog.at_level("ERROR"):
-        hits = tasks.find_videos_on_search_page([SongStatus("곡1", "v-1"), SongStatus("곡2", "v-2")])
+    with patch.object(tasks.SESSION, "get", return_value=Response()), \
+         patch.object(tasks.time, "sleep"), caplog.at_level("ERROR"), \
+         pytest.raises(tasks.SearchPageBlocked):
+        tasks.search_page_video_ids("곡1")
 
-    assert hits == set()
-    assert get.call_count == 1  # 다음 곡은 요청하지 않는다
     failures = [r.getMessage() for r in caplog.records if "크롤링 데이터 파싱 실패" in r.getMessage()]
     assert failures == [
         "크롤링 데이터 파싱 실패: 곡1 · HTTP 200 · www.youtube.com/results · 67자 · 제목 'YouTube' · ytInitialData 없음"
@@ -487,7 +530,7 @@ def test_search_page_description_shows_an_unexpected_initial_data_shape():
     assert "ytInitialData 뒤 \" = '\\\\x7b" in described  # 문자열로 감싼 JSON 인지 보인다
 
 
-def test_search_page_crawl_stops_quietly_when_blocked():
+def test_search_page_connection_failure_is_treated_as_blocked():
     with patch.object(tasks.SESSION, "get", side_effect=requests.ConnectionError("막힘")), \
-         patch.object(tasks.time, "sleep"):
-        assert tasks.find_videos_on_search_page([SongStatus("곡", "v-곡")]) == set()
+         patch.object(tasks.time, "sleep"), pytest.raises(tasks.SearchPageBlocked):
+        tasks.search_page_video_ids("곡")

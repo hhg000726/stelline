@@ -398,7 +398,7 @@ def test_search_run_counts_what_it_checked():
          patch.object(tasks, "utc_now", return_value=now), \
          patch.object(tasks, "record_check", return_value=True), \
          patch.object(tasks, "prune_old_checks"), \
-         patch.object(tasks, "find_videos_on_search_page", return_value=set()), \
+         patch.object(tasks, "search_page_video_ids", return_value=[]), \
          patch.object(tasks, "SEARCH_API_KEY", ["key"]), \
          patch.object(tasks.time, "sleep"), \
          patch.object(tasks, "_youtube_video_ids_for_query", side_effect=[["v"], [], ["b"]]):
@@ -407,7 +407,7 @@ def test_search_run_counts_what_it_checked():
     assert result["error"] == ""
     assert tasks.summarize_search_run(result["stats"]) == (
         "자동 · 검사 2곡(정상 1 · cover로만 1 · 막힘 0) · 재시도 1/1곡 · 순회 1곡(처음 검사 0)"
-        f" · cover로 찾음 1/1 · 크롤링으로 찾음 0 · API 3/{tasks.SEARCH_CALLS_PER_RUN}회 · 순회할 곡 없음"
+        f" · cover로 찾음 1/1 · 크롤링으로 찾음 0 · cover 크롤링으로 찾음 0 · API 3/{tasks.SEARCH_CALLS_PER_RUN}회 · 순회할 곡 없음"
     )
 
 
@@ -419,12 +419,12 @@ def _run_once(outcome):
 STATS = {
     "mode": "자동", "checked": 20, "visible": 9, "cover_only": 3, "blocked": 8,
     "retry_total": 23, "retry_checked": 14, "sweep_checked": 6, "first_time": 2,
-    "cover_calls": 11, "cover_found": 3, "crawl_found": 0, "calls_used": 29,
+    "cover_calls": 11, "cover_found": 3, "crawl_found": 0, "cover_crawl_found": 0, "calls_used": 29,
     "unchecked_left": 0, "sweep_wait_days": 16.84,
 }
 SUMMARY = (
     "자동 · 검사 20곡(정상 9 · cover로만 3 · 막힘 8) · 재시도 14/23곡 · 순회 6곡(처음 검사 2)"
-    f" · cover로 찾음 3/11 · 크롤링으로 찾음 0 · API 29/{tasks.SEARCH_CALLS_PER_RUN}회"
+    f" · cover로 찾음 3/11 · 크롤링으로 찾음 0 · cover 크롤링으로 찾음 0 · API 29/{tasks.SEARCH_CALLS_PER_RUN}회"
     " · 순회 다음 차례는 16.8일 전 검사한 곡"
 )
 
